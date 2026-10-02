@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>CarBook · 인터랙티브 자동차 교과서</title>
+<meta name="description" content="엔진과 변속기에서 전기차, 자율주행까지 — 슬라이더를 움직이고 3D 모델을 돌려 보며 배우는 인터랙티브 자동차 교과서. 22개 챕터, 약 150개 시뮬레이터.">
+<link rel="canonical" href="https://carbook.euiyun.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="CarBook">
+<meta property="og:title" content="CarBook · 인터랙티브 자동차 교과서">
+<meta property="og:description" content="엔진과 변속기에서 전기차, 자율주행까지 — 슬라이더를 움직이고 3D 모델을 돌려 보며 배우는 인터랙티브 자동차 교과서. 22개 챕터, 약 150개 시뮬레이터.">
+<meta property="og:url" content="https://carbook.euiyun.com/">
+<meta property="og:image" content="https://carbook.euiyun.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://carbook.euiyun.com/#site","name":"CarBook","alternateName":"자동차 교과서","url":"https://carbook.euiyun.com/","inLanguage":"ko"},{"@type":"Book","@id":"https://carbook.euiyun.com/#book","name":"CarBook — 인터랙티브 자동차 교과서","url":"https://carbook.euiyun.com/","inLanguage":"ko","isAccessibleForFree":true,"educationalLevel":"일반·대학 학부","about":["자동차 공학","전기차","자율주행"],"image":"https://carbook.euiyun.com/og.png","hasPart":[{"@type":"Chapter","position":1,"name":"자동차의 전체 그림","url":"https://carbook.euiyun.com/chapters/overview.html"},{"@type":"Chapter","position":2,"name":"달리는 힘, 막는 힘","url":"https://carbook.euiyun.com/chapters/dynamics.html"},{"@type":"Chapter","position":3,"name":"내연기관","url":"https://carbook.euiyun.com/chapters/engine.html"},{"@type":"Chapter","position":4,"name":"흡기·연료·점화·배기","url":"https://carbook.euiyun.com/chapters/combustion.html"},{"@type":"Chapter","position":5,"name":"클러치와 변속기","url":"https://carbook.euiyun.com/chapters/transmission.html"},{"@type":"Chapter","position":6,"name":"구동계와 디퍼렌셜","url":"https://carbook.euiyun.com/chapters/driveline.html"},{"@type":"Chapter","position":7,"name":"타이어와 접지","url":"https://carbook.euiyun.com/chapters/tire.html"},{"@type":"Chapter","position":8,"name":"브레이크","url":"https://carbook.euiyun.com/chapters/brake.html"},{"@type":"Chapter","position":9,"name":"서스펜션","url":"https://carbook.euiyun.com/chapters/suspension.html"},{"@type":"Chapter","position":10,"name":"조향과 차량 거동","url":"https://carbook.euiyun.com/chapters/steering.html"},{"@type":"Chapter","position":11,"name":"차체와 충돌 안전","url":"https://carbook.euiyun.com/chapters/body.html"},{"@type":"Chapter","position":12,"name":"공기역학","url":"https://carbook.euiyun.com/chapters/aero.html"},{"@type":"Chapter","position":13,"name":"전장과 차량 네트워크","url":"https://carbook.euiyun.com/chapters/electrical.html"},{"@type":"Chapter","position":14,"name":"하이브리드","url":"https://carbook.euiyun.com/chapters/hybrid.html"},{"@type":"Chapter","position":15,"name":"전기차: 모터와 인버터","url":"https://carbook.euiyun.com/chapters/motor.html"},{"@type":"Chapter","position":16,"name":"배터리와 충전","url":"https://carbook.euiyun.com/chapters/battery.html"},{"@type":"Chapter","position":17,"name":"ADAS: 운전자 보조","url":"https://carbook.euiyun.com/chapters/adas.html"},{"@type":"Chapter","position":18,"name":"자율주행의 눈: 센서","url":"https://carbook.euiyun.com/chapters/sensors.html"},{"@type":"Chapter","position":19,"name":"인지와 측위","url":"https://carbook.euiyun.com/chapters/perception.html"},{"@type":"Chapter","position":20,"name":"예측·계획·제어","url":"https://carbook.euiyun.com/chapters/planning.html"},{"@type":"Chapter","position":21,"name":"자율주행 시스템과 안전","url":"https://carbook.euiyun.com/chapters/autonomy.html"},{"@type":"Chapter","position":22,"name":"용어집 & 종합 퀴즈","url":"https://carbook.euiyun.com/chapters/glossary.html"}],"description":"엔진과 변속기에서 전기차, 자율주행까지 — 슬라이더를 움직이고 3D 모델을 돌려 보며 배우는 인터랙티브 자동차 교과서. 22개 챕터, 약 150개 시뮬레이터."}]}</script>
+<link rel="stylesheet" href="css/style.css">
+<script src="js/common.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+  .chain { overflow-x: auto; }
+  .chain svg { min-width: 760px; }
+  .paths { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .path { padding: 18px 20px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-elev); }
+  .path h3 { margin: 0 0 6px; font-size: 17px; }
+  .path p { margin: 0 0 10px; color: var(--text-dim); font-size: 14.5px; }
+  .path .steps { display: flex; flex-wrap: wrap; gap: 6px; }
+  .path .steps a { font-family: var(--mono); font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+  .path .steps a:hover { text-decoration: none; filter: brightness(1.1); }
+  .numbers { display: grid; gap: 1px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .numbers div { background: var(--bg-elev); padding: 18px 20px; }
+  .numbers b { display: block; font-family: var(--mono); font-size: 26px; letter-spacing: -0.02em; color: var(--text); }
+  .numbers span { color: var(--text-dim); font-size: 14px; }
+  .hero-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+  .hero-badges span { font-size: 13px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-dim); background: var(--bg-elev); }
+  .hero-seg { position: absolute; left: 12px; top: 12px; z-index: 2; }
+  .part-h { margin: 36px 0 14px; font-size: 13px; font-family: var(--mono); letter-spacing: .12em; color: var(--text-faint); text-transform: uppercase; }
+  .part-h:first-child { margin-top: 0; }
+  .part-h b { color: var(--accent); margin-right: 8px; }
+</style>
+</head>
+<body data-root="">
+
+<section class="home-hero">
+  <div class="inner">
+    <div>
+      <div class="eyebrow">Interactive Automotive Textbook</div>
+      <h1>연료 한 방울에서<br><span class="grad">스스로 달리는 차까지</span></h1>
+      <p>가속 페달을 밟으면 차 안에서는 무슨 일이 일어날까요? 엔진과 변속기, 타이어와 서스펜션, 모터와 배터리, 그리고 스스로 보고 판단하는 자율주행까지 — 직접 슬라이더를 움직이고 3D 모델을 돌려 보며 배우는 자동차 교과서입니다.</p>
+      <div class="cta">
+        <a class="primary" href="chapters/overview.html">1장부터 시작하기 →</a>
+        <a class="ghost" href="chapters/engine.html">엔진 돌려 보기</a>
+      </div>
+      <div class="hero-badges">
+        <span>22개 챕터</span><span>약 150개 시뮬레이터</span><span>3D 구조 모델</span><span>기초부터 자율주행까지</span>
+      </div>
+    </div>
+    <div class="hero-3d" id="hero3d">
+      <div class="seg hero-seg" id="hero-mode"><button data-value="ice" class="on">내연기관</button><button data-value="ev">전기차</button></div>
+      <span class="hint">드래그해서 돌려 보세요 · 차체 속 동력 계통이 보입니다</span>
+    </div>
+  </div>
+</section>
+
+<section class="home-section">
+  <h2>자동차는 무엇을 하는가</h2>
+  <p class="sub">한 문장으로: <b>저장된 에너지를 바퀴의 힘으로 바꾸고, 그 힘을 노면에 전해 원하는 곳으로 간다.</b> 그 과정이 이 교과서의 목차입니다.</p>
+  <figure class="diagram chain">
+    <svg viewBox="0 0 1100 250" role="img" aria-label="자동차의 에너지와 정보 흐름">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker>
+      </defs>
+      <!-- energy -->
+      <g transform="translate(20,40)">
+        <rect width="120" height="120" rx="12" class="f-surface"/>
+        <rect x="24" y="34" width="34" height="56" rx="5" class="f-acc-soft"/>
+        <path d="M58 50 h10 v34 a6 6 0 0 0 12 0 v-30 l-8 -8" class="s-acc"/>
+        <rect x="72" y="62" width="30" height="30" rx="4" class="f-acc2-soft"/>
+        <path d="M90 68 l-8 11 h7 l-3 9 l9 -12 h-7 z" fill="var(--accent-2)"/>
+        <text x="60" y="148" text-anchor="middle" class="t">에너지 저장</text>
+        <text x="60" y="166" text-anchor="middle" class="t-mono">연료 · 배터리 Ch.16</text>
+      </g>
+      <path d="M150 100 H185" class="s-acc" marker-end="url(#arr)"/>
+      <!-- power source -->
+      <g transform="translate(195,40)">
+        <rect width="120" height="120" rx="12" class="f-elev"/>
+        <rect x="38" y="26" width="44" height="48" rx="4" class="f-surface"/>
+        <rect x="42" y="40" width="36" height="16" rx="2" class="f-acc"/>
+        <line x1="60" y1="56" x2="72" y2="88" class="s-line"/>
+        <circle cx="60" cy="92" r="16" class="f-acc-soft"/>
+        <circle cx="72" cy="88" r="3.500" class="f-acc"/>
+        <text x="60" y="148" text-anchor="middle" class="t">동력원</text>
+        <text x="60" y="166" text-anchor="middle" class="t-mono">엔진 · 모터 Ch.03–04, 14–15</text>
+      </g>
+      <path d="M325 100 H360" class="s-acc" marker-end="url(#arr)"/>
+      <!-- transmission -->
+      <g transform="translate(370,40)">
+        <rect width="120" height="120" rx="12" class="f-elev"/>
+        <circle cx="44" cy="66" r="24" class="f-acc-soft"/>
+        <circle cx="86" cy="66" r="14" class="f-acc2-soft"/>
+        <circle cx="44" cy="66" r="4" class="f-acc"/><circle cx="86" cy="66" r="3" fill="var(--accent-2)"/>
+        <text x="60" y="148" text-anchor="middle" class="t">변속 · 구동계</text>
+        <text x="60" y="166" text-anchor="middle" class="t-mono">Ch.05–06</text>
+      </g>
+      <path d="M500 100 H535" class="s-acc" marker-end="url(#arr)"/>
+      <!-- tire -->
+      <g transform="translate(545,40)">
+        <rect width="120" height="120" rx="12" class="f-elev"/>
+        <circle cx="60" cy="62" r="34" fill="none" stroke="var(--text)" stroke-width="10"/>
+        <circle cx="60" cy="62" r="12" class="f-surface"/>
+        <line x1="14" y1="104" x2="106" y2="104" class="s-axis"/>
+        <path d="M60 104 h34" class="s-acc" marker-end="url(#arr)"/>
+        <text x="60" y="148" text-anchor="middle" class="t">타이어 · 섀시</text>
+        <text x="60" y="166" text-anchor="middle" class="t-mono">Ch.07–10</text>
+      </g>
+      <path d="M675 100 H710" class="s-acc" marker-end="url(#arr)"/>
+      <!-- motion -->
+      <g transform="translate(720,40)">
+        <rect width="150" height="120" rx="12" class="f-surface"/>
+        <path d="M22 84 v-12 q0 -8 8 -9 l14 -3 l12 -15 q4 -5 10 -5 h24 q7 0 11 6 l9 14 l10 3 q8 2 8 10 v11 z" class="f-acc"/>
+        <circle cx="48" cy="86" r="11" fill="var(--text)"/><circle cx="104" cy="86" r="11" fill="var(--text)"/>
+        <path d="M6 50 h-0 M4 46 H24 M0 60 H16 M6 74 H18" stroke="var(--text-faint)" stroke-width="2" stroke-linecap="round"/>
+        <text x="75" y="148" text-anchor="middle" class="t">달리는 차 · 저항</text>
+        <text x="75" y="166" text-anchor="middle" class="t-mono">Ch.02, 11–12</text>
+      </g>
+      <!-- brain -->
+      <g transform="translate(920,40)">
+        <rect width="160" height="120" rx="12" class="f-elev"/>
+        <rect x="52" y="34" width="56" height="48" rx="6" class="f-acc2-soft"/>
+        <g stroke="var(--accent-2)" stroke-width="2"><path d="M62 34 v-10 M80 34 v-10 M98 34 v-10 M62 82 v10 M80 82 v10 M98 82 v10 M52 46 h-10 M52 70 h-10 M108 46 h10 M108 70 h10"/></g>
+        <text x="80" y="63" text-anchor="middle" class="t-mono">ECU</text>
+        <text x="80" y="148" text-anchor="middle" class="t">전장 · 자율주행</text>
+        <text x="80" y="166" text-anchor="middle" class="t-mono">Ch.13, 17–21</text>
+      </g>
+      <path d="M1000 36 V14 H255 V36" stroke="var(--accent-2)" stroke-width="1.6" fill="none" stroke-dasharray="5 4"/>
+      <path d="M605 14 V36 M430 14 V36" stroke="var(--accent-2)" stroke-width="1.6" fill="none" stroke-dasharray="5 4"/>
+      <text x="628" y="10" text-anchor="middle" class="t-dim" style="fill:var(--accent-2)">센서로 보고, 계산하고, 명령한다 (제어 신호)</text>
+      <text x="550" y="238" text-anchor="middle" class="t-dim">에너지 → 회전력(토크) → 기어로 증폭 → 접지면의 구동력 → 저항을 이기고 가속 · 그 위를 전자 제어와 소프트웨어가 덮는다</text>
+    </svg>
+    <figcaption><b>그림 0-1.</b> 자동차의 에너지 흐름(실선)과 제어 신호 흐름(점선). 각 블록이 해당 챕터와 연결됩니다.</figcaption>
+  </figure>
+</section>
+
+<section class="home-section" style="padding-top:0">
+  <h2>숫자로 보는 자동차</h2>
+  <p class="sub">이 교과서를 끝내면 아래 숫자가 어디서 나오는지, 서로 어떻게 얽혀 있는지 설명할 수 있게 됩니다.</p>
+  <div class="numbers">
+    <div><b>엽서 4장</b><span>차와 도로가 닿는 면적. 가속·제동·선회의 모든 힘이 여기를 지난다</span></div>
+    <div><b>~40 %</b><span>잘 만든 가솔린 엔진의 최고 열효율. 나머지는 열로 나간다</span></div>
+    <div><b>90 %+</b><span>전기 모터의 효율. 0 rpm부터 최대 토크를 낸다</span></div>
+    <div><b>v³</b><span>공기 저항을 이기는 데 필요한 출력은 속도의 세제곱에 비례</span></div>
+    <div><b>~30 ms</b><span>충돌 감지 후 에어백이 다 펴지기까지 걸리는 시간</span></div>
+    <div><b>100개+</b><span>요즘 차 한 대에 들어가는 전자 제어 장치(ECU)의 수</span></div>
+  </div>
+</section>
+
+<section class="home-section" style="padding-top:0">
+  <h2>전체 챕터</h2>
+  <p class="sub">순서대로 읽어도 좋고, 관심 있는 장부터 골라 읽어도 됩니다. 각 장은 개념 → 그림 → 수식 → 시뮬레이터 → 퀴즈 순서로 구성됩니다.</p>
+  <div id="chparts"></div>
+</section>
+
+<section class="home-section" style="padding-top:0">
+  <h2>추천 학습 경로</h2>
+  <p class="sub">관심사에 따라 이렇게 읽어 보세요.</p>
+  <div class="paths">
+    <div class="path"><h3>입문 · 전체 그림</h3><p>자동차가 처음이라면. 차가 달리고 돌고 서는 원리의 뼈대를 잡는다.</p><div class="steps"><a href="chapters/overview.html">01</a><a href="chapters/dynamics.html">02</a><a href="chapters/engine.html">03</a><a href="chapters/transmission.html">05</a><a href="chapters/tire.html">07</a><a href="chapters/brake.html">08</a></div></div>
+    <div class="path"><h3>파워트레인</h3><p>엔진과 변속기, 구동계. 연료의 에너지가 바퀴의 힘이 되기까지.</p><div class="steps"><a href="chapters/engine.html">03</a><a href="chapters/combustion.html">04</a><a href="chapters/transmission.html">05</a><a href="chapters/driveline.html">06</a><a href="chapters/hybrid.html">14</a></div></div>
+    <div class="path"><h3>섀시 · 차량 동역학</h3><p>운전의 재미와 안정성이 어디서 오는가. 타이어에서 시작해 차 전체의 거동으로.</p><div class="steps"><a href="chapters/dynamics.html">02</a><a href="chapters/tire.html">07</a><a href="chapters/brake.html">08</a><a href="chapters/suspension.html">09</a><a href="chapters/steering.html">10</a><a href="chapters/aero.html">12</a></div></div>
+    <div class="path"><h3>전기차</h3><p>모터, 인버터, 배터리, 충전. 내연기관과 무엇이 같고 무엇이 다른가.</p><div class="steps"><a href="chapters/overview.html">01</a><a href="chapters/dynamics.html">02</a><a href="chapters/electrical.html">13</a><a href="chapters/hybrid.html">14</a><a href="chapters/motor.html">15</a><a href="chapters/battery.html">16</a></div></div>
+    <div class="path"><h3>자율주행</h3><p>SW/AI 전공. 차의 움직임을 이해한 뒤 센서, 인지, 계획, 안전으로.</p><div class="steps"><a href="chapters/steering.html">10</a><a href="chapters/electrical.html">13</a><a href="chapters/adas.html">17</a><a href="chapters/sensors.html">18</a><a href="chapters/perception.html">19</a><a href="chapters/planning.html">20</a><a href="chapters/autonomy.html">21</a></div></div>
+    <div class="path"><h3>안전</h3><p>사고를 견디는 차에서 사고를 피하는 차로. 수동 안전과 능동 안전.</p><div class="steps"><a href="chapters/tire.html">07</a><a href="chapters/brake.html">08</a><a href="chapters/body.html">11</a><a href="chapters/adas.html">17</a><a href="chapters/autonomy.html">21</a></div></div>
+  </div>
+</section>
+
+<section class="home-section" style="padding-top:0">
+  <h2>이 사이트 사용법</h2>
+  <div class="flow">
+    <div><b>읽기</b>개념과 직관을 먼저. 영어 용어는 괄호로 병기합니다.</div>
+    <div><b>보기</b>도해와 3D 모델로 부품의 생김새와 위치를 머릿속에 그립니다.</div>
+    <div><b>만지기</b>슬라이더를 끝까지 움직이고 그림을 직접 끌어 보세요. 극단에서 배웁니다.</div>
+    <div><b>계산하기</b>예제 수치를 직접 따라가며 감을 잡습니다.</div>
+    <div><b>확인하기</b>장마다 퀴즈, 마지막 장에서 종합 퀴즈로 마무리합니다.</div>
+  </div>
+</section>
+
+<script>
+(function () {
+  // chapter cards grouped by part
+  const PARTS = [
+    ["기초", ["overview", "dynamics"]],
+    ["파워트레인", ["engine", "combustion", "transmission", "driveline"]],
+    ["섀시", ["tire", "brake", "suspension", "steering"]],
+    ["차체와 전장", ["body", "aero", "electrical"]],
+    ["전동화", ["hybrid", "motor", "battery"]],
+    ["자율주행", ["adas", "sensors", "perception", "planning", "autonomy"]],
+    ["정리", ["glossary"]],
+  ];
+  const tagName = { sim: "시뮬레이터", "3d": "3D" };
+  const bySlug = Object.fromEntries(CB.CHAPTERS.map((c) => [c.slug, c]));
+  document.getElementById("chparts").innerHTML = PARTS.map(([name, slugs], i) => `
+    <h3 class="part-h"><b>PART ${i + 1}</b>${name}</h3>
+    <div class="ch-grid">${slugs.map((s) => bySlug[s]).map((c) => `
+      <a class="ch-card" href="chapters/${c.slug}.html">
+        <span class="num">CHAPTER ${c.num}</span>
+        <h3>${c.title}</h3>
+        <p>${c.desc}</p>
+        <span class="tags">${c.tags.map((t) => `<span class="${t === "sim" ? "sim" : t === "3d" ? "d3" : ""}">${tagName[t] || t}</span>`).join("")}</span>
+      </a>`).join("")}</div>`).join("");
+
+  // hero 3D: see-through car with powertrain, rolling on a moving road
+  const el = document.getElementById("hero3d");
+  const T = CB.three(el, { camera: [4.3, 2.5, 5.2], target: [0, 0.55, 0], fov: 36, autoRotate: true, autoRotateSpeed: 0.5, pan: false, minDistance: 5, maxDistance: 16 });
+  if (!T) return;
+  const { THREE, scene } = T, C = CB.CAR;
+  const car = CB.car3d(T, { opacity: 0.22 });
+
+  // road with moving dashes
+  const road = new THREE.Mesh(new THREE.PlaneGeometry(26, 5.5), T.material(0x4a5266, { roughness: 0.95, transparent: true, opacity: 0.35 }));
+  road.rotation.x = -Math.PI / 2; road.position.y = -0.01; scene.add(road);
+  const dashes = [];
+  const dashGeo = new THREE.PlaneGeometry(1.4, 0.12), dashMat = new THREE.MeshBasicMaterial({ color: 0xe8ecf4, transparent: true, opacity: 0.7 });
+  for (const z of [-2.1, 2.1]) for (let i = 0; i < 7; i++) {
+    const d = new THREE.Mesh(dashGeo, dashMat); d.rotation.x = -Math.PI / 2; d.position.set(-12 + i * 4, 0.001, z); scene.add(d); dashes.push(d);
+  }
+
+  const box = (w, h, d, color, x, y, z, o) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), T.material(color, o)); m.position.set(x, y, z); return m; };
+  const shaftX = (len, r, color, x, y, z) => { const g = new THREE.CylinderGeometry(r, r, len, 16); g.rotateZ(Math.PI / 2); const m = new THREE.Mesh(g, T.material(color, { metalness: 0.7, roughness: 0.35 })); m.position.set(x, y, z); return m; };
+  const shaftZ = (len, r, color, x, y, z) => { const g = new THREE.CylinderGeometry(r, r, len, 16); g.rotateX(Math.PI / 2); const m = new THREE.Mesh(g, T.material(color, { metalness: 0.7, roughness: 0.35 })); m.position.set(x, y, z); return m; };
+  const mark = (parent, r, len) => { const m = new THREE.Mesh(new THREE.BoxGeometry(len * 0.5, r * 0.5, r * 2.3), T.material(0xf0d34a)); parent.add(m); };
+
+  // ICE (front engine, rear drive)
+  const ice = new THREE.Group(); car.group.add(ice);
+  const engine = box(0.62, 0.52, 0.56, 0xdd5a16, 1.42, 0.68, 0, { metalness: 0.4, roughness: 0.4 }); ice.add(engine);
+  const head = box(0.56, 0.14, 0.48, 0x9aa3b5, 1.42, 1.0, 0, { metalness: 0.6 }); ice.add(head);
+  ice.add(box(0.5, 0.36, 0.36, 0x7d8698, 0.84, 0.56, 0, { metalness: 0.6 }));
+  const prop = shaftX(1.72, 0.05, 0xb8c0cf, -0.28, 0.42, 0); mark(prop, 0.05, 1.72); ice.add(prop);
+  const diff = new THREE.Mesh(new THREE.SphereGeometry(0.2, 20, 14), T.material(0x7d8698, { metalness: 0.6 })); diff.position.set(C.axR, C.r, 0); ice.add(diff);
+  const axle = shaftZ(C.track - 0.2, 0.04, 0xb8c0cf, C.axR, C.r, 0); ice.add(axle);
+  ice.add(box(0.7, 0.26, 1.0, 0x3d8f6a, -0.75, 0.5, 0, { transparent: true, opacity: 0.85 }));
+  const exhaust = shaftX(3.3, 0.045, 0x8a6f52, -0.4, 0.3, -0.42); ice.add(exhaust);
+
+  // EV (skateboard battery, rear motor)
+  const ev = new THREE.Group(); car.group.add(ev); ev.visible = false;
+  ev.add(box(2.0, 0.14, 1.34, 0x1f74d1, 0, 0.33, 0, { metalness: 0.3, roughness: 0.4 }));
+  for (let i = 0; i < 7; i++) ev.add(box(0.03, 0.15, 1.3, 0x9cc4f5, -0.84 + i * 0.28, 0.335, 0));
+  const motorGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.42, 24); motorGeo.rotateX(Math.PI / 2);
+  const motor = new THREE.Mesh(motorGeo, T.material(0xdd5a16, { metalness: 0.5, roughness: 0.35 })); motor.position.set(C.axR, C.r + 0.03, -0.12); ev.add(motor);
+  ev.add(box(0.3, 0.16, 0.36, 0x7d8698, C.axR, C.r + 0.32, -0.12, { metalness: 0.6 }));
+  ev.add(box(0.26, 0.3, 0.2, 0x9aa3b5, C.axR, C.r, 0.2, { metalness: 0.6 }));
+  ev.add(shaftZ(C.track - 0.2, 0.04, 0xb8c0cf, C.axR, C.r, 0));
+  const hv = shaftX(1.0, 0.025, 0xff8a1f, -0.85, 0.42, -0.3); ev.add(hv);
+
+  const L = {
+    ice: [T.label("엔진", [1.42, 1.25, 0]), T.label("변속기", [0.84, 0.95, 0.5]), T.label("프로펠러 샤프트", [-0.2, 0.2, 0.6]), T.label("디퍼렌셜", [C.axR, 0.75, 0.45]), T.label("연료 탱크", [-0.75, 0.85, -0.6])],
+    ev: [T.label("배터리 팩", [0.3, 0.6, 0.75]), T.label("모터", [C.axR, 0.3, -0.6]), T.label("인버터", [C.axR, 0.95, -0.2]), T.label("감속기", [C.axR - 0.1, 0.5, 0.65])],
+  };
+  Object.values(L).flat().forEach((l) => (l.obj = car.group));
+  const setMode = (m) => {
+    ice.visible = m === "ice"; ev.visible = m === "ev";
+    L.ice.forEach((l) => l.setVisible(m === "ice")); L.ev.forEach((l) => l.setVisible(m === "ev"));
+  };
+  CB.seg("hero-mode", setMode); setMode("ice");
+
+  const v = 9; // m/s
+  let dist = 0;
+  T.onFrame((dt, t) => {
+    dist += v * dt;
+    car.wheels.forEach((w) => (w.spin.rotation.z = -dist / C.r));
+    prop.rotation.x = (dist / C.r) * 3.2;
+    motor.rotation.z = (-dist / C.r) * 9;
+    engine.position.y = 0.68 + Math.sin(t * 40) * 0.004;
+    dashes.forEach((d) => { d.position.x -= v * dt; if (d.position.x < -13) d.position.x += 28; });
+    car.group.position.y = Math.sin(t * 2.3) * 0.008;
+  });
+})();
+</script>
+</body>
+</html>

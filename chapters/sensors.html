@@ -1,0 +1,1306 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>자율주행의 눈: 센서 · CarBook</title>
+<meta name="description" content="카메라, 레이더, 라이다, 초음파, GNSS·IMU가 무엇을 어떻게 재는지 핀홀 투영, FMCW 처프, ToF 스캔, 추측 항법 시뮬레이터로 직접 만져 보며 원리와 한계, 센서 배치를 익힌다.">
+<link rel="canonical" href="https://carbook.euiyun.com/chapters/sensors.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="CarBook">
+<meta property="og:title" content="자율주행의 눈: 센서 · CarBook">
+<meta property="og:description" content="카메라, 레이더, 라이다, 초음파, GNSS·IMU가 무엇을 어떻게 재는지 핀홀 투영, FMCW 처프, ToF 스캔, 추측 항법 시뮬레이터로 직접 만져 보며 원리와 한계, 센서 배치를 익힌다.">
+<meta property="og:url" content="https://carbook.euiyun.com/chapters/sensors.html">
+<meta property="og:image" content="https://carbook.euiyun.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TechArticle","headline":"자율주행의 눈: 센서","name":"자율주행의 눈: 센서 · CarBook","url":"https://carbook.euiyun.com/chapters/sensors.html","mainEntityOfPage":"https://carbook.euiyun.com/chapters/sensors.html","inLanguage":"ko","isAccessibleForFree":true,"learningResourceType":"interactive textbook chapter","position":18,"image":"https://carbook.euiyun.com/og.png","dateModified":"2026-10-02","isPartOf":{"@type":"Book","@id":"https://carbook.euiyun.com/#book","name":"CarBook — 인터랙티브 자동차 교과서","url":"https://carbook.euiyun.com/"},"publisher":{"@type":"Organization","name":"CarBook","url":"https://carbook.euiyun.com/"},"description":"카메라, 레이더, 라이다, 초음파, GNSS·IMU가 무엇을 어떻게 재는지 핀홀 투영, FMCW 처프, ToF 스캔, 추측 항법 시뮬레이터로 직접 만져 보며 원리와 한계, 센서 배치를 익힌다."},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"CarBook","item":"https://carbook.euiyun.com/"},{"@type":"ListItem","position":2,"name":"18 자율주행의 눈: 센서","item":"https://carbook.euiyun.com/chapters/sensors.html"}]}]}</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="../css/style.css">
+<script src="../js/common.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+  .sn-legend i { height: 10px; width: 10px; border-radius: 3px; }
+  .sn-info { padding: 12px 18px; border-top: 1px solid var(--border); font-size: 14.5px; line-height: 1.6; color: var(--text-dim); min-height: 3.2em; }
+  .sn-info b { color: var(--text); }
+  .sn-checks { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sn-checks .check i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+</style>
+</head>
+<body data-chapter="sensors">
+<main class="chapter">
+  <header class="chapter-hero">
+    <div class="eyebrow">Chapter 18</div>
+    <h1>자율주행의 눈: 센서</h1>
+    <p class="lead">사람은 두 눈과 귀, 그리고 몸으로 느끼는 가속으로 운전한다. 자율주행차는 그 일을 카메라, 레이더, 라이다, 초음파, 위성 항법 수신기와 관성 센서로 나누어 맡긴다. 센서마다 쓰는 파동이 다르고, 그래서 잘 재는 양과 실패하는 조건도 다르다. 이 장은 각 센서가 무엇을 어떻게 재는지를 수식 한두 줄과 시뮬레이터로 확인하고, 왜 한 종류만으로는 부족한지를 수치로 따져 본다.</p>
+    <ul class="objectives">
+      <li>카메라·레이더·라이다·초음파가 쓰는 파동과 그에 따른 장단점을 설명한다.</li>
+      <li>핀홀 모델로 물체가 영상에서 몇 픽셀을 차지하는지, 스테레오 거리 오차가 왜 거리의 제곱으로 커지는지 계산한다.</li>
+      <li>FMCW 레이더가 비트 주파수로 거리를, 도플러로 속도를 재는 원리와 거리 분해능 \(c/2B\)를 이해한다.</li>
+      <li>라이다의 ToF 측거와 각 분해능이 거리별 포인트 밀도를 어떻게 정하는지 계산한다.</li>
+      <li>GNSS와 IMU의 오차 성질이 왜 서로 보완적인지, 융합이 무엇을 하는지 설명한다.</li>
+      <li>센서 배치, 캘리브레이션, 오염 대책이 왜 센서 성능만큼 중요한지 이해한다.</li>
+    </ul>
+  </header>
+
+  <!-- =============================================================== 1 -->
+  <section id="why">
+    <h2>왜 여러 종류의 센서가 필요한가</h2>
+    <p><a href="adas.html">17장</a>의 ACC와 AEB는 앞차까지의 거리와 상대 속도만 알면 되었다. 자율주행은 훨씬 많은 것을 알아야 한다. 주변 물체가 <b>어디에</b>(거리와 방향) 있고, <b>얼마나 빨리</b> 움직이며, 그것이 <b>무엇</b>인지(차, 보행자, 신호등의 색, 차선), 그리고 <b>내 차가 어디에</b> 있는지다. 한 가지 센서로 이 넷을 모든 날씨와 조도에서 재는 방법은 아직 없다.</p>
+    <p>이유는 물리에 있다. 센서는 결국 파동을 받아 그 세기, 도달 시간, 주파수 변화, 들어온 방향을 재는 장치다. 파장이 짧으면 작은 구경으로도 방향을 세밀하게 가를 수 있지만, 빗방울이나 안개 입자처럼 파장과 비슷하거나 더 큰 입자에 쉽게 산란된다. 파장이 길면 악천후를 잘 뚫지만 각 분해능이 떨어진다. 구경 \(D\)인 센서의 각 분해능 한계는 대략 \(\theta \approx \lambda / D\)다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 270" role="img" aria-label="센서가 사용하는 파동의 파장 비교">
+        <line x1="40" y1="150" x2="730" y2="150" class="s-axis" stroke-width="2"/>
+        <g class="t-mono" text-anchor="middle">
+          <text x="80" y="172">100 nm</text><text x="210" y="172">1 µm</text><text x="340" y="172">10 µm</text>
+          <text x="470" y="172">1 mm</text><text x="600" y="172">10 cm</text><text x="700" y="172">1 m</text>
+        </g>
+        <g stroke="var(--axis)"><line x1="80" y1="145" x2="80" y2="155"/><line x1="210" y1="145" x2="210" y2="155"/><line x1="340" y1="145" x2="340" y2="155"/><line x1="470" y1="145" x2="470" y2="155"/><line x1="600" y1="145" x2="600" y2="155"/><line x1="700" y1="145" x2="700" y2="155"/></g>
+        <rect x="158" y="96" width="34" height="46" rx="5" fill="var(--blue)" opacity="0.75"/>
+        <text x="175" y="60" class="t" text-anchor="middle" font-weight="700">카메라</text>
+        <text x="175" y="80" class="t-dim" text-anchor="middle">400~700 nm</text>
+        <rect x="201" y="96" width="6" height="46" fill="var(--green)"/>
+        <rect x="232" y="96" width="6" height="46" fill="var(--green)"/>
+        <text x="262" y="60" class="t" text-anchor="middle" font-weight="700">라이다</text>
+        <text x="270" y="80" class="t-dim" text-anchor="middle">905 · 1550 nm</text>
+        <rect x="543" y="96" width="8" height="46" fill="var(--warn)"/>
+        <text x="520" y="60" class="t" text-anchor="middle" font-weight="700">레이더 77 GHz</text>
+        <text x="520" y="80" class="t-dim" text-anchor="middle">3.9 mm</text>
+        <rect x="634" y="96" width="8" height="46" fill="var(--accent-2)"/>
+        <text x="660" y="60" class="t" text-anchor="middle" font-weight="700">GNSS L1</text>
+        <text x="660" y="80" class="t-dim" text-anchor="middle">19 cm</text>
+        <rect x="576" y="196" width="8" height="30" fill="var(--accent)"/>
+        <text x="594" y="208" class="t" font-weight="700">초음파 48 kHz</text>
+        <text x="594" y="226" class="t-dim">음파, 파장 약 7 mm</text>
+        <text x="40" y="208" class="t-acc">← 짧은 파장: 각 분해능 좋음, 비·안개에 약함</text>
+        <text x="40" y="232" class="t-acc">긴 파장: 악천후 투과, 각 분해능 낮음 →</text>
+        <text x="40" y="256" class="t-dim">빗방울 0.5~5 mm, 안개 입자 1~20 µm</text>
+      </svg>
+      <figcaption><b>그림 18-1.</b> 센서별 파장(로그 눈금). 카메라와 라이다는 수백 nm~1.5 µm의 빛을, 레이더는 mm 파장의 전파를 쓴다. 초음파는 전자기파가 아닌 음파이지만 파장은 레이더와 비슷한 크기다.</figcaption>
+    </figure>
+
+    <p>측정 방식도 갈린다. <b>수동 센서</b>인 카메라는 햇빛이나 전조등이 물체에서 반사된 빛을 받기만 하므로 싸고 해상도가 높지만, 거리를 직접 재지 못하고 조명에 좌우된다. <b>능동 센서</b>인 레이더·라이다·초음파는 스스로 파동을 쏘고 돌아오는 시간을 재므로 거리를 직접 얻고 밤낮을 가리지 않는다. 대신 송신 출력, 안구 안전, 간섭이라는 제약이 붙는다.</p>
+
+    <div class="table-wrap"><table>
+      <thead><tr><th>센서</th><th>직접 재는 양</th><th>대표 거리</th><th>강점</th><th>약점</th></tr></thead>
+      <tbody>
+        <tr><td>카메라</td><td>방향별 밝기와 색</td><td>약 50~250 m</td><td>색·글자·차선, 높은 각 분해능, 저렴</td><td>거리 간접 추정, 역광·야간·악천후</td></tr>
+        <tr><td>레이더</td><td>거리, 시선 속도, 방위각</td><td>약 80~300 m</td><td>속도 직접 측정, 비·안개·먼지 투과</td><td>낮은 각 분해능, 물체 분류 어려움</td></tr>
+        <tr><td>라이다</td><td>방향별 거리, 반사 강도</td><td>약 100~250 m</td><td>cm급 3D 형상, 조명 무관</td><td>가격, 비·안개·오염, 검은 물체</td></tr>
+        <tr><td>초음파</td><td>가장 가까운 물체까지 거리</td><td>약 0.2~5 m</td><td>아주 저렴, 근거리 정밀</td><td>짧은 거리, 느린 갱신, 바람·온도</td></tr>
+        <tr><td>GNSS</td><td>지구상 절대 위치·시각</td><td>—</td><td>누적되지 않는 절대 기준</td><td>터널·빌딩 숲, 수 m 오차</td></tr>
+        <tr><td>IMU·휠 속도</td><td>가속도, 각속도, 바퀴 회전</td><td>—</td><td>높은 갱신율, 외부 신호 불필요</td><td>적분 오차가 시간에 따라 누적</td></tr>
+      </tbody>
+    </table></div>
+
+    <p>아래 3D 그림은 대표적인 센서 배치를 실제 축척으로 보여 준다. 초음파가 덮는 범위는 차 주변 몇 m뿐이고, 전방 레이더와 망원 카메라는 200 m 넘게 뻗는다. 옆 차로의 차를 뒤에서 앞으로 옮겨 가며 어떤 센서가 차례로 그 차를 넘겨받는지 확인해 보자.</p>
+
+    <div class="sim" id="sim-fov">
+      <div class="sim-head"><span class="sim-tag three">3D</span><h3>센서 배치와 시야</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view three" id="v3d-fov"><span class="hint">끌어서 회전 · 휠/핀치로 확대</span></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>센서 종류</span>
+            <div class="sn-checks">
+              <label class="check"><input type="checkbox" id="f-cam" checked><i style="background:#3b82f6"></i> 카메라 8</label>
+              <label class="check"><input type="checkbox" id="f-rad" checked><i style="background:#f59e0b"></i> 레이더 5</label>
+              <label class="check"><input type="checkbox" id="f-lid" checked><i style="background:#10b981"></i> 라이다 1</label>
+              <label class="check"><input type="checkbox" id="f-us" checked><i style="background:#a855f7"></i> 초음파 12</label>
+            </div>
+          </div>
+          <label class="ctrl"><span>옆 차로 차량 위치 <output id="f-x-out"></output></span><input type="range" id="f-x" min="-40" max="230" step="1" value="-12"></label>
+          <div class="ctrl"><span>시점</span><div class="seg" id="f-view"><button data-value="iso" class="on">비스듬히</button><button data-value="near">위 15 m</button><button data-value="mid">위 100 m</button><button data-value="far">위 전체</button></div></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">옆 차를 보는 카메라</span><span class="v" id="o-f-cam">—</span></div>
+        <div class="stat"><span class="k">레이더</span><span class="v" id="o-f-rad">—</span></div>
+        <div class="stat"><span class="k">라이다</span><span class="v" id="o-f-lid">—</span></div>
+        <div class="stat"><span class="k">초음파</span><span class="v" id="o-f-us">—</span></div>
+        <div class="stat"><span class="k">자차 기준 위치</span><span class="v" id="o-f-pos">—</span></div>
+      </div>
+      <div class="sn-info" id="f-info"></div>
+      <div class="sim-note">해볼 것: 카메라만 켜고 옆 차를 −40 m에서 +230 m까지 옮기면 측후방 → 측전방 → 전방 광각 → 주 → 망원 카메라로 시야가 넘어간다. 레이더만 켜면 차 바로 옆(0 m 부근)에서 코너 레이더 둘이 겹치는 것이 보인다. 격자 한 칸은 10 m다. 가려짐(오클루전)은 계산하지 않고 시야각과 거리만으로 판정한다.</div>
+    </div>
+
+    <p>시야가 겹치도록 배치하는 데에는 두 가지 이유가 있다. 한 센서가 놓친 것을 다른 센서가 잡는 <b>보완</b>, 그리고 같은 물체를 서로 다른 원리로 두 번 확인하는 <b>이중화</b>다. 이 둘을 실제로 묶는 방법인 센서 융합은 <a href="perception.html">19장</a>에서 다룬다.</p>
+  </section>
+
+  <!-- =============================================================== 2 -->
+  <section id="camera">
+    <h2>카메라: 방향을 재는 센서</h2>
+    <p>카메라는 렌즈로 빛을 모아 이미지 센서 위에 상을 맺는다. 기하학적으로는 작은 구멍 하나로 빛이 지나가는 <b>핀홀 모델</b><span class="en">(pinhole model)</span>로 충분히 설명된다. 카메라 좌표계에서 \((X, Y, Z)\)에 있는 점(\(Z\)가 광축 방향 거리)은 영상의 다음 픽셀에 찍힌다.</p>
+    <div class="formula">$$u = f\,\frac{X}{Z} + c_x, \qquad v = f\,\frac{Y}{Z} + c_y$$
+      <div class="where">여기서 \(f\)는 픽셀 단위로 나타낸 초점 거리, \((c_x, c_y)\)는 광축이 영상과 만나는 주점이다. 초점 거리를 mm로 알고 있으면 픽셀 피치로 나누어 픽셀 단위로 바꾼다.</div></div>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 250" role="img" aria-label="핀홀 카메라 투영의 닮은 삼각형">
+        <defs><marker id="sn-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--text-dim)"/></marker></defs>
+        <line x1="40" y1="130" x2="730" y2="130" class="s-axis" stroke-dasharray="5 4"/>
+        <text x="726" y="122" class="t-dim" text-anchor="end">광축 Z</text>
+        <line x1="90" y1="40" x2="90" y2="220" class="s-line" stroke-width="3"/>
+        <text x="90" y="30" class="t" text-anchor="middle">영상면</text>
+        <line x1="190" y1="60" x2="190" y2="120" class="s-line" stroke-width="3"/><line x1="190" y1="140" x2="190" y2="200" class="s-line" stroke-width="3"/>
+        <text x="190" y="50" class="t" text-anchor="middle">핀홀</text>
+        <line x1="640" y1="50" x2="640" y2="130" stroke="var(--accent)" stroke-width="5"/>
+        <text x="652" y="94" class="t-acc">Y</text>
+        <text x="640" y="40" class="t" text-anchor="middle">물체</text>
+        <line x1="640" y1="50" x2="90" y2="147.8" stroke="var(--accent)" stroke-width="1.6"/>
+        <line x1="90" y1="130" x2="90" y2="147.8" stroke="var(--accent-2)" stroke-width="5"/>
+        <text x="78" y="146" class="t" text-anchor="end" fill="var(--accent-2)">v</text>
+        <line x1="92" y1="216" x2="188" y2="216" stroke="var(--text-dim)" marker-start="url(#sn-ah)" marker-end="url(#sn-ah)"/>
+        <text x="140" y="236" class="t-mono" text-anchor="middle">f</text>
+        <line x1="192" y1="216" x2="638" y2="216" stroke="var(--text-dim)" marker-start="url(#sn-ah)" marker-end="url(#sn-ah)"/>
+        <text x="415" y="236" class="t-mono" text-anchor="middle">Z</text>
+        <text x="415" y="176" class="t-dim" text-anchor="middle">닮은 삼각형: v / f = Y / Z</text>
+      </svg>
+      <figcaption><b>그림 18-2.</b> 핀홀 투영. 물체 높이 \(Y\)와 거리 \(Z\)가 이루는 삼각형과, 상의 크기 \(v\)와 초점 거리 \(f\)가 이루는 삼각형이 닮음이다. 상은 뒤집혀 맺힌다.</figcaption>
+    </figure>
+
+    <h3>화각, 해상도, 그리고 픽셀 수</h3>
+    <p>가로 픽셀 수가 \(W\)인 카메라의 수평 화각<span class="en">(Field of View, FOV)</span>은 \(\mathrm{FOV} = 2\arctan(W/2f)\)다. 같은 센서에서 초점 거리를 늘리면 화각이 좁아지고 먼 물체가 크게 찍힌다. 높이 \(H\)인 물체가 거리 \(Z\)에서 차지하는 픽셀 높이는 위 식에서 바로 나온다.</p>
+    <div class="formula">$$h_{px} = \frac{f\,H}{Z}, \qquad f = \frac{W}{2\tan(\mathrm{FOV}/2)}$$</div>
+    <p>검출 신경망이 물체를 안정적으로 알아보려면 일정한 픽셀 수가 필요하다. 그래서 "몇 m 앞의 보행자가 몇 픽셀인가"가 카메라 사양을 정하는 출발점이 된다. 넓은 화각과 먼 인식 거리는 같은 픽셀 수로는 동시에 얻을 수 없으므로, 전방에는 화각이 다른 카메라를 두세 대 함께 단다.</p>
+
+    <div class="sim" id="sim-pin">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>핀홀 카메라와 픽셀 수</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-pin"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>수평 화각 <output id="p-fov-out"></output></span><input type="range" id="p-fov" min="20" max="120" step="1" value="50"></label>
+          <div class="ctrl"><span>해상도</span><div class="seg" id="p-res"><button data-value="1280">1.2 MP</button><button data-value="1920" class="on">2 MP</button><button data-value="3840">8 MP</button></div></div>
+          <label class="ctrl"><span>물체 거리 <output id="p-z-out"></output></span><input type="range" id="p-z" min="5" max="300" step="1" value="60"></label>
+          <div class="ctrl"><span>물체</span><div class="seg" id="p-obj"><button data-value="ped" class="on">보행자</button><button data-value="car">차량</button><button data-value="sign">표지판</button></div></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">초점 거리 f</span><span class="v" id="o-p-f">—</span></div>
+        <div class="stat"><span class="k">각 분해능</span><span class="v" id="o-p-ang">—</span></div>
+        <div class="stat"><span class="k">물체 픽셀 높이</span><span class="v" id="o-p-h">—</span></div>
+        <div class="stat"><span class="k">1 픽셀이 덮는 폭</span><span class="v" id="o-p-gsd">—</span></div>
+        <div class="stat"><span class="k">최대 인식 거리</span><span class="v" id="o-p-max">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 2 MP·50°에서 보행자를 150 m로 보내면 높이가 20여 픽셀로 줄어 오른쪽 아래 확대 그림에서 사람 형태가 무너진다. 화각을 30°로 좁히거나 8 MP로 바꾸면 다시 살아난다. 최대 인식 거리는 높이 20 픽셀(표지판은 16 픽셀)이 필요하다고 가정한 값이다. 위쪽 광선 그림은 세로를 과장해 그렸다.</div>
+    </div>
+
+    <div class="callout tip">
+      <strong>계산 예: 100 m 앞 보행자는 몇 픽셀인가</strong>
+      <p>가로 1,920 픽셀, 수평 화각 50°인 카메라의 초점 거리는 \(f = 1920 / (2\tan 25^\circ) \approx 2059\) 픽셀이다. 키 1.7 m인 보행자는 100 m에서 \(2059 \times 1.7 / 100 \approx 35\) 픽셀 높이로 찍힌다. 한 픽셀은 \(100/2059 \approx 4.9\) cm를 덮는다. 같은 화각에서 8 MP(가로 3,840)로 올리면 70 픽셀이 되고, 화각을 30°로 좁힌 8 MP 망원 카메라는 250 m에서도 약 49 픽셀을 확보한다.</p>
+    </div>
+
+    <h3>단안의 거리 모호성과 스테레오</h3>
+    <p>투영식에서 \(X\)와 \(Z\)를 같은 배율로 키워도 \(u\)는 변하지 않는다. 가까운 작은 물체와 먼 큰 물체가 같은 상을 만든다는 뜻이다. 카메라 한 대(단안)는 방향만 재고 거리는 재지 못한다. 실제 시스템은 물체의 알려진 크기, 물체가 지면과 닿는 위치(지면이 평면이라는 가정), 시간에 따른 상의 변화, 학습된 깊이 추정을 써서 거리를 추정하지만 모두 가정에 기대는 간접 측정이다.</p>
+    <p>카메라 두 대를 간격 \(B\)(베이스라인)만큼 떨어뜨려 놓으면 가정 없이 거리를 잴 수 있다. 같은 점이 좌우 영상에서 찍히는 가로 위치의 차이인 <b>시차</b><span class="en">(disparity)</span> \(d\)가 거리에 반비례한다.</p>
+    <div class="formula">$$Z = \frac{f\,B}{d}, \qquad \Delta Z \approx \frac{Z^2}{f\,B}\,\Delta d$$
+      <div class="where">여기서 \(\Delta d\)는 시차 측정 오차(픽셀), \(\Delta Z\)는 그에 따른 거리 오차다. 두 번째 식은 첫 식을 \(d\)로 미분해서 얻는다.</div></div>
+    <p>거리 오차가 \(Z^2\)에 비례한다는 점이 스테레오의 한계를 정한다. 거리가 두 배가 되면 오차는 네 배다. 베이스라인이나 초점 거리를 키우면 줄일 수 있지만 차폭과 화각이 한계를 정한다.</p>
+
+    <div class="sim" id="sim-st">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>스테레오 시차와 거리 오차</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-st"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>베이스라인 B <output id="s-b-out"></output></span><input type="range" id="s-b" min="10" max="120" step="2" value="30"></label>
+          <label class="ctrl"><span>초점 거리 f <output id="s-f-out"></output></span><input type="range" id="s-f" min="500" max="4000" step="100" value="2000"></label>
+          <label class="ctrl"><span>시차 오차 Δd <output id="s-e-out"></output></span><input type="range" id="s-e" min="0.05" max="1" step="0.05" value="0.25"></label>
+          <label class="ctrl"><span>물체 거리 Z <output id="s-z-out"></output></span><input type="range" id="s-z" min="2" max="150" step="1" value="40"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">시차 d</span><span class="v" id="o-s-d">—</span></div>
+        <div class="stat"><span class="k">거리 오차 ΔZ</span><span class="v" id="o-s-dz">—</span></div>
+        <div class="stat"><span class="k">상대 오차</span><span class="v" id="o-s-rel">—</span></div>
+        <div class="stat"><span class="k">시차 1 픽셀이 되는 거리</span><span class="v" id="o-s-fb">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 물체를 20 m → 40 m → 80 m로 보내며 위 그림의 빨간 불확실 구간이 4배씩 길어지는 것을 본다. 베이스라인을 두 배로 늘리면 오차가 절반이 된다(그래프의 점선). 위 그림의 카메라 간격과 가로 방향 각도는 보기 쉽게 과장했다.</div>
+    </div>
+
+    <div class="callout tip">
+      <strong>계산 예: 스테레오로 100 m를 재면</strong>
+      <p>\(f = 2000\) 픽셀, \(B = 0.3\) m이면 \(fB = 600\)이다. 50 m의 시차는 12 픽셀, 100 m는 6 픽셀이다. 시차를 0.25 픽셀 정확도로 잰다면 50 m에서 \(\Delta Z = 50^2 \times 0.25 / 600 \approx 1.0\) m, 100 m에서는 약 4.2 m다. 고속도로에서 필요한 거리의 정확도를 스테레오만으로 얻기 어려운 이유다.</p>
+    </div>
+
+    <h3>밝기의 범위, 깜빡이는 LED, 밤</h3>
+    <p>도로 장면은 밝기 차이가 극단적이다. 터널 출구의 햇빛과 터널 안 그늘, 마주 오는 전조등과 그 옆의 어두운 보행자가 한 화면에 들어온다. 차량용 카메라에는 대표적으로 120 dB 이상(밝기 비 100만 대 1)의 다이내믹 레인지<span class="en">(High Dynamic Range, HDR)</span>가 요구되고, 노출 시간이 다른 영상을 여러 장 합치거나 크기가 다른 광다이오드를 한 화소에 넣는 방식으로 이를 얻는다.</p>
+    <p>LED 신호등과 차량 등화는 눈에 보이지 않는 빠르기(대표적으로 약 90 Hz~수 kHz)로 켜졌다 꺼지는 PWM 방식으로 밝기를 조절한다. 밝은 낮에 노출 시간을 수백 µs로 짧게 잡으면 마침 꺼진 순간만 찍혀 신호등이 꺼진 것처럼 보이거나 프레임마다 깜빡일 수 있다. 이를 막는 화소 설계를 LED 플리커 저감<span class="en">(LED Flicker Mitigation, LFM)</span>이라 한다. 밤에는 광자 수 자체가 부족해 잡음이 늘고, 전조등이 닿지 않는 곳은 보이지 않는다. 근적외선 감도를 높인 센서나 열화상 카메라가 보조 수단으로 쓰인다.</p>
+    <div class="callout">
+      <strong>이미지 센서를 더 깊이 알고 싶다면</strong>
+      <p>화소 구조, 광전 변환, 잡음, HDR, 롤링·글로벌 셔터처럼 이미지 센서 자체의 동작은 자매 교재 <a href="https://sensorbook.euiyun.com/">SensorBook</a>에서 같은 방식의 시뮬레이터와 함께 자세히 다룬다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 3 -->
+  <section id="radar">
+    <h2>레이더: 거리와 속도를 한 번에</h2>
+    <p>차량용 레이더는 76~81 GHz 대역(파장 약 3.9 mm)의 전파를 쓴다. 펄스를 쏘고 왕복 시간을 직접 재려면 1 m 분해능에 수 ns의 시간 정밀도와 높은 순간 출력이 필요하다. 그래서 차량용은 거의 모두 <b>FMCW</b><span class="en">(Frequency-Modulated Continuous Wave, 주파수 변조 연속파)</span> 방식을 쓴다. 시간 대신 주파수 차이를 재는 것이다.</p>
+    <p>송신 주파수를 시간에 따라 직선으로 올리는 신호를 <b>처프</b><span class="en">(chirp)</span>라 한다. 대역폭 \(B\)를 시간 \(T_c\) 동안 훑으면 기울기는 \(S = B/T_c\)다. 거리 \(R\)에서 반사되어 온 신호는 \(\tau = 2R/c\)만큼 늦게 도착하므로, 같은 순간의 송신 주파수보다 \(S\tau\)만큼 낮다. 송신과 수신을 섞으면(믹싱) 이 차이에 해당하는 낮은 주파수의 <b>비트 신호</b>가 남는다.</p>
+    <div class="formula">$$f_b = S\,\tau = \frac{2\,R\,B}{c\,T_c} \quad\Longrightarrow\quad R = \frac{c\,T_c}{2B}\,f_b, \qquad \Delta R = \frac{c}{2B}$$
+      <div class="where">여기서 \(f_b\)는 비트 주파수, \(\Delta R\)은 거리 분해능이다. 처프 하나를 \(T_c\) 동안 관측하면 주파수를 \(1/T_c\)까지 가를 수 있고, 이를 거리로 환산하면 \(c/2B\)가 된다. 분해능은 대역폭만으로 정해진다.</div></div>
+    <p>타깃이 여럿이면 비트 신호는 여러 주파수의 합이 되고, 푸리에 변환(FFT)을 하면 거리마다 봉우리가 하나씩 선다. 두 타깃의 거리 차가 \(c/2B\)보다 작으면 봉우리가 하나로 합쳐진다.</p>
+    <p>속도는 <b>도플러 효과</b>로 잰다. 상대 속도 \(v\)로 다가오는 타깃에서 돌아온 전파는 \(f_d = 2v/\lambda\)만큼 주파수가 높다. 처프 하나 안에서는 이 변화가 너무 작아서, 같은 처프를 수십~수백 번 연속으로 쏘고 처프 사이에 비트 신호의 <b>위상</b>이 얼마나 돌아가는지를 본다. 처프 간격마다 위상은 \(4\pi v T_c/\lambda\)씩 돈다. 처프 방향으로 FFT를 한 번 더 하면 거리–속도 2차원 지도가 나온다.</p>
+    <div class="formula">$$f_d = \frac{2v}{\lambda}, \qquad v_{max} = \frac{\lambda}{4T_c}, \qquad \Delta v = \frac{\lambda}{2\,M\,T_c}$$
+      <div class="where">여기서 \(M\)은 한 프레임의 처프 개수, \(v_{max}\)는 위상이 반 바퀴를 넘지 않는 최대 속도, \(\Delta v\)는 속도 분해능이다.</div></div>
+
+    <div class="sim" id="sim-fm">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>FMCW 레이더: 처프에서 거리–속도 지도까지</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-fm1"></canvas><canvas id="cv-fm2"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>대역폭 B <output id="r-bw-out"></output></span><input type="range" id="r-bw" min="50" max="1000" step="10" value="300"></label>
+          <label class="ctrl"><span>타깃 1 거리 <output id="r-r1-out"></output></span><input type="range" id="r-r1" min="5" max="140" step="0.5" value="40"></label>
+          <label class="ctrl"><span>타깃 1 접근 속도 <output id="r-v1-out"></output></span><input type="range" id="r-v1" min="-35" max="35" step="0.5" value="12"></label>
+          <label class="check"><input type="checkbox" id="r-t2" checked> 타깃 2 (정지 물체)</label>
+          <label class="ctrl"><span>타깃 2 거리 <output id="r-r2-out"></output></span><input type="range" id="r-r2" min="5" max="140" step="0.5" value="46"></label>
+        </div>
+      </div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>송신 처프</span><span><i style="background:var(--accent-2)"></i>타깃 1 수신</span><span><i style="background:var(--warn)"></i>타깃 2 수신</span></div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">거리 분해능 c/2B</span><span class="v" id="o-r-res">—</span></div>
+        <div class="stat"><span class="k">타깃 1 비트 주파수</span><span class="v" id="o-r-fb">—</span></div>
+        <div class="stat"><span class="k">타깃 1 도플러</span><span class="v" id="o-r-fd">—</span></div>
+        <div class="stat"><span class="k">FFT가 찾은 봉우리</span><span class="v" id="o-r-est">—</span></div>
+        <div class="stat"><span class="k">봉우리의 속도</span><span class="v" id="o-r-vest">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 두 타깃을 40 m와 41 m에 두면 300 MHz(분해능 0.5 m)에서는 봉우리 둘이 보이지만 대역폭을 100 MHz(1.5 m)로 줄이면 하나로 합쳐진다. 이때 타깃 1에 속도를 주면 거리 스펙트럼에서는 여전히 하나지만 아래 거리–속도 지도에서는 세로로 갈라진다. 처프 길이 25 µs, 처프당 2,048 샘플, 프레임당 64 처프로 실제 신호를 만들어 직접 구현한 FFT로 계산한다. 위 그림의 수신 지연은 3배 과장했다.</div>
+    </div>
+
+    <div class="callout tip">
+      <strong>계산 예: 100 m 앞, 시속 108 km로 다가오는 차</strong>
+      <p>\(B = 300\) MHz, \(T_c = 50\) µs인 처프의 기울기는 \(S = 6\times10^{12}\) Hz/s다. 100 m의 왕복 지연은 \(\tau = 200/(3\times10^8) \approx 0.67\) µs이므로 비트 주파수는 \(f_b \approx 4.0\) MHz다. 77 GHz 전파를 수 MHz의 신호로 바꿔 재는 셈이다. 거리 분해능은 \(c/2B = 0.5\) m다. 접근 속도 30 m/s의 도플러는 \(2 \times 30 / 0.0039 \approx 15.4\) kHz다. 대역폭을 4 GHz까지 쓰는 근거리 레이더는 분해능이 약 3.75 cm다.</p>
+    </div>
+
+    <h3>방향은 안테나 배열로</h3>
+    <p>레이더 한 채널은 거리와 속도만 준다. 방향은 수신 안테나를 여러 개 나란히 놓고 각 안테나에 도달한 신호의 위상 차로 구한다. 간격 \(d\)인 두 안테나에 각도 \(\theta\)로 들어온 파는 경로 차 \(d\sin\theta\)만큼 늦게 닿는다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 260" role="img" aria-label="안테나 배열의 경로 차와 각도 추정">
+        <line x1="120" y1="200" x2="640" y2="200" class="s-axis" stroke-width="2"/>
+        <g class="f-acc"><rect x="192" y="192" width="16" height="16" rx="3"/><rect x="312" y="192" width="16" height="16" rx="3"/><rect x="432" y="192" width="16" height="16" rx="3"/><rect x="552" y="192" width="16" height="16" rx="3"/></g>
+        <g stroke="var(--accent-2)" stroke-width="1.8">
+          <line x1="200" y1="192" x2="300" y2="19"/><line x1="320" y1="192" x2="420" y2="19"/><line x1="440" y1="192" x2="540" y2="19"/><line x1="560" y1="192" x2="660" y2="19"/>
+        </g>
+        <g stroke="var(--text-dim)" stroke-dasharray="5 4"><line x1="200" y1="192" x2="530" y2="2" opacity="0"/><line x1="320" y1="192" x2="230" y2="140"/><line x1="200" y1="192" x2="200" y2="60"/></g>
+        <line x1="200" y1="192" x2="230" y2="140" stroke="var(--red)" stroke-width="4"/>
+        <text x="160" y="160" class="t" fill="var(--red)" text-anchor="end">d·sinθ</text>
+        <path d="M200 130 A62 62 0 0 1 231 138" fill="none" stroke="var(--text-dim)"/>
+        <text x="216" y="118" class="t-mono" text-anchor="middle">θ</text>
+        <text x="260" y="228" class="t-mono" text-anchor="middle">d = λ/2</text>
+        <text x="200" y="246" class="t-dim" text-anchor="middle">Rx 1</text><text x="320" y="246" class="t-dim" text-anchor="middle">Rx 2</text><text x="440" y="246" class="t-dim" text-anchor="middle">Rx 3</text><text x="560" y="246" class="t-dim" text-anchor="middle">Rx 4</text>
+        <text x="700" y="60" class="t" text-anchor="end">반사파(평면파)</text>
+        <text x="700" y="120" class="t-dim" text-anchor="end">위상 차 Δφ = 2π·d·sinθ / λ</text>
+      </svg>
+      <figcaption><b>그림 18-3.</b> 수신 안테나 배열. 이웃 안테나 사이의 위상 차에서 도래각 \(\theta\)를 구한다. 안테나가 많을수록(배열이 길수록) 가까운 두 방향을 가를 수 있다.</figcaption>
+    </figure>
+
+    <p>안테나 \(N\)개를 반파장 간격으로 놓은 배열의 각 분해능은 대략 \(2/N\) rad이다. 8개면 약 14°, 1°를 얻으려면 100개가 넘게 필요하다. 송신 안테나 여러 개와 수신 안테나 여러 개를 조합해 그 곱만큼의 가상 배열을 만드는 MIMO 기법이 쓰인다(송신 3 × 수신 4 = 가상 12채널). 기존 레이더는 방위각만 쟀지만, 가상 채널을 수백~수천 개로 늘리고 세로 방향으로도 배열해 고도각까지 재는 <b>4D 이미징 레이더</b>가 등장했다. 방위각 분해능 약 1° 수준으로, 육교(지나갈 수 있음)와 정지한 차(지나갈 수 없음)를 구분하고 성긴 포인트 클라우드를 낸다.</p>
+    <div class="callout warn">
+      <strong>레이더가 헷갈리는 것</strong>
+      <p>금속 가드레일, 맨홀 뚜껑, 터널 벽은 강하게 반사하고, 전파가 노면이나 옆 차에 튕겨 돌아오는 다중 경로는 없는 곳에 유령 타깃을 만든다. 각 분해능이 낮던 기존 레이더는 정지 물체를 대부분 걸러 냈는데, 이것이 정차한 차량을 늦게 인식하는 원인이 되기도 한다. 사람이나 플라스틱처럼 반사 단면적이 작은 물체는 신호가 약하다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 4 -->
+  <section id="lidar">
+    <h2>라이다: 빛으로 재는 3D 형상</h2>
+    <p>라이다<span class="en">(LiDAR, Light Detection and Ranging)</span>는 레이저 펄스를 쏘고 반사광이 돌아오는 시간<span class="en">(Time of Flight, ToF)</span>으로 거리를 잰다.</p>
+    <div class="formula">$$R = \frac{c\,t}{2}$$
+      <div class="where">여기서 \(t\)는 왕복 시간이다. 200 m의 왕복은 약 1.33 µs이고, 1 ns의 시간 오차가 15 cm의 거리 오차다.</div></div>
+    <p>빛은 파장이 짧아 손톱만 한 렌즈로도 0.1° 이하의 가는 빔을 만들 수 있다. 빔의 방향을 가로·세로로 바꿔 가며 초당 수십만~수백만 번 거리를 재면, 각 측정이 3차원 공간의 점 하나가 된다. 이 점들의 집합이 <b>포인트 클라우드</b>다.</p>
+
+    <h3>파장과 스캔 방식</h3>
+    <p>파장은 주로 두 가지다. <b>905 nm</b>는 값싼 실리콘 검출기를 쓸 수 있지만 망막에 초점이 맺히는 파장이어서 안구 안전 기준이 출력을 강하게 제한한다. <b>1550 nm</b>는 각막과 수정체의 물에 흡수되어 망막에 닿지 않으므로 훨씬 높은 출력을 쓸 수 있어 먼 거리에 유리하지만, InGaAs 검출기와 광섬유 레이저가 비싸고 비와 젖은 표면에서 물에 더 많이 흡수된다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 250" role="img" aria-label="라이다 스캔 방식 네 가지">
+        <g>
+          <rect x="10" y="20" width="176" height="170" rx="10" class="f-surface"/>
+          <rect x="198" y="20" width="176" height="170" rx="10" class="f-surface"/>
+          <rect x="386" y="20" width="176" height="170" rx="10" class="f-surface"/>
+          <rect x="574" y="20" width="176" height="170" rx="10" class="f-surface"/>
+        </g>
+        <g class="t" text-anchor="middle" font-weight="700"><text x="98" y="46">기계식 회전</text><text x="286" y="46">MEMS·미러 스캔</text><text x="474" y="46">플래시</text><text x="662" y="46">FMCW</text></g>
+        <rect x="80" y="110" width="36" height="46" rx="4" class="f-acc"/>
+        <path d="M68 100 A34 12 0 1 1 128 100" fill="none" stroke="var(--text-dim)" stroke-width="1.5"/><path d="M128 100 l-9 -2 l5 8 z" fill="var(--text-dim)"/>
+        <g stroke="var(--red)" stroke-width="1.5"><line x1="116" y1="118" x2="176" y2="106"/><line x1="116" y1="126" x2="176" y2="124"/><line x1="116" y1="134" x2="176" y2="142"/><line x1="116" y1="142" x2="176" y2="160"/></g>
+        <rect x="212" y="120" width="26" height="30" rx="3" class="f-acc"/>
+        <line x1="238" y1="135" x2="290" y2="135" stroke="var(--red)" stroke-width="1.5"/>
+        <line x1="282" y1="118" x2="298" y2="152" stroke="var(--text)" stroke-width="4"/>
+        <g stroke="var(--red)" stroke-width="1.5"><line x1="290" y1="135" x2="330" y2="76"/><line x1="290" y1="135" x2="352" y2="84"/><line x1="290" y1="135" x2="364" y2="100"/></g>
+        <path d="M324 70 Q350 66 368 92" fill="none" stroke="var(--text-dim)" stroke-dasharray="3 3"/>
+        <rect x="400" y="118" width="30" height="34" rx="3" class="f-acc"/>
+        <path d="M430 135 L548 78 L548 180 Z" fill="var(--red)" opacity="0.22"/>
+        <g fill="var(--text-dim)"><rect x="404" y="160" width="5" height="5"/><rect x="411" y="160" width="5" height="5"/><rect x="418" y="160" width="5" height="5"/><rect x="404" y="167" width="5" height="5"/><rect x="411" y="167" width="5" height="5"/><rect x="418" y="167" width="5" height="5"/></g>
+        <rect x="588" y="120" width="30" height="30" rx="3" class="f-acc"/>
+        <path d="M624 150 L654 110 L654 150 L684 110 L684 150 L714 110 L714 150" fill="none" stroke="var(--red)" stroke-width="1.8"/>
+        <path d="M634 150 L664 110 L664 150 L694 110 L694 150 L724 110" fill="none" stroke="var(--accent-2)" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <g class="t-dim" text-anchor="middle" font-size="13">
+          <text x="98" y="210">360°, 검증된 성능</text><text x="98" y="228">크고 비쌈, 내구성</text>
+          <text x="286" y="210">작은 거울이 빔을 흔듦</text><text x="286" y="228">소형, 시야 약 120°</text>
+          <text x="474" y="210">한 번에 전체 조사</text><text x="474" y="228">구동부 없음, 근거리</text>
+          <text x="662" y="210">주파수 처프 + 간섭</text><text x="662" y="228">속도 직접 측정</text>
+        </g>
+      </svg>
+      <figcaption><b>그림 18-4.</b> 라이다의 네 가지 방식. 왼쪽 셋은 펄스 ToF이고 빔을 움직이는 방법이 다르다. FMCW 라이다는 레이더와 같은 원리를 빛에 적용한다.</figcaption>
+    </figure>
+
+    <ul>
+      <li><b>기계식 회전.</b> 세로로 쌓은 레이저·검출기 묶음(16~128채널)을 통째로 초당 10~20회 돌린다. 360°를 한 번에 본다. 초기 자율주행 시험차 지붕 위의 원통이 이것이다.</li>
+      <li><b>MEMS·회전 미러.</b> 레이저는 고정하고 작은 거울만 움직여 빔을 흔든다. 작고 싸서 양산차의 지붕 앞이나 그릴에 들어간다. 시야가 전방 약 120°로 제한된다.</li>
+      <li><b>플래시.</b> 카메라 플래시처럼 장면 전체를 한 번에 비추고 2차원 검출기 배열로 받는다. 움직이는 부품이 없지만 빛이 넓게 퍼져 거리가 짧다. 근거리 사각지대용으로 쓴다.</li>
+      <li><b>FMCW.</b> 레이저의 주파수를 처프시키고 수신광을 송신광과 간섭시킨다. 점마다 거리와 시선 속도를 함께 얻고, 햇빛이나 다른 라이다의 간섭에 강하다. 광학계가 복잡하다.</li>
+    </ul>
+
+    <h3>각 분해능과 포인트 밀도</h3>
+    <p>각 분해능이 \(\Delta\theta\)인 라이다에서 이웃한 두 빔은 거리 \(R\)에서 \(R\,\Delta\theta\)만큼 벌어진다. 폭 \(w\), 높이 \(H\)인 물체에 닿는 점의 수는 대략 다음과 같다.</p>
+    <div class="formula">$$N \approx \frac{w}{R\,\Delta\theta_h}\times\frac{H}{R\,\Delta\theta_v} \;\propto\; \frac{1}{R^2}$$
+      <div class="where">여기서 \(\Delta\theta_h, \Delta\theta_v\)는 수평·수직 각 분해능(rad)이다. 점의 수는 거리의 제곱에 반비례해 급격히 줄어든다.</div></div>
+    <p>돌아오는 빛의 양도 거리에 따라 줄어든다. 표면에서 사방으로 흩어진 빛 가운데 수신 렌즈에 들어오는 비율이 \(1/R^2\)로 줄기 때문이다. 받는 세기는 표면 <b>반사율</b>에 비례하므로, 라이다의 최대 거리는 "반사율 10 %에서 200 m"처럼 반사율과 함께 적는다. 흰 차는 멀리서도 보이고, 검은 차나 젖은 아스팔트는 훨씬 가까이 와야 보인다. 비와 안개 속에서는 빛이 물방울에 산란되어 왕복 경로에서 지수적으로 약해지고, 가까운 물방울에서 되돌아온 빛이 허상 점을 만든다.</p>
+
+    <div class="sim" id="sim-li">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>라이다 스캔: 광선에서 포인트 클라우드로</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-li" style="touch-action:none"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>수평 각 분해능 <output id="l-res-out"></output></span><input type="range" id="l-res" min="0.1" max="2" step="0.1" value="0.4"></label>
+          <label class="ctrl"><span>최대 거리 (반사율 10 %) <output id="l-max-out"></output></span><input type="range" id="l-max" min="15" max="100" step="1" value="60"></label>
+          <label class="ctrl"><span>거리 잡음 σ <output id="l-noise-out"></output></span><input type="range" id="l-noise" min="0" max="30" step="1" value="3"></label>
+          <label class="ctrl"><span>비·안개 <output id="l-fog-out"></output></span><input type="range" id="l-fog" min="0" max="100" step="1" value="0"></label>
+          <label class="check"><input type="checkbox" id="l-rays"> 광선 표시</label>
+          <button class="btn" id="l-reset">배치 초기화</button>
+        </div>
+      </div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>보행자</span><span><i style="background:var(--accent-2)"></i>흰 차 (반사율 50 %)</span><span><i style="background:var(--warn)"></i>검은 차 (6 %)</span><span><i style="background:var(--ok)"></i>벽</span><span><i style="background:var(--bad)"></i>허상 점</span></div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">보행자</span><span class="v" id="o-l-ped">—</span></div>
+        <div class="stat"><span class="k">흰 차</span><span class="v" id="o-l-car">—</span></div>
+        <div class="stat"><span class="k">검은 차</span><span class="v" id="o-l-dark">—</span></div>
+        <div class="stat"><span class="k">벽</span><span class="v" id="o-l-wall">—</span></div>
+        <div class="stat"><span class="k">보행자 위치의 점 간격</span><span class="v" id="o-l-sp">—</span></div>
+        <div class="stat"><span class="k">보행자 3D 점 수 (추정)</span><span class="v" id="o-l-3d">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 보행자를 끌어 10 m에서 50 m로 옮기면 점 수가 거리에 반비례해 줄어든다(수직 방향까지 치면 제곱에 반비례). 보행자를 흰 차 뒤로 옮기면 가려져 0이 된다. 최대 거리를 줄이면 같은 거리의 검은 차가 흰 차보다 먼저 사라진다. 비·안개를 올리면 먼 물체부터 사라지고 차 주변에 허상 점이 생긴다. 수평면 한 층만 계산한 것이며, 3D 점 수는 수직 분해능이 수평과 같다고 가정한 추정이다.</div>
+    </div>
+
+    <div class="callout tip">
+      <strong>계산 예: 100 m 앞 보행자에 닿는 점</strong>
+      <p>수평·수직 각 분해능이 모두 0.2°(0.0035 rad)인 라이다의 빔 간격은 100 m에서 \(100 \times 0.0035 = 0.35\) m다. 폭 0.5 m, 키 1.7 m인 보행자에는 가로 1~2점, 세로 4~5점, 합쳐서 대략 5~10점이 닿는다. 같은 보행자가 20 m에 있으면 간격이 7 cm로 줄어 약 170점이 된다. 먼 물체를 "있다"고 아는 것과 "무엇인지" 아는 것 사이에는 큰 차이가 있다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 5 -->
+  <section id="ultra">
+    <h2>초음파: 가장 가까운 몇 미터</h2>
+    <p>범퍼에 박힌 동전 크기의 원형 센서가 초음파 센서다. 압전 소자가 대표적으로 40~58 kHz의 음파 묶음(버스트)을 내보내고, 같은 소자로 메아리를 듣는다. 원리는 라이다와 같은 ToF지만 파동이 빛이 아니라 소리다. 음속은 빛보다 약 백만 배 느리므로 시간 측정이 쉽고 회로가 아주 싸다.</p>
+    <div class="formula">$$d = \frac{c_s\,t}{2}, \qquad c_s \approx 331.3 + 0.606\,T \;\;[\mathrm{m/s}]$$
+      <div class="where">여기서 \(c_s\)는 공기 중 음속, \(T\)는 섭씨 온도다. 20 °C에서 약 343 m/s다.</div></div>
+    <p>느린 음속은 약점이기도 하다. 5 m를 왕복하는 데 약 29 ms가 걸려 갱신율이 낮고, 차가 빠르게 달리면 바람 소리에 묻힌다. 음속이 온도에 따라 변하므로 외기 온도로 보정해야 한다. 또 하나의 한계는 <b>최소 감지 거리</b>다. 소자는 송신을 멈춘 뒤에도 종처럼 한동안 울리는데(링잉), 이 잔향이 가라앉기 전에 돌아온 메아리는 구분할 수 없다. 그래서 대표적으로 15~25 cm 안쪽은 재지 못한다.</p>
+
+    <div class="sim" id="sim-us">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>초음파 주차 센서: 버스트와 메아리</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-us"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>장애물까지 거리 <output id="u-d-out"></output></span><input type="range" id="u-d" min="0.1" max="5" step="0.05" value="1.5"></label>
+          <label class="ctrl"><span>외기 온도 <output id="u-t-out"></output></span><input type="range" id="u-t" min="-20" max="40" step="1" value="20"></label>
+          <label class="ctrl"><span>버스트 길이 <output id="u-n-out"></output></span><input type="range" id="u-n" min="4" max="32" step="1" value="12"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">음속</span><span class="v" id="o-u-c">—</span></div>
+        <div class="stat"><span class="k">왕복 시간</span><span class="v" id="o-u-t">—</span></div>
+        <div class="stat"><span class="k">20 °C로 가정한 거리</span><span class="v" id="o-u-err">—</span></div>
+        <div class="stat"><span class="k">최소 감지 거리</span><span class="v" id="o-u-min">—</span></div>
+        <div class="stat"><span class="k">판정</span><span class="v" id="o-u-st">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 거리를 0.15 m까지 줄이면 메아리가 송신 잔향(회색 구간)에 묻혀 감지되지 않는다. 버스트를 길게 하면 메아리 에너지는 커지지만 최소 감지 거리도 늘어난다. 온도를 −20 °C로 내리면 같은 거리의 왕복 시간이 길어지고, 보정하지 않으면 실제보다 멀게 읽는다. 주파수 48 kHz, 파형은 포락선으로 그렸다.</div>
+    </div>
+
+    <div class="callout tip">
+      <strong>계산 예: 온도 보정을 빼먹으면</strong>
+      <p>−10 °C에서 음속은 \(331.3 + 0.606 \times (-10) \approx 325.2\) m/s다. 실제 2.00 m 거리의 왕복 시간은 \(4.00/325.2 \approx 12.30\) ms다. 이를 20 °C의 음속 343.4 m/s로 환산하면 2.11 m가 되어 11 cm를 멀게 읽는다. 주차에서 11 cm는 범퍼가 닿고 안 닿고의 차이다.</p>
+    </div>
+    <p>초음파 센서는 앞뒤 범퍼에 4~6개씩, 모두 8~12개가 달린다. 주차 보조(<a href="adas.html">17장</a>)에서 장애물 경고와 주차 공간 탐색에 쓰이고, 이웃 센서가 서로의 메아리를 듣는 방식으로 장애물의 가로 위치도 추정한다. 눈, 진흙, 얼음이 소자 표면에 붙으면 감도가 크게 떨어진다.</p>
+  </section>
+
+  <!-- =============================================================== 6 -->
+  <section id="gnss">
+    <h2>내 위치를 재는 센서: GNSS, IMU, 휠 속도</h2>
+    <p>지금까지의 센서는 바깥을 본다. 차가 스스로 어디에 있고 어떻게 움직이는지를 재는 센서가 따로 필요하다.</p>
+    <h3>GNSS: 위성까지의 거리로 위치를</h3>
+    <p>GNSS<span class="en">(Global Navigation Satellite System)</span>는 GPS, 갈릴레오, 글로나스, 베이더우를 아우르는 이름이다. 고도 약 2만 km의 위성들이 자기 위치와 송신 시각을 실어 전파를 내보낸다. 수신기는 도착 시각과 송신 시각의 차에 광속을 곱해 위성까지의 거리를 구한다. 그런데 수신기의 값싼 시계는 위성의 원자시계와 맞지 않는다. 1 µs만 틀려도 300 m다. 그래서 이 거리를 <b>의사 거리</b><span class="en">(pseudorange)</span>라 부르고, 수신기 시계 오차 자체를 네 번째 미지수로 함께 푼다.</p>
+    <div class="formula">$$\rho_i = \sqrt{(x-x_i)^2+(y-y_i)^2+(z-z_i)^2} + c\,\delta t + \varepsilon_i$$
+      <div class="where">여기서 \(\rho_i\)는 \(i\)번 위성의 의사 거리, \((x_i,y_i,z_i)\)는 위성 위치, \(\delta t\)는 수신기 시계 오차, \(\varepsilon_i\)는 나머지 오차다. 미지수가 \(x, y, z, \delta t\) 넷이므로 위성이 <b>4개 이상</b> 필요하다.</div></div>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 270" role="img" aria-label="의사 거리와 수신기 시계 오차">
+        <path d="M0 250 Q380 190 760 250 L760 270 L0 270 Z" class="f-surface"/>
+        <g class="f-acc2-soft" stroke="var(--accent-2)" stroke-width="1.5"><rect x="92" y="34" width="26" height="14" rx="2"/><rect x="262" y="14" width="26" height="14" rx="2"/><rect x="472" y="14" width="26" height="14" rx="2"/><rect x="642" y="40" width="26" height="14" rx="2"/></g>
+        <g class="t-dim" text-anchor="middle"><text x="105" y="26">위성 1</text><text x="330" y="26">위성 2</text><text x="540" y="26">위성 3</text><text x="655" y="32">위성 4</text></g>
+        <g stroke="var(--text-dim)" stroke-width="1.2" stroke-dasharray="5 4"><line x1="105" y1="48" x2="372" y2="212"/><line x1="275" y1="28" x2="378" y2="208"/><line x1="485" y1="28" x2="382" y2="208"/><line x1="655" y1="54" x2="388" y2="212"/></g>
+        <circle cx="380" cy="216" r="7" class="f-acc"/>
+        <text x="380" y="244" class="t" text-anchor="middle" font-weight="700">수신기 (x, y, z, δt)</text>
+        <g fill="none" stroke="var(--accent)" stroke-width="1.5" opacity="0.7">
+          <path d="M330 186 A312 312 0 0 0 420 250"/><path d="M344 236 A212 212 0 0 1 420 190"/><path d="M340 190 A212 212 0 0 1 416 236"/><path d="M340 250 A312 312 0 0 0 430 186"/>
+        </g>
+        <text x="200" y="120" class="t-mono" transform="rotate(31 200 120)">ρ₁ = r₁ + c·δt</text>
+        <text x="555" y="118" class="t-mono" text-anchor="middle" transform="rotate(-31 555 118)">ρ₄ = r₄ + c·δt</text>
+        <text x="20" y="160" class="t-dim">전리층·대류권 지연</text>
+        <text x="740" y="160" class="t-dim" text-anchor="end">건물 반사(다중 경로)</text>
+      </svg>
+      <figcaption><b>그림 18-5.</b> 의사 거리. 각 위성을 중심으로 한 구면이 한 점에서 만나도록 위치와 시계 오차를 동시에 푼다. 시계 오차는 모든 의사 거리에 같은 양으로 더해지므로 네 번째 위성으로 가려낼 수 있다.</figcaption>
+    </figure>
+
+    <p>오차의 원인은 여럿이다. 전리층과 대류권을 지나며 전파가 늦어지고, 위성 궤도와 시계 정보에 오차가 있으며, 도심에서는 건물에 반사된 신호가 직접 신호보다 늦게 들어오는 <b>다중 경로</b>가 수십 m의 오차를 만든다. 하늘이 트인 곳의 단독 측위는 대표적으로 수 m 수준이다. 차로 하나의 폭이 약 3.5 m이므로 어느 차로에 있는지 알기에는 부족하다.</p>
+    <p><b>RTK</b><span class="en">(Real-Time Kinematic)</span>는 위치를 정확히 아는 기준국이 같은 위성을 관측해 구한 보정값을 받아 공통 오차를 상쇄하고, 코드 대신 반송파(파장 약 19 cm)의 위상을 세어 cm 수준의 정확도를 얻는다. 다만 위성이 가려지면 쓸 수 없다는 점은 그대로다.</p>
+
+    <h3>IMU와 휠 속도: 적분은 드리프트를 부른다</h3>
+    <p>관성 측정 장치<span class="en">(Inertial Measurement Unit, IMU)</span>는 3축 가속도계와 3축 자이로(각속도계)로 이루어진다. 각속도를 적분하면 자세가, 가속도를 두 번 적분하면 위치가 나온다. 초당 100회 이상 값을 내고 외부 신호가 필요 없다. 문제는 적분이 작은 오차를 키운다는 것이다. 가속도계에 일정한 바이어스 \(b_a\)가 있으면 위치 오차는 \(\tfrac{1}{2} b_a t^2\)로 자란다.</p>
+    <div class="callout tip">
+      <strong>계산 예: 터널 60초</strong>
+      <p>가속도 바이어스가 0.05 m/s²(중력의 약 0.5 %)라면 10초 뒤 위치 오차는 \(0.5 \times 0.05 \times 10^2 = 2.5\) m, 60초 뒤에는 90 m다. 자이로 바이어스 0.1 °/s는 60초 뒤 방위각을 6° 틀어 놓고, 시속 72 km로 달렸다면 1.2 km를 가는 동안 옆으로 약 60 m가 어긋난다.</p>
+    </div>
+    <p>휠 속도 센서(ABS용, <a href="brake.html">8장</a>)로 바퀴 회전을 세어 이동 거리를 구하는 <b>휠 오도메트리</b>는 가속도를 두 번 적분하는 것보다 훨씬 안정적이어서, 보통 속도는 바퀴에서, 방향은 자이로에서 가져와 위치를 적분한다. 이를 <b>추측 항법</b><span class="en">(dead reckoning)</span>이라 한다. 그래도 타이어 반지름 오차, 미끄러짐, 자이로 바이어스 때문에 오차는 달린 거리에 따라 계속 쌓인다.</p>
+    <p>GNSS와 추측 항법은 오차의 성질이 정반대다. GNSS는 측정마다 수 m씩 튀지만 오래 써도 오차가 쌓이지 않는다. 추측 항법은 짧은 시간에는 매끄럽고 정확하지만 시간이 갈수록 흘러간다. 둘을 합치면 추측 항법으로 매끄럽게 예측하고 GNSS로 천천히 끌어당겨 드리프트를 지운다. 아래 시뮬레이터는 가장 단순한 융합인 상보 필터를 쓴다. 실제 차량은 <a href="perception.html">19장</a>에서 다루는 칼만 필터를 쓴다.</p>
+
+    <div class="sim" id="sim-gn">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>GNSS + IMU: 튀는 센서와 흘러가는 센서</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-gn"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>GNSS 잡음 σ <output id="g-sig-out"></output></span><input type="range" id="g-sig" min="0.5" max="10" step="0.5" value="3"></label>
+          <label class="ctrl"><span>자이로 바이어스 <output id="g-bias-out"></output></span><input type="range" id="g-bias" min="0" max="0.5" step="0.01" value="0.15"></label>
+          <label class="ctrl"><span>터널 길이 <output id="g-tun-out"></output></span><input type="range" id="g-tun" min="0" max="320" step="10" value="200"></label>
+          <label class="ctrl"><span>GNSS 보정 이득 K <output id="g-k-out"></output></span><input type="range" id="g-k" min="0.02" max="0.6" step="0.02" value="0.1"></label>
+          <div class="ctrl"><span>표시</span><div class="seg" id="g-show"><button data-value="all" class="on">모두</button><button data-value="gnss">GNSS</button><button data-value="imu">추측 항법</button><button data-value="fus">융합</button></div></div>
+          <button class="btn" id="g-reset">처음부터</button>
+        </div>
+      </div>
+      <div class="legend"><span><i style="background:var(--text-dim)"></i>실제 경로</span><span><i style="background:var(--accent-2)"></i>GNSS 측위점</span><span><i style="background:var(--warn)"></i>추측 항법만</span><span><i style="background:var(--accent)"></i>융합</span></div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">GNSS 오차</span><span class="v" id="o-g-eg">—</span></div>
+        <div class="stat"><span class="k">추측 항법 오차</span><span class="v" id="o-g-ei">—</span></div>
+        <div class="stat"><span class="k">융합 오차</span><span class="v" id="o-g-ef">—</span></div>
+        <div class="stat"><span class="k">융합 평균 오차</span><span class="v" id="o-g-rms">—</span></div>
+        <div class="stat"><span class="k">상태</span><span class="v" id="o-g-st">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 추측 항법만의 궤적(주황)은 처음에는 정확하지만 바퀴를 돌수록 실제 경로에서 멀어진다. 융합(파랑)은 터널 안에서 추측 항법처럼 흘러가다가 출구에서 GNSS를 다시 받으면 끌려 돌아온다. 이득 K를 키우면 빨리 돌아오는 대신 GNSS 잡음을 그대로 따라 흔들리고, 줄이면 매끄럽지만 느리게 돌아온다. 차는 15 m/s로 달리며 GNSS는 초당 5회, 관성 센서는 초당 50회 갱신된다.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 7 -->
+  <section id="compare">
+    <h2>센서를 비교하고 조합하기</h2>
+    <p>지금까지의 내용을 한 표에 모은다. 값은 양산 수준 센서의 대표적인 범위이고, 제품과 세대에 따라 크게 달라진다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>항목</th><th>카메라</th><th>레이더</th><th>라이다</th><th>초음파</th></tr></thead>
+      <tbody>
+        <tr><td>탐지 거리</td><td>약 50~250 m</td><td>약 80~300 m</td><td>약 100~250 m</td><td>약 0.2~5 m</td></tr>
+        <tr><td>거리 정확도</td><td>거리의 수 %~10 % (추정)</td><td>약 0.1~0.5 m</td><td>약 2~5 cm</td><td>약 1~3 cm</td></tr>
+        <tr><td>각 분해능</td><td>약 0.01~0.05°</td><td>약 1~15°</td><td>약 0.05~0.4°</td><td>수십 ° (방향 구분 거의 없음)</td></tr>
+        <tr><td>속도</td><td>프레임 간 변화로 추정</td><td>도플러로 직접 측정</td><td>프레임 간 추정 (FMCW는 직접)</td><td>측정 안 함</td></tr>
+        <tr><td>비·안개·눈</td><td>약함</td><td>강함</td><td>약함~보통</td><td>보통</td></tr>
+        <tr><td>야간·역광</td><td>약함</td><td>영향 없음</td><td>영향 거의 없음</td><td>영향 없음</td></tr>
+        <tr><td>색·글자·신호등</td><td>가능</td><td>불가</td><td>반사 강도만</td><td>불가</td></tr>
+        <tr><td>상대 가격</td><td>낮음</td><td>낮음~중간</td><td>높음</td><td>아주 낮음</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="sim" id="sim-cmp">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>날씨에 따른 센서 성능 비교</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-cmp"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>조건</span><div class="seg" id="c-wx"><button data-value="clear" class="on">맑은 낮</button><button data-value="rain">폭우</button><button data-value="fog">안개</button><button data-value="night">야간</button></div></div>
+          <div class="ctrl"><span>센서 구성</span>
+            <div class="sn-checks">
+              <label class="check"><input type="checkbox" id="c-cam" checked> 카메라</label>
+              <label class="check"><input type="checkbox" id="c-rad" checked> 레이더</label>
+              <label class="check"><input type="checkbox" id="c-lid"> 라이다</label>
+              <label class="check"><input type="checkbox" id="c-us"> 초음파</label>
+            </div>
+          </div>
+          <label class="check"><input type="checkbox" id="c-env" checked> 융합 외곽선 (축별 최댓값)</label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">이 구성의 가장 약한 축</span><span class="v" id="o-c-weak">—</span></div>
+        <div class="stat"><span class="k">그 축의 점수</span><span class="v" id="o-c-val">—</span></div>
+        <div class="stat"><span class="k">융합 다각형 면적</span><span class="v" id="o-c-area">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 카메라만 켜고 맑은 낮 → 안개로 바꾸면 다각형이 크게 쪼그라든다. 레이더를 더하면 탐지 거리와 속도 축이 채워지지만 "거리 정확도"와 안개 속 "각 분해능"은 여전히 약하다. 라이다를 더하면 무엇이 채워지고 무엇을 잃는지(저렴함 축은 구성 전체의 비용이므로 가장 비싼 센서를 따른다) 본다. 점수는 0~5의 정성적 평가다.</div>
+    </div>
+
+    <h3>카메라 중심 접근과 라이다 포함 접근</h3>
+    <p>업계는 센서 구성에서 크게 두 갈래로 나뉜다. <b>카메라 중심 접근</b>은 사람이 눈만으로 운전한다는 점에서 출발한다. 카메라 8대 안팎을 차 둘레에 달고, 거리와 3D 구조는 대량의 주행 데이터로 학습한 신경망이 추정한다. 센서가 싸서 수백만 대에 달 수 있고, 그 차들이 다시 학습 데이터를 모은다. 약점은 거리가 추정값이라는 점과 역광·악천후·처음 보는 물체에서의 신뢰성이다. 레이더를 보조로 함께 쓰는 구성도 많다.</p>
+    <p><b>라이다 포함 접근</b>은 카메라, 레이더, 라이다를 모두 달아 서로 다른 물리 원리로 같은 물체를 독립적으로 확인한다. 학습 데이터에 없던 물체라도 라이다는 "거기에 무언가 있다"는 사실을 형상으로 알려 준다. 운전자 없는 로보택시는 거의 모두 이 구성이다. 약점은 비용, 전력, 세정과 캘리브레이션의 복잡함이다. 라이다 가격이 내려가면서 양산 승용차의 고속도로 자동화 기능에도 전방 라이다 한 대를 더하는 구성이 늘고 있다. 어느 쪽이 옳은지는 목표로 하는 자동화 레벨(<a href="adas.html">17장</a>)과 안전을 어떻게 입증할 것인가(<a href="autonomy.html">21장</a>)에 달린 문제다.</p>
+  </section>
+
+  <!-- =============================================================== 8 -->
+  <section id="calib">
+    <h2>배치, 캘리브레이션, 그리고 더러워진 렌즈</h2>
+    <h3>어디에 달 것인가</h3>
+    <p>센서 위치는 성능과 디자인, 내구성 사이의 타협이다. 전방 카메라는 와이퍼가 닦아 주는 앞 유리 안쪽 위에 둔다. 높아서 멀리 보이고 오염에서 보호된다. 레이더는 전파가 플라스틱을 통과하므로 범퍼나 엠블럼 뒤에 숨긴다. 금속 성분이 든 도료나 두꺼운 얼음은 전파를 막는다. 라이다는 높을수록 가려짐이 적어 지붕 앞이 유리하지만 공기 저항(<a href="aero.html">12장</a>)과 외관에 불리하다. 지붕 위 센서는 차 바로 옆의 낮은 곳을 보지 못하므로 근거리는 초음파와 주변 카메라가 덮는다.</p>
+
+    <h3>캘리브레이션: 센서들이 같은 세계를 보게 하기</h3>
+    <p>카메라의 한 픽셀과 라이다의 한 점이 같은 물체라는 것을 알려면, 각 센서가 무엇을 어떻게 왜곡하는지, 그리고 차체 어디에 어느 방향으로 붙어 있는지를 정확히 알아야 한다.</p>
+    <ul>
+      <li><b>내부 파라미터</b><span class="en">(intrinsic)</span>: 센서 자체의 성질이다. 카메라의 초점 거리 \(f\), 주점 \((c_x, c_y)\), 렌즈 왜곡 계수가 해당한다. 체커보드 같은 알려진 패턴을 여러 각도에서 찍어 구한다.</li>
+      <li><b>외부 파라미터</b><span class="en">(extrinsic)</span>: 센서 좌표계와 차량 좌표계 사이의 회전 \(R\)과 이동 \(t\)다. 센서에서 본 점 \(p_s\)는 차량 좌표계에서 \(p_v = R\,p_s + t\)가 된다.</li>
+      <li><b>시간 동기</b>: 센서마다 측정 시각이 다르다. 모든 측정에 공통 시계의 시각을 붙이고, 필요하면 차의 움직임만큼 보정한다.</li>
+    </ul>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 280" role="img" aria-label="외부 파라미터와 시간 동기">
+        <defs><marker id="sn-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker>
+        <marker id="sn-ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent-2)"/></marker></defs>
+        <path d="M40 150 L40 120 Q42 106 60 104 L100 98 L140 72 Q150 66 164 66 L240 66 Q256 66 266 76 L290 100 L330 106 Q344 110 344 124 L344 150 Z" class="f-surface" stroke="var(--border)"/>
+        <circle cx="100" cy="150" r="20" class="f-elev" stroke="var(--text-dim)"/><circle cx="286" cy="150" r="20" class="f-elev" stroke="var(--text-dim)"/>
+        <g stroke="var(--accent)" stroke-width="2.2" marker-end="url(#sn-ah2)"><line x1="100" y1="150" x2="170" y2="150"/><line x1="100" y1="150" x2="100" y2="92"/></g>
+        <text x="100" y="192" class="t-acc" text-anchor="middle">차량 좌표계 (뒤 차축 중심)</text>
+        <g stroke="var(--accent-2)" stroke-width="2.2" marker-end="url(#sn-ah3)"><line x1="262" y1="82" x2="318" y2="92"/><line x1="262" y1="82" x2="270" y2="38"/></g>
+        <circle cx="262" cy="82" r="5" fill="var(--accent-2)"/>
+        <text x="330" y="60" class="t" fill="var(--accent-2)">카메라 좌표계</text>
+        <path d="M108 142 Q180 60 254 80" fill="none" stroke="var(--text-dim)" stroke-dasharray="5 4"/>
+        <text x="150" y="60" class="t-mono" text-anchor="middle">R, t</text>
+        <text x="40" y="226" class="t-dim">회전이 0.5° 틀리면 100 m 앞에서 0.87 m 어긋난다</text>
+        <line x1="420" y1="70" x2="740" y2="70" class="s-axis"/><line x1="420" y1="130" x2="740" y2="130" class="s-axis"/><line x1="420" y1="190" x2="740" y2="190" class="s-axis"/>
+        <g class="t-dim" text-anchor="end"><text x="412" y="74">카메라</text><text x="412" y="134">라이다</text><text x="412" y="194">레이더</text></g>
+        <g fill="var(--blue)"><rect x="440" y="60" width="6" height="20"/><rect x="507" y="60" width="6" height="20"/><rect x="574" y="60" width="6" height="20"/><rect x="641" y="60" width="6" height="20"/><rect x="708" y="60" width="6" height="20"/></g>
+        <g fill="var(--green)" opacity="0.5"><rect x="430" y="122" width="180" height="16" rx="3"/><rect x="630" y="122" width="100" height="16" rx="3"/></g>
+        <g fill="var(--warn)"><rect x="470" y="180" width="6" height="20"/><rect x="570" y="180" width="6" height="20"/><rect x="670" y="180" width="6" height="20"/></g>
+        <line x1="574" y1="40" x2="574" y2="212" stroke="var(--red)" stroke-dasharray="4 3"/>
+        <text x="580" y="50" class="t" fill="var(--red)">같은 순간?</text>
+        <text x="580" y="236" class="t-dim" text-anchor="middle">시간 →  (라이다는 한 바퀴 100 ms 동안 차례로 측정)</text>
+        <text x="580" y="258" class="t-dim" text-anchor="middle">시각이 10 ms 어긋나면 30 m/s에서 0.3 m</text>
+      </svg>
+      <figcaption><b>그림 18-6.</b> 왼쪽: 외부 파라미터는 각 센서 좌표계를 하나의 차량 좌표계로 옮긴다. 오른쪽: 센서마다 측정 주기와 순간이 달라 공통 시각으로 맞춰야 한다.</figcaption>
+    </figure>
+
+    <p>요구되는 정밀도는 꽤 높다. 카메라의 방향이 0.5° 틀리면 100 m 앞에서 \(100 \times \tan 0.5^\circ \approx 0.87\) m가 어긋나 옆 차로의 차를 내 차로로 착각할 수 있다. 공장에서 타깃을 세워 놓고 맞추지만, 온도 변화와 진동, 가벼운 접촉 사고로도 틀어지므로 주행 중에 차선이나 주변 구조물을 이용해 스스로 다시 맞추는 온라인 캘리브레이션이 필수다. 앞 유리나 범퍼를 교체한 뒤 정비소에서 ADAS 재보정을 하는 것도 같은 이유다.</p>
+
+    <h3>오염과 세정</h3>
+    <p>센서는 차에서 가장 더러워지기 쉬운 곳에 노출되어 있다. 진흙, 벌레, 염화칼슘, 성에, 빗방울 하나가 카메라 시야의 큰 부분을 가린다. 그래서 워셔액 분사 노즐, 압축 공기, 렌즈 히터, 발수 코팅이 센서와 한 묶음으로 설계된다. 그보다 중요한 것은 센서가 <b>자신이 가려졌다는 사실을 아는 것</b>이다. 영상의 선명도 저하, 레이더 수신 세기의 전반적 하락, 라이다 창에서의 강한 근거리 반사를 감시해 성능 저하를 판단하고, 기능을 제한하거나 운전자에게 넘긴다. 이처럼 고장이 아닌 성능 한계로 생기는 위험을 다루는 체계가 <a href="autonomy.html">21장</a>의 SOTIF다.</p>
+    <div class="callout deep">
+      <strong>센서끼리의 간섭</strong>
+      <p>도로 위 레이더와 라이다가 늘면 남의 송신을 내 반사파로 착각할 수 있다. FMCW 레이더는 처프의 기울기와 시작 시각이 정확히 같아야만 비트 신호가 생기므로 남의 처프는 대부분 넓게 퍼진 잡음으로 나타나지만, 잡음 바닥이 올라가 약한 타깃을 놓칠 수 있다. 처프 시작 시각과 기울기를 무작위로 바꾸거나 간섭 구간을 검출해 지우는 방법을 쓴다. 펄스 라이다는 펄스 간격에 고유한 부호를 싣고, FMCW 라이다는 자기 송신광과 간섭하는 빛만 검출하므로 원리적으로 간섭에 강하다.</p>
+    </div>
+  </section>
+
+  <section class="keypoints" id="summary">
+    <h2>핵심 정리</h2>
+    <ol>
+      <li>파장이 짧을수록 각 분해능이 좋고 비·안개에 약하다. 카메라·라이다(빛)와 레이더(mm파)의 장단점은 여기서 갈리며, 그래서 서로를 보완한다.</li>
+      <li>카메라는 방향을 재는 센서다. 물체의 픽셀 높이는 \(fH/Z\)이고, 넓은 화각과 먼 인식 거리는 같은 픽셀 수로 함께 얻을 수 없다.</li>
+      <li>단안 카메라는 거리를 추정할 뿐이다. 스테레오는 \(Z = fB/d\)로 거리를 재지만 오차가 \(Z^2\)에 비례해 원거리에 약하다.</li>
+      <li>FMCW 레이더는 비트 주파수로 거리를, 처프 사이의 위상 변화(도플러)로 속도를 잰다. 거리 분해능은 \(c/2B\)로 대역폭만이 정한다. 방향은 안테나 배열의 위상 차로 구하며 각 분해능이 약점이다.</li>
+      <li>라이다는 \(R = ct/2\)로 방향마다 거리를 재어 3D 포인트 클라우드를 만든다. 물체에 닿는 점의 수는 거리의 제곱에 반비례하고, 반사율이 낮은 물체와 악천후에서 탐지 거리가 줄어든다.</li>
+      <li>초음파는 음속(20 °C에서 약 343 m/s)으로 근거리를 싸게 잰다. 온도 보정이 필요하고 잔향 때문에 최소 감지 거리가 있다.</li>
+      <li>GNSS는 위성 4개 이상의 의사 거리로 절대 위치를 주지만 수 m씩 튀고 터널에서 끊긴다. IMU와 휠 오도메트리는 매끄럽지만 적분 오차가 쌓인다. 둘의 융합이 드리프트를 지운다.</li>
+      <li>센서 성능은 내부·외부 캘리브레이션, 시간 동기, 세정과 오염 감지가 뒷받침될 때만 의미가 있다.</li>
+    </ol>
+  </section>
+
+  <section class="quiz-sec" id="quiz">
+    <h2>확인 퀴즈</h2>
+    <div class="quiz">
+      <div class="quiz-q"><p>가로 1,920 픽셀, 초점 거리 2,000 픽셀인 카메라로 80 m 앞의 키 1.6 m 보행자를 찍으면 픽셀 높이는?</p><div class="opts">
+        <button class="opt">약 16 픽셀</button><button class="opt" data-correct>약 40 픽셀</button><button class="opt">약 100 픽셀</button><button class="opt">약 250 픽셀</button>
+      </div><div class="quiz-exp">\(h = fH/Z = 2000 \times 1.6 / 80 = 40\) 픽셀이다. 가로 픽셀 수는 화각을 정할 뿐, 픽셀 단위 초점 거리가 주어지면 계산에 쓰이지 않는다.</div></div>
+
+      <div class="quiz-q"><p>스테레오 카메라로 30 m에서 거리 오차가 0.5 m였다. 다른 조건이 같을 때 90 m에서의 오차는?</p><div class="opts">
+        <button class="opt">약 1.5 m</button><button class="opt">약 3 m</button><button class="opt" data-correct>약 4.5 m</button><button class="opt">약 13.5 m</button>
+      </div><div class="quiz-exp">\(\Delta Z \propto Z^2\)이다. 거리가 3배이므로 오차는 9배, \(0.5 \times 9 = 4.5\) m다.</div></div>
+
+      <div class="quiz-q"><p>FMCW 레이더에서 1 m 떨어진 두 타깃을 거리로 구분하려면 무엇을 바꿔야 하는가?</p><div class="opts">
+        <button class="opt">송신 출력을 높인다</button><button class="opt">처프 개수를 늘린다</button><button class="opt" data-correct>처프의 대역폭을 150 MHz보다 넓힌다</button><button class="opt">중심 주파수를 24 GHz로 낮춘다</button>
+      </div><div class="quiz-exp">거리 분해능은 \(c/2B\)다. 1 m 이하가 되려면 \(B \ge c/2 = 150\) MHz가 필요하다. 출력은 신호 대 잡음비를, 처프 개수는 속도 분해능을 바꿀 뿐 거리 분해능과는 무관하다.</div></div>
+
+      <div class="quiz-q"><p>각 분해능 0.2°인 라이다에서 50 m 앞 물체에 닿던 점이 약 40개였다. 같은 물체가 100 m에 있으면 대략 몇 개인가?</p><div class="opts">
+        <button class="opt">약 40개</button><button class="opt">약 20개</button><button class="opt" data-correct>약 10개</button><button class="opt">약 5개</button>
+      </div><div class="quiz-exp">빔 간격 \(R\,\Delta\theta\)가 가로·세로 모두 두 배로 벌어지므로 점의 수는 \(1/R^2\)에 따라 4분의 1인 약 10개가 된다.</div></div>
+
+      <div class="quiz-q"><p>GNSS 수신기가 3차원 위치를 구하는 데 위성이 최소 4개 필요한 이유는?</p><div class="opts">
+        <button class="opt">위성 하나는 고장에 대비한 예비다</button><button class="opt" data-correct>수신기 시계 오차가 네 번째 미지수이기 때문이다</button><button class="opt">전리층 지연을 측정하기 위해서다</button><button class="opt">속도를 구하려면 하나가 더 필요하다</button>
+      </div><div class="quiz-exp">미지수는 \(x, y, z\)와 수신기 시계 오차 \(\delta t\)의 넷이다. 시계 오차는 모든 의사 거리에 공통으로 더해지므로, 방정식 4개로 함께 풀 수 있다.</div></div>
+
+      <div class="quiz-q"><p>GNSS와 추측 항법(IMU + 휠 속도)을 융합하는 것이 효과적인 근본 이유는?</p><div class="opts">
+        <button class="opt">둘 다 같은 물리량을 재므로 평균하면 잡음이 줄어서</button><button class="opt">IMU가 GNSS보다 항상 정확해서</button><button class="opt" data-correct>GNSS는 튀지만 누적되지 않고, 추측 항법은 매끄럽지만 누적되는, 서로 반대인 오차 성질을 가져서</button><button class="opt">GNSS 신호가 IMU의 바이어스를 물리적으로 없애서</button>
+      </div><div class="quiz-exp">단기적으로는 추측 항법이, 장기적으로는 GNSS가 정확하다. 추측 항법으로 예측하고 GNSS로 천천히 보정하면 양쪽의 장점만 남는다. 터널처럼 GNSS가 끊긴 구간은 추측 항법이 메운다.</div></div>
+    </div>
+  </section>
+</main>
+<script>
+(function () {
+  "use strict";
+  const PI = Math.PI, TAU = PI * 2, D2R = PI / 180, C0 = 299792458;
+  const $ = (id) => document.getElementById(id);
+  const css = getComputedStyle(document.body);
+  const FONT = css.getPropertyValue("--font") || "sans-serif", MONO = css.getPropertyValue("--mono") || "monospace";
+  function text(ctx, s, x, y, color, font, align, base) {
+    ctx.fillStyle = color; ctx.font = font || `12px ${FONT}`; ctx.textAlign = align || "center"; ctx.textBaseline = base || "middle"; ctx.fillText(s, x, y);
+  }
+  function line(ctx, x1, y1, x2, y2) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+  const wrap = (a) => { while (a > PI) a -= TAU; while (a < -PI) a += TAU; return a; };
+  const pctx = document.createElement("canvas").getContext("2d");
+  function rgb(c) { pctx.clearRect(0, 0, 1, 1); pctx.fillStyle = c; pctx.fillRect(0, 0, 1, 1); const d = pctx.getImageData(0, 0, 1, 1).data; return [d[0], d[1], d[2]]; }
+
+  /* ================================================================ 1. 3D 센서 배치 */
+  (function () {
+    const T = CB.three($("v3d-fov"), { camera: [-16, 13, 15], target: [6, 0, 0], fov: 40, minDistance: 5, maxDistance: 700 });
+    if (!T) return;
+    const THREE = T.THREE;
+    CB.ground3d(T, 600, 60);
+    CB.car3d(T, { color: 0x9aa3b2 });
+    const COL = { cam: 0x3b82f6, rad: 0xf59e0b, lid: 0x10b981, us: 0xa855f7 };
+    const NAME = { cam: "카메라", rad: "레이더", lid: "라이다", us: "초음파" };
+    const LAYER = { cam: 0.04, rad: 0.08, lid: 0.12, us: 0.16 };
+    // [종류, x, z, 높이, 방위(°, +는 왼쪽), 화각(°), 거리(m)]
+    const DEF = [
+      ["cam", 0.9, 0, 1.3, 0, 30, 250], ["cam", 0.9, 0, 1.3, 0, 52, 150], ["cam", 0.9, 0, 1.3, 0, 120, 60],
+      ["cam", 0.5, -0.9, 1.0, 60, 90, 80], ["cam", 0.5, 0.9, 1.0, -60, 90, 80],
+      ["cam", 1.6, -0.9, 0.8, 140, 80, 100], ["cam", 1.6, 0.9, 0.8, -140, 80, 100],
+      ["cam", -2.2, 0, 0.9, 180, 130, 50],
+      ["rad", 2.25, 0, 0.5, 0, 18, 250],
+      ["rad", 2.0, -0.8, 0.5, 50, 150, 90], ["rad", 2.0, 0.8, 0.5, -50, 150, 90],
+      ["rad", -2.0, -0.8, 0.5, 130, 150, 90], ["rad", -2.0, 0.8, 0.5, -130, 150, 90],
+      ["lid", 0.6, 0, 1.5, 0, 120, 200],
+    ];
+    [[-0.7, 30], [-0.25, 10], [0.25, -10], [0.7, -30]].forEach(([z, a]) => { DEF.push(["us", 2.25, z, 0.5, a, 100, 5]); DEF.push(["us", -2.25, z, 0.5, 180 - a, 100, 5]); });
+    [1.7, -1.7].forEach((x) => { DEF.push(["us", x, -0.9, 0.5, 90, 100, 5]); DEF.push(["us", x, 0.9, 0.5, -90, 100, 5]); });
+    const groups = {};
+    Object.keys(COL).forEach((k) => { groups[k] = new THREE.Group(); T.scene.add(groups[k]); });
+    const sensors = DEF.map(([type, x, z, y, yaw, fov, range], i) => {
+      const geo = new THREE.CircleGeometry(range, 48, (yaw - fov / 2) * D2R, fov * D2R);
+      geo.rotateX(-PI / 2);
+      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: COL[type], transparent: true, opacity: type === "us" ? 0.3 : 0.13, side: THREE.DoubleSide, depthWrite: false }));
+      m.position.set(x, LAYER[type] + i * 0.002, z);
+      const pts = [new THREE.Vector3(0, 0, 0)];
+      for (let k = 0; k <= 32; k++) { const a = (yaw - fov / 2 + (fov * k) / 32) * D2R; pts.push(new THREE.Vector3(range * Math.cos(a), 0, -range * Math.sin(a))); }
+      const edge = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: COL[type], transparent: true, opacity: 0.75 }));
+      edge.position.copy(m.position);
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 8), new THREE.MeshBasicMaterial({ color: COL[type] }));
+      dot.position.set(x, y, z);
+      groups[type].add(m, edge, dot);
+      return { type, x, z, yaw: yaw * D2R, half: (fov / 2) * D2R, range };
+    });
+    // 주변 물체: [이름, x, z, 길이, 폭, 높이]
+    const OBJ = [["옆 차로 차", -12, -3.5, 4.5, 1.8, 1.45], ["앞차", 45, 0, 4.5, 1.8, 1.45], ["먼 트럭", 190, 0, 9, 2.5, 3.2], ["보행자", 14, 5, 0.5, 0.5, 1.7], ["뒤차", -28, 0, 4.5, 1.8, 1.45], ["주차 기둥", -3.6, 0.5, 0.3, 0.3, 1.0]];
+    const objs = OBJ.map(([name, x, z, l, wd, hh]) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(l, hh, wd), T.material(0x8892a6, { roughness: 0.6 }));
+      mesh.position.set(x, hh / 2, z); T.scene.add(mesh);
+      const label = T.label(name, [0, hh / 2 + 0.5, 0]); label.obj = mesh;
+      return { name, mesh, label };
+    });
+    const on = {};
+    const sees = (s, o) => {
+      const dx = o.mesh.position.x - s.x, dz = o.mesh.position.z - s.z;
+      return Math.hypot(dx, dz) <= s.range && Math.abs(wrap(Math.atan2(-dz, dx) - s.yaw)) <= s.half;
+    };
+    function update() {
+      Object.keys(COL).forEach((k) => { on[k] = $("f-" + k).checked; groups[k].visible = on[k]; });
+      objs[0].mesh.position.x = fx();
+      let nOn = 0, far = 0;
+      sensors.forEach((s) => { if (on[s.type]) { nOn++; far = Math.max(far, s.range); } });
+      objs.forEach((o, i) => {
+        const cnt = { cam: 0, rad: 0, lid: 0, us: 0 };
+        sensors.forEach((s) => { if (on[s.type] && sees(s, o)) cnt[s.type]++; });
+        const list = Object.keys(cnt).filter((k) => cnt[k]);
+        o.mesh.material.color.setHex(list.length ? 0xdd5a16 : 0x8892a6);
+        o.mesh.material.emissive.setHex(list.length ? 0x441a00 : 0x000000);
+        o.label.el.innerHTML = o.name + (list.length ? ' <span style="font-weight:400">' + list.map((k) => NAME[k]).join("·") + "</span>" : ' <span style="font-weight:400;color:var(--bad)">감지 없음</span>');
+        if (i === 0) {
+          ["cam", "rad", "lid", "us"].forEach((k) => CB.stat("o-f-" + k, cnt[k] + "<small>대</small>"));
+          const x = o.mesh.position.x;
+          CB.stat("o-f-pos", (x >= 0 ? "앞 " : "뒤 ") + Math.abs(x).toFixed(0) + "<small>m, 왼쪽 3.5 m</small>");
+        }
+      });
+      const blind = objs.filter((o) => o.label.el.innerHTML.indexOf("감지 없음") >= 0).map((o) => o.name);
+      $("f-info").innerHTML = "<b>켜진 센서 " + nOn + "개</b> · 가장 먼 감지 거리 " + far + " m · " + (blind.length ? "지금 구성으로 보이지 않는 물체: <b>" + blind.join(", ") + "</b>" : "모든 물체가 적어도 한 종류의 센서 시야 안에 있다.");
+    }
+    const fx = CB.range("f-x", (v) => (v >= 0 ? "앞 " : "뒤 ") + Math.abs(v) + " m", update);
+    ["cam", "rad", "lid", "us"].forEach((k) => $("f-" + k).addEventListener("change", update));
+    const VIEW = { iso: [[-16, 13, 15], [6, 0, 0]], near: [[-0.04, 40, 0], [0, 0, 0]], mid: [[29.85, 150, 0], [30, 0, 0]], far: [[94.6, 420, 0], [95, 0, 0]] };
+    CB.seg("f-view", (v) => { T.camera.position.set(...VIEW[v][0]); T.controls.target.set(...VIEW[v][1]); T.controls.update(); });
+    update();
+  })();
+
+  /* ================================================================ 2. 핀홀 카메라 */
+  (function () {
+    const RES = { 1280: [1280, 960], 1920: [1920, 1080], 3840: [3840, 2160] };
+    const OBJ = { ped: { H: 1.7, W: 0.5, min: 20, name: "보행자" }, car: { H: 1.5, W: 1.8, min: 20, name: "차량" }, sign: { H: 0.6, W: 0.6, min: 16, name: "표지판" } };
+    // 실루엣: x는 중심 기준 m, y는 바닥 기준 m
+    const SIL = {
+      ped: (x, y) => Math.hypot(x, y - 1.58) < 0.11 || (Math.abs(x) < 0.2 && y > 0.8 && y < 1.45) || (Math.abs(x) > 0.03 && Math.abs(x) < 0.17 && y <= 0.8),
+      car: (x, y) => (Math.abs(x) < 0.9 && y > 0.3 && y < 1.0) || (Math.abs(x) < 0.76 && y >= 1.0 && y < 1.5) || (Math.abs(x) > 0.55 && Math.abs(x) < 0.86 && y <= 0.3),
+      sign: (x, y) => Math.hypot(x, y - 0.3) < 0.3,
+    };
+    const CAMH = 1.3;
+    let cv;
+    const upd = () => { stats(); cv && cv.redraw(); };
+    const fov = CB.range("p-fov", (v) => v + "°", upd), Z = CB.range("p-z", (v) => v + " m", upd);
+    const res = CB.seg("p-res", upd), obj = CB.seg("p-obj", upd);
+    const S = () => {
+      const [W, Hh] = RES[res()], o = OBJ[obj()], f = W / (2 * Math.tan((fov() * D2R) / 2));
+      return { W, Hh, o, f, hpx: (f * o.H) / Z(), wpx: (f * o.W) / Z(), zmax: (f * o.H) / o.min };
+    };
+    function stats() {
+      const s = S();
+      CB.stat("o-p-f", Math.round(s.f).toLocaleString("en-US") + "<small>px</small>");
+      CB.stat("o-p-ang", (Math.atan(1 / s.f) / D2R).toFixed(3) + "<small>°/px</small>");
+      CB.stat("o-p-h", (s.hpx < 10 ? s.hpx.toFixed(1) : Math.round(s.hpx)) + "<small>px</small>");
+      CB.stat("o-p-gsd", ((Z() / s.f) * 100).toFixed(1) + "<small>cm</small>");
+      CB.stat("o-p-max", Math.round(s.zmax) + "<small>m</small>");
+    }
+    cv = CB.canvas("#cv-pin", (ctx, w, h) => {
+      const P = CB.palette(), s = S(), z = Z(), fm = `11px ${MONO}`, fl = `600 12px ${FONT}`;
+      // ---- 위: 옆에서 본 광선 그림 (세로 과장)
+      const top = h * 0.46, x0 = 56, x1 = w - 16, gy = top - 22, sy = (top - 50) / 3.2;
+      const X = (d) => x0 + (d / 300) * (x1 - x0), Y = (m) => gy - m * sy;
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 1; line(ctx, 8, gy, w - 8, gy);
+      [0, 100, 200, 300].forEach((d) => { text(ctx, d + " m", X(d), gy + 11, P.dim, fm); });
+      ctx.strokeStyle = P.grid; ctx.setLineDash([4, 4]); line(ctx, 8, Y(CAMH), x1, Y(CAMH)); ctx.setLineDash([]);
+      const ix = x0 - 30, proj = (m) => Y(CAMH) - ((Y(m) - Y(CAMH)) * (x0 - ix)) / Math.max(4, X(z) - x0);
+      ctx.strokeStyle = P.accent; ctx.lineWidth = 1.2; ctx.globalAlpha = 0.8;
+      [0, s.o.H].forEach((m) => line(ctx, X(z), Y(m), ix, proj(m)));
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = P.text; ctx.lineWidth = 2; line(ctx, ix, Y(CAMH) - 24, ix, Y(CAMH) + 24);
+      ctx.strokeStyle = P.accent2; ctx.lineWidth = 4; line(ctx, ix, proj(0), ix, proj(s.o.H));
+      ctx.fillStyle = P.text; ctx.beginPath(); ctx.arc(x0, Y(CAMH), 3.5, 0, TAU); ctx.fill();
+      ctx.strokeStyle = P.accent; ctx.lineWidth = 4; line(ctx, X(z), Y(0), X(z), Y(s.o.H));
+      text(ctx, s.o.name + " " + s.o.H + " m", CB.clamp(X(z), 60, w - 50), Y(s.o.H) - 10, P.accent, fl);
+      text(ctx, "영상면", ix, Y(CAMH) - 34, P.dim, fm); text(ctx, "핀홀", x0 + 4, Y(CAMH) - 12, P.dim, fm, "left");
+      ctx.strokeStyle = P.warn; ctx.setLineDash([3, 3]); ctx.lineWidth = 1.2;
+      if (s.zmax <= 300) { line(ctx, X(s.zmax), Y(2.6), X(s.zmax), gy); text(ctx, "인식 한계 " + Math.round(s.zmax) + " m", X(s.zmax) - 4, Y(2.8), P.warn, fm, s.zmax > 200 ? "right" : "left"); }
+      ctx.setLineDash([]);
+      // ---- 아래 왼쪽: 영상 프레임
+      const by = top + 8, bh = h - by - 22, fw = Math.min(w * 0.54, (bh * s.W) / s.Hh), fh = (fw * s.Hh) / s.W, fx = 12, fy = by + (bh - fh) / 2, k = fw / s.W;
+      ctx.save(); ctx.beginPath(); ctx.rect(fx, fy, fw, fh); ctx.clip();
+      ctx.fillStyle = P.surface; ctx.fillRect(fx, fy, fw, fh);
+      const cx = fx + fw / 2, cy = fy + fh / 2;
+      ctx.strokeStyle = P.faint; ctx.lineWidth = 1; line(ctx, fx, cy, fx + fw, cy);
+      [-1.75, 1.75].forEach((lx) => { ctx.beginPath(); for (let d = 4; d <= 400; d *= 1.3) { const px = cx + ((s.f * lx) / d) * k, py = cy + ((s.f * CAMH) / d) * k; d === 4 ? ctx.moveTo(px, py) : ctx.lineTo(px, py); } ctx.stroke(); });
+      const ob = cy + ((s.f * CAMH) / z) * k, oh = s.hpx * k, ow = s.wpx * k;
+      ctx.fillStyle = P.accent; ctx.fillRect(cx - Math.max(ow, 1) / 2, ob - Math.max(oh, 1), Math.max(ow, 1), Math.max(oh, 1));
+      ctx.restore();
+      ctx.strokeStyle = P.border; ctx.lineWidth = 1.5; ctx.strokeRect(fx, fy, fw, fh);
+      text(ctx, s.W + " × " + s.Hh + " 영상", fx + fw / 2, fy + fh + 11, P.dim, fm);
+      // ---- 아래 오른쪽: 픽셀 확대
+      const gx = fx + fw + 14, gw = w - gx - 12, gh = bh - 4;
+      let nH = Math.max(1, Math.round(s.hpx)), nW = Math.max(1, Math.round(s.wpx)), shrunk = false;
+      if (nH > 48) { nW = Math.max(1, Math.round((nW * 48) / nH)); nH = 48; shrunk = true; }
+      const cell = Math.min(gh / nH, gw / nW, 16), ox = gx + (gw - cell * nW) / 2, oy = by + (gh - cell * nH) / 2, sil = SIL[obj()];
+      for (let r = 0; r < nH; r++) for (let c = 0; c < nW; c++) {
+        let cov = 0;
+        for (let a = 0; a < 3; a++) for (let b = 0; b < 3; b++) if (sil(((c + (a + 0.5) / 3) / nW - 0.5) * s.o.W, (1 - (r + (b + 0.5) / 3) / nH) * s.o.H)) cov++;
+        ctx.globalAlpha = 0.08 + 0.92 * (cov / 9); ctx.fillStyle = P.accent;
+        ctx.fillRect(ox + c * cell, oy + r * cell, cell + 0.5, cell + 0.5);
+      }
+      ctx.globalAlpha = 1;
+      if (cell >= 5) { ctx.strokeStyle = P.bg; ctx.lineWidth = 1; for (let r = 0; r <= nH; r++) line(ctx, ox, oy + r * cell, ox + nW * cell, oy + r * cell); for (let c = 0; c <= nW; c++) line(ctx, ox + c * cell, oy, ox + c * cell, oy + nH * cell); }
+      text(ctx, Math.round(s.wpx) + " × " + Math.round(s.hpx) + " px" + (shrunk ? " (축소)" : ""), gx + gw / 2, fy + fh + 11, s.hpx < s.o.min ? P.bad : P.dim, fm);
+    }, { aspect: 0.78, minHeight: 320, maxHeight: 470 });
+    stats();
+  })();
+
+  /* ================================================================ 3. 스테레오 */
+  (function () {
+    let cv;
+    const upd = () => { stats(); cv && cv.redraw(); };
+    const B = CB.range("s-b", (v) => v + " cm", upd), F = CB.range("s-f", (v) => v + " px", upd);
+    const E = CB.range("s-e", (v) => v.toFixed(2) + " px", upd), Z = CB.range("s-z", (v) => v + " m", upd);
+    const S = () => { const fb = (F() * B()) / 100, d = fb / Z(); return { fb, d, dz: (Z() * Z() * E()) / fb, zn: fb / (d + E()), zf: d > E() ? fb / (d - E()) : Infinity }; };
+    function stats() {
+      const s = S();
+      CB.stat("o-s-d", s.d.toFixed(s.d < 10 ? 2 : 1) + "<small>px</small>");
+      CB.stat("o-s-dz", "±" + (s.dz < 1 ? (s.dz * 100).toFixed(0) + "<small>cm</small>" : s.dz.toFixed(1) + "<small>m</small>"));
+      CB.stat("o-s-rel", ((s.dz / Z()) * 100).toFixed(1) + "<small>%</small>");
+      CB.stat("o-s-fb", Math.round(s.fb) + "<small>m</small>");
+    }
+    cv = CB.canvas("#cv-st", (ctx, w, h) => {
+      const P = CB.palette(), s = S(), z = Z(), fm = `11px ${MONO}`, fl = `600 12px ${FONT}`;
+      const top = h * 0.44, x0 = 44, x1 = w - 16, cy = top / 2 + 4, X = (d) => x0 + (Math.min(d, 150) / 150) * (x1 - x0);
+      const half = CB.map(B(), 10, 120, 10, Math.min(46, top / 2 - 16));
+      ctx.strokeStyle = P.grid; ctx.setLineDash([4, 4]); line(ctx, x0, cy, x1, cy); ctx.setLineDash([]);
+      [0, 50, 100, 150].forEach((d) => text(ctx, d + " m", X(d), top - 6, P.dim, fm));
+      // 불확실 구간
+      const xa = X(s.zn), xb = X(Math.min(s.zf, 150));
+      ctx.fillStyle = P.bad; ctx.globalAlpha = 0.25;
+      ctx.beginPath(); ctx.moveTo(xa, cy); ctx.lineTo(X(z), cy - 7); ctx.lineTo(xb, cy); ctx.lineTo(X(z), cy + 7); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1; ctx.strokeStyle = P.bad; ctx.lineWidth = 3; line(ctx, xa, cy, xb, cy);
+      ctx.lineWidth = 1.4;
+      [[-half, P.accent], [half, P.accent2]].forEach(([dy, col]) => {
+        ctx.strokeStyle = col; line(ctx, x0, cy + dy, X(z), cy);
+        ctx.fillStyle = col; ctx.fillRect(x0 - 16, cy + dy - 6, 16, 12);
+        ctx.beginPath(); ctx.moveTo(x0, cy + dy - 4); ctx.lineTo(x0 + 7, cy + dy - 8); ctx.lineTo(x0 + 7, cy + dy + 8); ctx.lineTo(x0, cy + dy + 4); ctx.fill();
+      });
+      text(ctx, "L", x0 - 24, cy - half, P.accent, fl); text(ctx, "R", x0 - 24, cy + half, P.accent2, fl);
+      text(ctx, "B", x0 - 34, cy, P.dim, fm);
+      ctx.fillStyle = P.text; ctx.beginPath(); ctx.arc(X(z), cy, 5, 0, TAU); ctx.fill();
+      const lab = "Z = " + z + " m ± " + (s.dz < 10 ? s.dz.toFixed(2) : s.dz.toFixed(0)) + " m";
+      text(ctx, lab, CB.clamp(X(z), 90, w - 90), cy - half - 12 < 12 ? 12 : cy - Math.max(half, 14) - 10, P.text, fl);
+      // 오차 곡선
+      const box = { x: 52, y: top + 12, w: w - 52 - 16, h: h - top - 12 - 44 };
+      const ymax = Math.max(1, Math.min(60, (150 * 150 * E()) / s.fb));
+      const cur = [], dbl = [];
+      for (let d = 2; d <= 150; d += 2) { cur.push([d, (d * d * E()) / s.fb]); dbl.push([d, (d * d * E()) / (2 * s.fb)]); }
+      CB.chart(ctx, box, { x: [0, 150], y: [0, ymax], xLabel: "거리 Z (m)", yLabel: "거리 오차 ΔZ (m)",
+        series: [{ data: dbl, color: P.dim, width: 1.4, dash: [5, 4] }, { data: cur, color: P.bad, width: 2.2 }],
+        points: [{ x: z, y: Math.min(s.dz, ymax), color: P.text, r: 4.5 }] });
+      text(ctx, "B × 2", box.x + box.w - 6, box.y + box.h - 8, P.dim, fm, "right", "bottom");
+    }, { aspect: 0.82, minHeight: 330, maxHeight: 480 });
+    stats();
+  })();
+
+  /* ================================================================ 4. FMCW 레이더 */
+  (function () {
+    const FC = 77e9, LAM = C0 / FC, TC = 25e-6, N = 2048, M = 64, FS = N / TC, RMAX = 150, VMAX = LAM / (4 * TC), DV = LAM / (2 * M * TC);
+    function fft(re, im) {
+      const n = re.length;
+      for (let i = 1, j = 0; i < n; i++) {
+        let bit = n >> 1;
+        for (; j & bit; bit >>= 1) j ^= bit;
+        j ^= bit;
+        if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; }
+      }
+      for (let len = 2; len <= n; len <<= 1) {
+        const ang = -TAU / len, wr = Math.cos(ang), wi = Math.sin(ang), hl = len >> 1;
+        for (let i = 0; i < n; i += len) {
+          let cr = 1, ci = 0;
+          for (let k = 0; k < hl; k++) {
+            const a = i + k, b = a + hl, xr = re[b] * cr - im[b] * ci, xi = re[b] * ci + im[b] * cr;
+            re[b] = re[a] - xr; im[b] = im[a] - xi; re[a] += xr; im[a] += xi;
+            const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t;
+          }
+        }
+      }
+    }
+    const hN = new Float64Array(N), hM = new Float64Array(M);
+    for (let i = 0; i < N; i++) hN[i] = 0.5 - 0.5 * Math.cos((TAU * i) / (N - 1));
+    for (let i = 0; i < M; i++) hM[i] = 0.5 - 0.5 * Math.cos((TAU * i) / (M - 1));
+    let D = null, c1 = null, c2 = null;
+    const upd = () => { compute(); stats(); c1 && c1.redraw(); c2 && c2.redraw(); };
+    const bw = CB.range("r-bw", (v) => v + " MHz", upd), r1 = CB.range("r-r1", (v) => v.toFixed(1) + " m", upd);
+    const v1 = CB.range("r-v1", (v) => (v > 0 ? "+" : "") + v.toFixed(1) + " m/s", upd), r2 = CB.range("r-r2", (v) => v.toFixed(1) + " m", upd);
+    $("r-t2").addEventListener("change", upd);
+
+    function compute() {
+      const Bw = bw() * 1e6, S = Bw / TC, dR = C0 / (2 * Bw), K = Math.min(N / 2, Math.ceil(RMAX / dR) + 1);
+      const tg = [{ R: r1(), v: v1() }];
+      if ($("r-t2").checked) tg.push({ R: r2(), v: 0 });
+      tg.forEach((t) => {
+        t.fd = (2 * t.v) / LAM; t.fb = (2 * t.R * S) / C0 - t.fd; t.A = Math.min(1, Math.pow(20 / t.R, 2));
+        t.ph = ((4 * PI * t.R) / LAM) % TAU; t.wn = (TAU * t.fb) / FS; t.wm = TAU * t.fd * TC;
+      });
+      const re = new Float64Array(N), im = new Float64Array(N), raw = new Float64Array(256);
+      const Xr = new Float64Array(K * M), Xi = new Float64Array(K * M), spec = new Float64Array(K);
+      for (let m = 0; m < M; m++) {
+        for (let n = 0; n < N; n++) {
+          let s = (Math.random() + Math.random() + Math.random() - 1.5) * 0.04;
+          for (let q = 0; q < tg.length; q++) s += tg[q].A * Math.cos(tg[q].wn * n + tg[q].ph - tg[q].wm * m);
+          if (m === 0 && n < 256) raw[n] = s;
+          re[n] = s * hN[n]; im[n] = 0;
+        }
+        fft(re, im);
+        for (let k = 0; k < K; k++) { Xr[k * M + m] = re[k]; Xi[k * M + m] = im[k]; spec[k] += re[k] * re[k] + im[k] * im[k]; }
+      }
+      // 처프 방향 FFT → 거리–속도 지도 (행 0 = +VMAX 접근)
+      const rd = new Float32Array(K * M), a = new Float64Array(M), b = new Float64Array(M);
+      let rdMax = 1e-12, sMax = 1e-12;
+      for (let k = 0; k < K; k++) {
+        for (let m = 0; m < M; m++) { a[m] = Xr[k * M + m] * hM[m]; b[m] = Xi[k * M + m] * hM[m]; }
+        fft(a, b);
+        for (let j = 0; j < M; j++) { const p = a[j] * a[j] + b[j] * b[j]; rd[k * M + ((j + M / 2) % M)] = p; if (p > rdMax) rdMax = p; }
+        if (spec[k] > sMax) sMax = spec[k];
+      }
+      const db = new Float64Array(K);
+      for (let k = 0; k < K; k++) db[k] = 10 * Math.log10(spec[k] / sMax + 1e-12);
+      const floor = Array.from(db).sort((x, y) => x - y)[K >> 1];
+      const pk = [];
+      for (let k = 2; k < K - 1; k++) if (db[k] > db[k - 1] && db[k] >= db[k + 1] && db[k] > floor + 15 && db[k] > -45) {
+        const den = db[k - 1] - 2 * db[k] + db[k + 1], off = den ? (0.5 * (db[k - 1] - db[k + 1])) / den : 0;
+        let bi = 0, bp = 0;
+        for (let i = 0; i < M; i++) if (rd[k * M + i] > bp) { bp = rd[k * M + i]; bi = i; }
+        pk.push({ R: (k + off) * dR, db: db[k], v: -(bi - M / 2) * DV });
+      }
+      pk.sort((x, y) => y.db - x.db); pk.length = Math.min(pk.length, 3); pk.sort((x, y) => x.R - y.R);
+      D = { Bw, S, dR, K, tg, raw, db, rd, rdMax, pk };
+    }
+    function stats() {
+      const t = D.tg[0];
+      CB.stat("o-r-res", (D.dR < 1 ? (D.dR * 100).toFixed(0) + "<small>cm</small>" : D.dR.toFixed(2) + "<small>m</small>"));
+      CB.stat("o-r-fb", (t.fb / 1e6).toFixed(2) + "<small>MHz</small>");
+      CB.stat("o-r-fd", (t.fd / 1e3).toFixed(1) + "<small>kHz</small>");
+      CB.stat("o-r-est", D.pk.length ? D.pk.map((p) => p.R.toFixed(1)).join(" · ") + "<small>m</small>" : "없음");
+      CB.stat("o-r-vest", D.pk.length ? D.pk.map((p) => (p.v > 0 ? "+" : "") + p.v.toFixed(1)).join(" · ") + "<small>m/s</small>" : "—");
+    }
+    compute();
+    c1 = CB.canvas("#cv-fm1", (ctx, w, h) => {
+      const P = CB.palette(), fm = `11px ${MONO}`, cols = [P.accent2, P.warn];
+      const x0 = 50, x1 = w - 14, y0 = 16, y1 = h * 0.58, EX = 3;
+      const X = (t) => x0 + (t / (2 * TC)) * (x1 - x0), Y = (f) => y1 - f * (y1 - y0);
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 1; line(ctx, x0, y0 - 6, x0, y1); line(ctx, x0, y1, x1, y1);
+      text(ctx, "77 GHz", x0 - 5, y1, P.dim, fm, "right"); text(ctx, "+" + bw() + " MHz", x0 - 5 + 46, y0 - 8, P.dim, fm, "right");
+      text(ctx, "0", X(0), y1 + 10, P.dim, fm); text(ctx, "25 µs", X(TC), y1 + 10, P.dim, fm); text(ctx, "50 µs", X(2 * TC), y1 + 10, P.dim, fm, "right");
+      ctx.save(); ctx.beginPath(); ctx.rect(x0, y0 - 4, x1 - x0, y1 - y0 + 5); ctx.clip();
+      const saw = (dl, col, dash, wd) => {
+        ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.setLineDash(dash); ctx.beginPath();
+        for (let c = -1; c < 2; c++) { ctx.moveTo(X(c * TC + dl), Y(0)); ctx.lineTo(X((c + 1) * TC + dl), Y(1)); }
+        ctx.stroke(); ctx.setLineDash([]);
+      };
+      D.tg.forEach((t, i) => saw(((2 * t.R) / C0) * EX, cols[i], [6, 4], 1.8));
+      saw(0, P.accent, [], 2.4);
+      const t0 = D.tg[0], tm = 0.62 * TC, gap = ((2 * t0.R) / C0) * EX / TC;
+      ctx.restore();
+      if (gap > 0.03) { CB.arrow(ctx, X(tm), Y(tm / TC), X(tm), Y(tm / TC - gap), P.text, 1.5); text(ctx, "f_b", X(tm) + 6, Y(tm / TC - gap / 2), P.text, fm, "left"); }
+      // 비트 신호
+      const by0 = y1 + 26, by1 = h - 18, bm = (by0 + by1) / 2, amp = (by1 - by0) / 2;
+      let mx = 0.05; for (let i = 0; i < 256; i++) mx = Math.max(mx, Math.abs(D.raw[i]));
+      ctx.strokeStyle = P.grid; line(ctx, x0, bm, x1, bm);
+      ctx.strokeStyle = P.text; ctx.lineWidth = 1.3; ctx.beginPath();
+      for (let i = 0; i < 256; i++) { const px = x0 + (i / 255) * (x1 - x0), py = bm - (D.raw[i] / mx) * amp * 0.92; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+      ctx.stroke();
+      text(ctx, "비트 신호 (처프 앞 3.1 µs, 256 샘플)", x0, h - 8, P.dim, fm, "left");
+    }, { aspect: 0.5, minHeight: 230, maxHeight: 300 });
+    const off = document.createElement("canvas");
+    c2 = CB.canvas("#cv-fm2", (ctx, w, h) => {
+      const P = CB.palette(), fm = `11px ${MONO}`, cols = [P.accent2, P.warn];
+      const box = { x: 50, y: 14, w: w - 50 - 14, h: h * 0.42 - 14 };
+      const data = []; for (let k = 0; k < D.K; k++) data.push([k * D.dR, D.db[k]]);
+      CB.chart(ctx, box, { x: [0, RMAX], y: [-70, 5], yLabel: "세기 (dB)", yTicks: [-60, -40, -20, 0],
+        series: [{ data, color: P.accent, width: 1.6 }],
+        vlines: D.tg.map((t, i) => ({ x: t.R, color: cols[i], dash: [3, 3] })),
+        points: D.pk.map((p) => ({ x: p.R, y: p.db, color: P.text, r: 3.5 })) });
+      text(ctx, "거리 스펙트럼 (FFT)", box.x + box.w - 4, box.y + 8, P.dim, fm, "right");
+      // 거리–속도 지도
+      const my = box.y + box.h + 34, mh = h - my - 34, mw = box.w * Math.min(1, ((D.K - 1) * D.dR) / RMAX);
+      off.width = D.K; off.height = M;
+      const oc = off.getContext("2d"), img = oc.createImageData(D.K, M), c0 = rgb(P.bg), cA = rgb(P.accent), cT = rgb(P.text);
+      for (let k = 0; k < D.K; k++) for (let i = 0; i < M; i++) {
+        const t = CB.clamp((10 * Math.log10(D.rd[k * M + i] / D.rdMax + 1e-12) + 55) / 55, 0, 1), o = (i * D.K + k) * 4;
+        const u = t < 0.7 ? t / 0.7 : 1, s = t < 0.7 ? 0 : (t - 0.7) / 0.3;
+        for (let c = 0; c < 3; c++) img.data[o + c] = (c0[c] + (cA[c] - c0[c]) * u) * (1 - s) + cT[c] * s;
+        img.data[o + 3] = 255;
+      }
+      oc.putImageData(img, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(off, box.x, my, mw, mh);
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 1; ctx.strokeRect(box.x, my, box.w, mh);
+      ctx.strokeStyle = P.faint; ctx.setLineDash([3, 4]); line(ctx, box.x, my + mh / 2, box.x + box.w, my + mh / 2); ctx.setLineDash([]);
+      text(ctx, "+" + VMAX.toFixed(0), box.x - 6, my + 5, P.dim, fm, "right"); text(ctx, "0", box.x - 6, my + mh / 2, P.dim, fm, "right"); text(ctx, "−" + VMAX.toFixed(0), box.x - 6, my + mh - 5, P.dim, fm, "right");
+      ctx.save(); ctx.translate(12, my + mh / 2); ctx.rotate(-PI / 2); text(ctx, "접근 속도 (m/s)", 0, 0, P.dim, `12px ${FONT}`); ctx.restore();
+      [0, 50, 100, 150].forEach((d) => text(ctx, String(d), box.x + (d / RMAX) * box.w, my + mh + 10, P.dim, fm));
+      text(ctx, "거리 (m) · 거리–속도 지도", box.x + box.w / 2, my + mh + 26, P.dim, `12px ${FONT}`);
+    }, { aspect: 0.9, minHeight: 360, maxHeight: 480 });
+    stats();
+  })();
+
+  /* ================================================================ 5. 라이다 스캔 */
+  (function () {
+    const INIT = () => [
+      { k: "ped", c: 1, x: 14, y: -6, r: 0.35, rho: 0.25 },
+      { k: "car", x: 28, y: 3.5, l: 4.5, wd: 1.8, a: 0, rho: 0.5 },
+      { k: "dark", x: 45, y: -3.5, l: 4.5, wd: 1.8, a: 0, rho: 0.06 },
+      { k: "wall", x: 30, y: 16, l: 40, wd: 0.6, a: -0.08, rho: 0.6 },
+    ];
+    const XMIN = -15, XSPAN = 80;
+    let objs = INIT(), rays = [], cnt = {}, cv = null, sweep = 0, grab = null;
+    const res = CB.range("l-res", (v) => v.toFixed(1) + "°", () => scan()), rmax = CB.range("l-max", (v) => v + " m", () => scan());
+    const noise = CB.range("l-noise", (v) => v + " cm", () => scan()), fog = CB.range("l-fog", (v) => v + " %", () => scan());
+    const corners = (o) => {
+      const ca = Math.cos(o.a), sa = Math.sin(o.a);
+      return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([i, j]) => [o.x + (i * o.l / 2) * ca - (j * o.wd / 2) * sa, o.y + (i * o.l / 2) * sa + (j * o.wd / 2) * ca]);
+    };
+    function scan() {
+      const n = Math.round(360 / res()), dth = TAU / n, R10 = rmax(), thr = 0.1 / (R10 * R10), f = fog() / 100, alpha = f * 0.05, sig = noise() / 100;
+      const shapes = objs.map((o) => (o.c ? null : corners(o)));
+      rays = []; cnt = { ped: 0, car: 0, dark: 0, wall: 0, noise: 0 };
+      for (let i = 0; i < n; i++) {
+        const a = i * dth, dx = Math.cos(a), dy = Math.sin(a);
+        let best = Infinity, bo = null;
+        objs.forEach((o, q) => {
+          if (o.c) {
+            const b = o.x * dx + o.y * dy, disc = b * b - (o.x * o.x + o.y * o.y - o.r * o.r);
+            if (disc > 0) { const t = b - Math.sqrt(disc); if (t > 0 && t < best) { best = t; bo = o; } }
+          } else {
+            const c = shapes[q];
+            for (let e = 0; e < 4; e++) {
+              const p = c[e], p2 = c[(e + 1) % 4], ex = p2[0] - p[0], ey = p2[1] - p[1], den = dx * ey - dy * ex;
+              if (Math.abs(den) < 1e-12) continue;
+              const t = (p[0] * ey - p[1] * ex) / den, u = (p[0] * dy - p[1] * dx) / den;
+              if (t > 0 && u >= 0 && u <= 1 && t < best) { best = t; bo = o; }
+            }
+          }
+        });
+        let t = 0, k = null;
+        if (f > 0 && Math.random() < f * 0.12) { const tf = 1.5 + Math.random() * 7; if (tf < best) { t = tf; k = "noise"; } }
+        if (!k && bo && (bo.rho * Math.exp(-2 * alpha * best)) / (best * best) >= thr) { t = Math.max(0.2, best + sig * CB.randn()); k = bo.k; }
+        if (k) cnt[k]++;
+        rays.push({ a, t, k });
+      }
+      const ped = objs[0], dp = Math.hypot(ped.x, ped.y), sp = dp * res() * D2R;
+      ["ped", "car", "dark", "wall"].forEach((k) => CB.stat("o-l-" + k, cnt[k] + "<small>점</small>"));
+      CB.stat("o-l-sp", (sp * 100).toFixed(1) + "<small>cm @ " + dp.toFixed(0) + " m</small>");
+      CB.stat("o-l-3d", "약 " + cnt.ped * Math.max(1, Math.floor(1.7 / sp)) + "<small>점</small>");
+    }
+    scan();
+    const geom = (w, h) => { const s = w / XSPAN; return { s, X: (x) => (x - XMIN) * s, Y: (y) => h / 2 + y * s }; };
+    cv = CB.canvas("#cv-li", (ctx, w, h) => {
+      const P = CB.palette(), g = geom(w, h), ox = g.X(0), oy = g.Y(0), fm = `11px ${MONO}`;
+      const COL = { ped: P.accent, car: P.accent2, dark: P.warn, wall: P.ok, noise: P.bad };
+      ctx.strokeStyle = P.grid; ctx.lineWidth = 1;
+      for (let r = 20; r <= 100; r += 20) { ctx.beginPath(); ctx.arc(ox, oy, r * g.s, 0, TAU); ctx.stroke(); if (ox + r * g.s < w - 20) text(ctx, r + " m", ox + r * g.s, oy + 10, P.faint, fm); }
+      ctx.strokeStyle = P.faint; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.arc(ox, oy, rmax() * g.s, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+      if ($("l-rays").checked) {
+        ctx.strokeStyle = P.red; ctx.globalAlpha = 0.16; ctx.lineWidth = 1; ctx.beginPath();
+        const st = Math.max(1, Math.round(rays.length / 720));
+        for (let i = 0; i < rays.length; i += st) { const r = rays[i]; if (!r.k) continue; ctx.moveTo(ox, oy); ctx.lineTo(ox + Math.cos(r.a) * r.t * g.s, oy + Math.sin(r.a) * r.t * g.s); }
+        ctx.stroke(); ctx.globalAlpha = 1;
+      }
+      objs.forEach((o) => {
+        ctx.fillStyle = P.surface; ctx.strokeStyle = o === grab ? P.text : P.border; ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        if (o.c) ctx.arc(g.X(o.x), g.Y(o.y), Math.max(4, o.r * g.s), 0, TAU);
+        else { corners(o).forEach(([x, y], i) => (i ? ctx.lineTo(g.X(x), g.Y(y)) : ctx.moveTo(g.X(x), g.Y(y)))); ctx.closePath(); }
+        ctx.fill(); ctx.stroke();
+      });
+      CB.carTop(ctx, ox, oy, 0, { len: Math.max(16, 4.5 * g.s), color: P.dim });
+      const br = rays[Math.floor((sweep / TAU) * rays.length) % rays.length];
+      if (br) { const t = br.k ? br.t : rmax(); ctx.strokeStyle = P.red; ctx.lineWidth = 1.5; line(ctx, ox, oy, ox + Math.cos(br.a) * t * g.s, oy + Math.sin(br.a) * t * g.s); }
+      const ps = w < 420 ? 2 : 2.6;
+      rays.forEach((r) => { if (!r.k) return; ctx.fillStyle = COL[r.k]; ctx.fillRect(ox + Math.cos(r.a) * r.t * g.s - ps / 2, oy + Math.sin(r.a) * r.t * g.s - ps / 2, ps, ps); });
+      text(ctx, "물체를 끌어 옮길 수 있다", w - 10, 14, P.faint, `12px ${FONT}`, "right");
+    }, { aspect: 0.62, minHeight: 240, maxHeight: 470 });
+    CB.drag(cv.canvas, {
+      down(p) {
+        const g = geom(cv.w, cv.h), wx = p.x / g.s + XMIN, wy = (p.y - cv.h / 2) / g.s, m = 12 / g.s;
+        grab = null;
+        objs.forEach((o) => {
+          if (grab) return;
+          const dx = wx - o.x, dy = wy - o.y;
+          if (o.c) { if (Math.hypot(dx, dy) < o.r + m) grab = o; }
+          else { const ca = Math.cos(o.a), sa = Math.sin(o.a); if (Math.abs(dx * ca + dy * sa) < o.l / 2 + m && Math.abs(-dx * sa + dy * ca) < o.wd / 2 + m) grab = o; }
+        });
+        if (!grab) return false;
+        grab.ox = wx - grab.x; grab.oy = wy - grab.y;
+      },
+      move(p) {
+        const g = geom(cv.w, cv.h), hy = cv.h / 2 / g.s;
+        grab.x = CB.clamp(p.x / g.s + XMIN - grab.ox, XMIN + 1, XMIN + XSPAN - 1);
+        grab.y = CB.clamp((p.y - cv.h / 2) / g.s - grab.oy, -hy + 0.5, hy - 0.5);
+        if (Math.hypot(grab.x, grab.y) < 3.5) grab.x = Math.sqrt(Math.max(0, 12.25 - grab.y * grab.y)) + 0.01;
+        scan();
+      },
+      up() { grab = null; },
+    });
+    $("l-rays").addEventListener("change", () => cv.redraw());
+    $("l-reset").addEventListener("click", () => { objs = INIT(); scan(); });
+    CB.loop(cv.canvas, (dt) => { sweep += dt * TAU * 0.4; if (sweep >= TAU) { sweep -= TAU; if (!grab) scan(); } cv.redraw(); });
+  })();
+
+  /* ================================================================ 6. 초음파 */
+  (function () {
+    const FQ = 48e3, TR = 0.3e-3, THR = 0.05;
+    let cv = null, tt = 0;
+    const upd = () => stats();
+    const dist = CB.range("u-d", (v) => v.toFixed(2) + " m", upd), temp = CB.range("u-t", (v) => v + " °C", upd), nb = CB.range("u-n", (v) => v + " 주기", upd);
+    const S = () => {
+      const c = 331.3 + 0.606 * temp(), d = dist(), tb = nb() / FQ, te = (2 * d) / c, tbl = tb + TR * Math.log(1 / THR), A = Math.min(0.9, 0.35 / d);
+      return { c, d, tb, te, tbl, A, dmin: (c * tbl) / 2, ok: te > tbl && A > THR, tmax: Math.min(45e-3, Math.max(4e-3, te * 1.5)) };
+    };
+    function stats() {
+      const s = S(), d20 = (343.42 * s.te) / 2;
+      CB.stat("o-u-c", s.c.toFixed(1) + "<small>m/s</small>");
+      CB.stat("o-u-t", (s.te * 1e3).toFixed(2) + "<small>ms</small>");
+      CB.stat("o-u-err", d20.toFixed(2) + "<small>m (" + (d20 - s.d >= 0 ? "+" : "−") + Math.abs((d20 - s.d) * 100).toFixed(1) + " cm)</small>");
+      CB.stat("o-u-min", (s.dmin * 100).toFixed(0) + "<small>cm</small>");
+      CB.stat("o-u-st", s.ok ? "감지" : '<span style="color:var(--bad)">감지 불가</span>');
+    }
+    cv = CB.canvas("#cv-us", (ctx, w, h) => {
+      const P = CB.palette(), s = S(), fm = `11px ${MONO}`, fl = `600 12px ${FONT}`;
+      // ---- 장면
+      const top = h * 0.44, sc = (w - 30) / 7.6, gy = top - 14, xb = 10 + 1.9 * sc, sy = gy - 0.5 * sc, xo = xb + s.d * sc;
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 1; line(ctx, 0, gy, w, gy);
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, w, gy + 1); ctx.clip();
+      CB.carSide(ctx, xb - 2.25 * sc, gy, sc, { flip: true, color: P.dim });
+      ctx.restore();
+      ctx.fillStyle = P.accent2; ctx.fillRect(xo, gy - 1.0 * sc, 7, 1.0 * sc);
+      ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(xb, sy, 4, 0, TAU); ctx.fill();
+      ctx.fillStyle = P.bad; ctx.globalAlpha = 0.18; ctx.fillRect(xb, gy - 1.0 * sc, s.dmin * sc, 1.0 * sc); ctx.globalAlpha = 1;
+      ctx.save(); ctx.beginPath(); ctx.rect(xb, 0, Math.max(0, xo - xb), gy); ctx.clip();
+      const pos = s.c * tt; ctx.lineWidth = 2;
+      for (let q = 0; q < 3; q++) {
+        const r = pos - q * 0.06;
+        ctx.globalAlpha = 1 - q * 0.3;
+        if (r > 0 && r < s.d) { ctx.strokeStyle = P.accent; ctx.beginPath(); ctx.arc(xb, sy, r * sc, -0.55, 0.55); ctx.stroke(); }
+        else if (r >= s.d && r < 2 * s.d) { ctx.strokeStyle = P.accent2; ctx.beginPath(); ctx.arc(xo, sy, (r - s.d) * sc, PI - 0.55, PI + 0.55); ctx.stroke(); }
+      }
+      ctx.restore(); ctx.globalAlpha = 1;
+      ctx.strokeStyle = P.dim; ctx.lineWidth = 1; line(ctx, xb, gy + 8, xo, gy + 8); line(ctx, xb, gy + 4, xb, gy + 12); line(ctx, xo, gy + 4, xo, gy + 12);
+      text(ctx, s.d.toFixed(2) + " m", (xb + xo) / 2, 12, P.text, fl);
+      // ---- 시간축 파형
+      const x0 = 46, x1 = w - 14, y0 = top + 22, y1 = h - 30, ym = (y0 + y1) / 2, amp = (y1 - y0) / 2;
+      const X = (t) => x0 + (t / s.tmax) * (x1 - x0), shape = (v) => Math.sqrt(v);
+      ctx.fillStyle = P.faint; ctx.globalAlpha = 0.25; ctx.fillRect(x0, y0, Math.min(x1, X(s.tbl)) - x0, y1 - y0); ctx.globalAlpha = 1;
+      ctx.strokeStyle = P.grid; line(ctx, x0, ym, x1, ym);
+      ctx.strokeStyle = P.warn; ctx.setLineDash([4, 4]); line(ctx, x0, ym - shape(THR) * amp, x1, ym - shape(THR) * amp); ctx.setLineDash([]);
+      text(ctx, "문턱", x1, ym - shape(THR) * amp - 8, P.warn, fm, "right");
+      for (let px = x0; px <= x1; px++) {
+        const t = ((px - x0) / (x1 - x0)) * s.tmax, u = t - s.te;
+        const tx = t < s.tb ? 1 : Math.exp(-(t - s.tb) / TR);
+        const ec = u < 0 ? 0 : s.A * (u < s.tb ? Math.min(1, u / (s.tb * 0.5)) : Math.exp(-(u - s.tb) / TR));
+        const e = shape(Math.max(tx, ec));
+        if (e < 0.01) continue;
+        ctx.strokeStyle = ec > tx ? (s.ok ? P.accent2 : P.bad) : P.accent; ctx.lineWidth = 1;
+        line(ctx, px + 0.5, ym - e * amp, px + 0.5, ym + e * amp);
+      }
+      ctx.strokeStyle = P.axis; line(ctx, x0, y1, x1, y1);
+      const step = [1, 2, 5, 10].find((v) => s.tmax * 1e3 / v <= 6) || 10;
+      for (let v = 0; v <= s.tmax * 1e3 + 1e-9; v += step) text(ctx, v + (v ? "" : " ms"), X(v / 1e3), y1 + 11, P.dim, fm);
+      text(ctx, "송신 + 잔향", x0 + 4, y0 - 9, P.accent, fm, "left");
+      if (X(s.te) < x1) text(ctx, s.ok ? "메아리" : "잔향에 묻힘", CB.clamp(X(s.te) + 8, x0 + 90, x1 - 30), y0 - 9, s.ok ? P.accent2 : P.bad, fm, "left");
+      if (tt < s.tmax) { ctx.strokeStyle = P.text; ctx.lineWidth = 1.2; line(ctx, X(tt), y0, X(tt), y1); }
+    }, { aspect: 0.74, minHeight: 300, maxHeight: 440 });
+    stats();
+    CB.loop(cv.canvas, (dt) => { const s = S(); tt += (dt * Math.max(s.tmax, s.te * 2.2)) / 2.6; if (tt > Math.max(s.tmax, s.te * 2.2)) tt = 0; cv.redraw(); });
+  })();
+
+  /* ================================================================ 7. GNSS + IMU */
+  (function () {
+    const LS = 200, R = 60, V = 15, PER = 2 * LS + TAU * R, DT = 0.02, T0 = 60;
+    function path(s) {
+      s = ((s % PER) + PER) % PER;
+      if (s < LS) return { x: -100 + s, y: -R, p: 0, k: 0 };
+      s -= LS;
+      if (s < PI * R) { const f = s / R; return { x: 100 + R * Math.sin(f), y: -R * Math.cos(f), p: f, k: 1 / R }; }
+      s -= PI * R;
+      if (s < LS) return { x: 100 - s, y: R, p: PI, k: 0 };
+      s -= LS;
+      const f = s / R; return { x: -100 - R * Math.sin(f), y: R * Math.cos(f), p: PI + f, k: 1 / R };
+    }
+    let st = null, cv = null;
+    const sig = CB.range("g-sig", (v) => v.toFixed(1) + " m"), bias = CB.range("g-bias", (v) => v.toFixed(2) + " °/s");
+    const tun = CB.range("g-tun", (v) => v + " m", () => cv && cv.redraw()), gain = CB.range("g-k", (v) => v.toFixed(2));
+    const show = CB.seg("g-show", () => cv && cv.redraw());
+    const inTunnel = (s) => { const m = ((s % PER) + PER) % PER; return m > T0 && m < T0 + tun(); };
+    function reset() {
+      const p = path(0);
+      st = { s: 0, n: 0, dr: { x: p.x, y: p.y, p: 0 }, fu: { x: p.x, y: p.y, p: 0 }, gb: { x: 0, y: 0 }, fix: null, fixes: [], trD: [], trF: [], avg: 0, eg: NaN, ei: 0, ef: 0 };
+    }
+    function step() {
+      const tr = path(st.s), wm = V * tr.k + bias() * D2R + 0.2 * D2R * CB.randn(), vm = V * 1.005;
+      [st.dr, st.fu].forEach((e) => { e.p += wm * DT; e.x += vm * Math.cos(e.p) * DT; e.y += vm * Math.sin(e.p) * DT; });
+      st.s += V * DT; st.n++;
+      const tp = path(st.s);
+      if (st.n % 10 === 0) {
+        if (inTunnel(st.s)) { st.fix = null; st.eg = NaN; }
+        else {
+          const sg = sig();
+          st.gb.x += -st.gb.x * 0.01 + 0.07 * sg * CB.randn(); st.gb.y += -st.gb.y * 0.01 + 0.07 * sg * CB.randn();
+          const gx = tp.x + st.gb.x + 0.6 * sg * CB.randn(), gy = tp.y + st.gb.y + 0.6 * sg * CB.randn();
+          st.fix = { x: gx, y: gy }; st.fixes.push(st.fix); if (st.fixes.length > 260) st.fixes.shift();
+          st.eg = Math.hypot(gx - tp.x, gy - tp.y);
+          const K = gain(), ex = gx - st.fu.x, ey = gy - st.fu.y;
+          st.fu.p += ((K * K * 5) / (4 * V)) * (-Math.sin(st.fu.p) * ex + Math.cos(st.fu.p) * ey);
+          st.fu.x += K * ex; st.fu.y += K * ey;
+        }
+      }
+      st.ei = Math.hypot(st.dr.x - tp.x, st.dr.y - tp.y); st.ef = Math.hypot(st.fu.x - tp.x, st.fu.y - tp.y);
+      st.avg += (st.ef - st.avg) * (DT / 30);
+      if (st.n % 5 === 0) {
+        st.trD.push([st.dr.x, st.dr.y]); st.trF.push([st.fu.x, st.fu.y]);
+        if (st.trD.length > 520) { st.trD.shift(); st.trF.shift(); }
+      }
+    }
+    function stats() {
+      const m = (v) => (isFinite(v) ? v.toFixed(1) + "<small>m</small>" : "신호 없음");
+      CB.stat("o-g-eg", m(st.eg)); CB.stat("o-g-ei", m(st.ei)); CB.stat("o-g-ef", m(st.ef)); CB.stat("o-g-rms", m(st.avg));
+      CB.stat("o-g-st", inTunnel(st.s) ? '<span style="color:var(--warn)">터널 안</span>' : "GNSS 수신 " + Math.floor(st.s / PER + 1) + "<small>바퀴째</small>");
+    }
+    reset();
+    cv = CB.canvas("#cv-gn", (ctx, w, h) => {
+      const P = CB.palette(), sc = Math.min(w / 400, h / 190), X = (x) => w / 2 + x * sc, Y = (y) => h / 2 + y * sc, sh = show();
+      const poly = (pts, col, wd) => { if (pts.length < 2) return; ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.lineJoin = "round"; ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)))); ctx.stroke(); };
+      const seg = (a, b) => { const o = []; for (let s = a; s <= b; s += 4) { const p = path(s); o.push([p.x, p.y]); } const e = path(b); o.push([e.x, e.y]); return o; };
+      ctx.lineCap = "round";
+      if (tun() > 0) { ctx.globalAlpha = 0.35; poly(seg(T0, T0 + tun()), P.faint, Math.max(12, 16 * sc)); ctx.globalAlpha = 1; const tp = path(T0 + tun() / 2); text(ctx, "터널", X(tp.x), Y(tp.y) - Math.max(14, 14 * sc), P.dim, `600 12px ${FONT}`); }
+      ctx.setLineDash([5, 4]); poly(seg(0, PER), P.dim, 1.2); ctx.setLineDash([]);
+      if (sh === "all" || sh === "gnss") { ctx.fillStyle = P.accent2; ctx.globalAlpha = 0.75; st.fixes.forEach((f) => { ctx.beginPath(); ctx.arc(X(f.x), Y(f.y), 1.8, 0, TAU); ctx.fill(); }); ctx.globalAlpha = 1; }
+      if (sh === "all" || sh === "imu") poly(st.trD, P.warn, 1.8);
+      if (sh === "all" || sh === "fus") poly(st.trF, P.accent, 2.2);
+      const tr = path(st.s);
+      CB.carTop(ctx, X(tr.x), Y(tr.y), tr.p, { len: Math.max(18, 14 * sc), color: P.dim });
+      const mark = (e, col) => { ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X(e.x), Y(e.y), 5, 0, TAU); ctx.stroke(); line(ctx, X(e.x), Y(e.y), X(tr.x), Y(tr.y)); };
+      if (sh === "all" || sh === "imu") mark(st.dr, P.warn);
+      if (sh === "all" || sh === "fus") mark(st.fu, P.accent);
+      if ((sh === "all" || sh === "gnss") && st.fix) { ctx.fillStyle = P.accent2; ctx.beginPath(); ctx.arc(X(st.fix.x), Y(st.fix.y), 4, 0, TAU); ctx.fill(); }
+    }, { aspect: 0.5, minHeight: 200, maxHeight: 380 });
+    $("g-reset").addEventListener("click", () => { reset(); stats(); cv.redraw(); });
+    stats();
+    CB.loop(cv.canvas, (dt) => { const n = Math.max(1, Math.round((dt * 6) / DT)); for (let i = 0; i < n; i++) step(); stats(); cv.redraw(); });
+  })();
+
+  /* ================================================================ 8. 센서 비교 */
+  (function () {
+    const AX = ["탐지 거리", "각 분해능", "거리 정확도", "속도 측정", "색·분류", "조건 강건성", "저렴함"];
+    const KEYS = ["cam", "rad", "lid", "us"], NAME = { cam: "카메라", rad: "레이더", lid: "라이다", us: "초음파" };
+    const BASE = { cam: [4, 5, 2, 1, 5, 5, 4], rad: [5, 2, 4, 5, 1, 5, 4], lid: [4, 4, 5, 2, 2, 5, 1.5], us: [0.5, 1, 3, 0.5, 0.5, 5, 5] };
+    // [거리 배율, 분해능 배율, 분류 배율, 강건성 점수]
+    const MOD = {
+      clear: { cam: [1, 1, 1, 5], rad: [1, 1, 1, 5], lid: [1, 1, 1, 5], us: [1, 1, 1, 5] },
+      rain: { cam: [0.7, 0.8, 0.8, 3], rad: [0.95, 1, 1, 4.5], lid: [0.65, 0.9, 1, 3], us: [1, 1, 1, 4] },
+      fog: { cam: [0.35, 0.6, 0.5, 1.5], rad: [1, 1, 1, 4.8], lid: [0.35, 0.8, 1, 1.5], us: [1, 1, 1, 4.5] },
+      night: { cam: [0.55, 0.8, 0.6, 2.5], rad: [1, 1, 1, 5], lid: [1, 1, 1, 5], us: [1, 1, 1, 5] },
+    };
+    let cv = null;
+    const upd = () => { stats(); cv && cv.redraw(); };
+    const wx = CB.seg("c-wx", upd);
+    const score = (k) => { const b = BASE[k], m = MOD[wx()][k]; return [b[0] * m[0], b[1] * m[1], b[2] * (k === "cam" ? m[1] : 1), b[3], b[4] * m[2], m[3], b[6]]; };
+    const active = () => KEYS.filter((k) => $("c-" + k).checked);
+    const envelope = () => { const a = active(); if (!a.length) return null; const sc = a.map(score); return AX.map((_, i) => (i === 6 ? Math.min : Math.max)(...sc.map((s) => s[i]))); };
+    function stats() {
+      const e = envelope();
+      if (!e) { CB.stat("o-c-weak", "—"); CB.stat("o-c-val", "—"); CB.stat("o-c-area", "—"); return; }
+      let wi = 0, area = 0;
+      e.forEach((v, i) => { if (i !== 6 && v < e[wi]) wi = i; area += v * e[(i + 1) % 7]; });
+      CB.stat("o-c-weak", AX[wi]); CB.stat("o-c-val", e[wi].toFixed(1) + "<small>/ 5</small>");
+      CB.stat("o-c-area", Math.round((area / (25 * 7)) * 100) + "<small>%</small>");
+    }
+    KEYS.concat("env").forEach((k) => $("c-" + k).addEventListener("change", upd));
+    cv = CB.canvas("#cv-cmp", (ctx, w, h) => {
+      const P = CB.palette(), cx = w / 2, cy = h / 2 - 8, RR = Math.min(w * 0.3, h * 0.36), fl = `12px ${FONT}`;
+      const COL = { cam: P.blue, rad: P.warn, lid: P.green, us: P.accent2 };
+      const pt = (i, v) => { const a = -PI / 2 + (i * TAU) / 7; return [cx + Math.cos(a) * (v / 5) * RR, cy + Math.sin(a) * (v / 5) * RR]; };
+      const poly = (vals) => { ctx.beginPath(); vals.forEach((v, i) => { const [x, y] = pt(i, v); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.closePath(); };
+      ctx.strokeStyle = P.grid; ctx.lineWidth = 1;
+      for (let r = 1; r <= 5; r++) { poly(AX.map(() => r)); ctx.stroke(); }
+      AX.forEach((n, i) => {
+        const [x, y] = pt(i, 5), [lx, ly] = pt(i, 5.75), c = Math.cos(-PI / 2 + (i * TAU) / 7);
+        line(ctx, cx, cy, x, y);
+        text(ctx, n, lx, ly, P.dim, fl, c > 0.3 ? "left" : c < -0.3 ? "right" : "center");
+      });
+      active().forEach((k) => {
+        poly(score(k)); ctx.fillStyle = COL[k]; ctx.globalAlpha = 0.12; ctx.fill(); ctx.globalAlpha = 1;
+        ctx.strokeStyle = COL[k]; ctx.lineWidth = 2; ctx.stroke();
+      });
+      const e = envelope();
+      if (e && $("c-env").checked) { poly(e); ctx.strokeStyle = P.text; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]); }
+      KEYS.forEach((k, i) => {
+        const x = (w * (i + 0.5)) / 4, on = $("c-" + k).checked;
+        ctx.fillStyle = COL[k]; ctx.globalAlpha = on ? 1 : 0.3; ctx.fillRect(x - 30, h - 16, 10, 10);
+        text(ctx, NAME[k], x - 16, h - 11, P.dim, fl, "left"); ctx.globalAlpha = 1;
+      });
+    }, { aspect: 0.8, minHeight: 320, maxHeight: 450 });
+    stats();
+  })();
+})();
+</script>
+</body>
+</html>

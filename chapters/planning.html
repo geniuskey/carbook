@@ -1,0 +1,1585 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>예측·계획·제어 · CarBook</title>
+<meta name="description" content="인지 결과로부터 주변 차량의 미래를 예측하고, A* 경로 탐색과 행동 결정, 저크 최소 궤적 계획, 곡률 기반 속도 계획, 퓨어 퍼슈트·스탠리·MPC 제어까지 자율주행의 판단과 조작을 시뮬레이터로 익힌다.">
+<link rel="canonical" href="https://carbook.euiyun.com/chapters/planning.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="CarBook">
+<meta property="og:title" content="예측·계획·제어 · CarBook">
+<meta property="og:description" content="인지 결과로부터 주변 차량의 미래를 예측하고, A* 경로 탐색과 행동 결정, 저크 최소 궤적 계획, 곡률 기반 속도 계획, 퓨어 퍼슈트·스탠리·MPC 제어까지 자율주행의 판단과 조작을 시뮬레이터로 익힌다.">
+<meta property="og:url" content="https://carbook.euiyun.com/chapters/planning.html">
+<meta property="og:image" content="https://carbook.euiyun.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TechArticle","headline":"예측·계획·제어","name":"예측·계획·제어 · CarBook","url":"https://carbook.euiyun.com/chapters/planning.html","mainEntityOfPage":"https://carbook.euiyun.com/chapters/planning.html","inLanguage":"ko","isAccessibleForFree":true,"learningResourceType":"interactive textbook chapter","position":20,"image":"https://carbook.euiyun.com/og.png","dateModified":"2026-10-02","isPartOf":{"@type":"Book","@id":"https://carbook.euiyun.com/#book","name":"CarBook — 인터랙티브 자동차 교과서","url":"https://carbook.euiyun.com/"},"publisher":{"@type":"Organization","name":"CarBook","url":"https://carbook.euiyun.com/"},"description":"인지 결과로부터 주변 차량의 미래를 예측하고, A* 경로 탐색과 행동 결정, 저크 최소 궤적 계획, 곡률 기반 속도 계획, 퓨어 퍼슈트·스탠리·MPC 제어까지 자율주행의 판단과 조작을 시뮬레이터로 익힌다."},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"CarBook","item":"https://carbook.euiyun.com/"},{"@type":"ListItem","position":2,"name":"20 예측·계획·제어","item":"https://carbook.euiyun.com/chapters/planning.html"}]}]}</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="../css/style.css">
+<script src="../js/common.js"></script>
+<style>
+  .sim-view canvas.grab { cursor: crosshair; touch-action: none; }
+  .sim-view canvas + canvas { border-top: 1px solid var(--border); }
+  .legend i.dash { background: repeating-linear-gradient(90deg, currentColor 0 4px, transparent 4px 7px); }
+  .pl-layers td:first-child { font-weight: 700; white-space: nowrap; }
+</style>
+</head>
+<body data-chapter="planning">
+<main class="chapter">
+  <header class="chapter-hero">
+    <div class="eyebrow">Chapter 20</div>
+    <h1>예측·계획·제어</h1>
+    <p class="lead">센서와 인지가 "지금 주변에 무엇이 어디에 있는가"에 답했다면, 이제 차는 "그래서 어떻게 움직일 것인가"를 정해야 한다. 주변 차와 보행자가 몇 초 뒤 어디에 있을지 예측하고, 목적지까지의 길을 찾고, 차로를 바꿀지 기다릴지 판단하고, 승객이 편안하면서도 부딪히지 않는 궤적을 그린 다음, 조향과 가감속으로 그 궤적을 실제로 따라간다. 이 장은 그 판단과 조작의 사슬을 위에서 아래로 따라 내려가며 하나씩 손으로 돌려 본다.</p>
+    <ul class="objectives">
+      <li>경로 탐색 → 행동 결정 → 궤적 계획 → 제어로 이어지는 계층 구조와 각 층의 시간 규모를 설명한다.</li>
+      <li>등속 모델, 차로 기반 모델, 다중 가설 예측의 차이와 한계를 비교한다.</li>
+      <li>다익스트라와 A*의 탐색 과정을 이해하고 휴리스틱이 하는 일을 설명한다.</li>
+      <li>프레네 좌표계와 5차 다항식으로 저크가 작은 차로 변경 궤적을 만들고 비용으로 고른다.</li>
+      <li>곡률과 횡가속도 한계로부터 코너 제한 속도와 속도 프로파일을 계산한다.</li>
+      <li>퓨어 퍼슈트, 스탠리, MPC가 궤적을 따라가는 원리와 조정 변수의 영향을 설명한다.</li>
+    </ul>
+  </header>
+
+  <!-- =============================================================== 1 -->
+  <section id="stack">
+    <h2>인지 다음에 오는 일</h2>
+    <p><a href="perception.html">19장</a>의 인지와 측위는 차 주변의 세계를 숫자로 바꿔 놓았다. 내 차의 위치와 자세, 차로의 형상, 주변 물체의 위치·속도·종류가 초당 수십 번 갱신된다. 하지만 이 정보만으로는 스티어링 휠이 한 눈금도 돌아가지 않는다. 사람이 운전할 때 머릿속에서 일어나는 일을 떠올려 보자. 내비게이션이 알려 준 길을 따라가다가, 앞의 느린 트럭을 보고 추월을 마음먹고, 옆 차로의 빈틈을 확인한 뒤, 부드럽게 핸들을 꺾어 차로를 옮긴다. 이 과정에는 서로 다른 규모의 결정이 층층이 쌓여 있다.</p>
+    <p>자율주행 소프트웨어도 같은 문제를 여러 층으로 나누어 푼다. 한 번에 "목적지까지의 모든 조향각"을 계산하는 것은 불가능에 가깝기 때문이다. 위층일수록 멀리 보고 천천히 결정하며, 아래층일수록 가까이 보고 빠르게 반응한다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 330" role="img" aria-label="예측, 경로 탐색, 행동 결정, 궤적 계획, 제어의 계층 구조">
+        <defs><marker id="pl-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker>
+        <marker id="pl-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--text-dim)"/></marker></defs>
+        <rect x="14" y="16" width="170" height="60" rx="10" class="f-surface"/>
+        <text x="99" y="42" class="t" text-anchor="middle" font-weight="700">인지 · 측위</text>
+        <text x="99" y="62" class="t-dim" text-anchor="middle">물체, 차로, 내 위치</text>
+        <rect x="14" y="112" width="170" height="60" rx="10" class="f-acc2-soft"/>
+        <text x="99" y="138" class="t" text-anchor="middle" font-weight="700">예측</text>
+        <text x="99" y="158" class="t-dim" text-anchor="middle">주변 물체의 미래 궤적</text>
+        <rect x="14" y="208" width="170" height="60" rx="10" class="f-surface"/>
+        <text x="99" y="234" class="t" text-anchor="middle" font-weight="700">지도 · 목적지</text>
+        <text x="99" y="254" class="t-dim" text-anchor="middle">도로망, 규칙</text>
+        <g stroke="var(--text-dim)" stroke-width="1.8" marker-end="url(#pl-ah2)"><line x1="99" y1="78" x2="99" y2="108"/></g>
+
+        <g>
+          <rect x="250" y="16" width="230" height="58" rx="10" class="f-acc-soft"/>
+          <text x="266" y="40" class="t" font-weight="700">① 경로 탐색 (route)</text>
+          <text x="266" y="60" class="t-dim">어느 도로로 갈 것인가</text>
+          <rect x="250" y="94" width="230" height="58" rx="10" class="f-acc-soft"/>
+          <text x="266" y="118" class="t" font-weight="700">② 행동 결정 (behavior)</text>
+          <text x="266" y="138" class="t-dim">추종, 차로 변경, 양보, 정지</text>
+          <rect x="250" y="172" width="230" height="58" rx="10" class="f-acc-soft"/>
+          <text x="266" y="196" class="t" font-weight="700">③ 궤적 계획 (motion)</text>
+          <text x="266" y="216" class="t-dim">시간이 붙은 경로 x(t), y(t)</text>
+          <rect x="250" y="250" width="230" height="58" rx="10" class="f-acc-soft"/>
+          <text x="266" y="274" class="t" font-weight="700">④ 제어 (control)</text>
+          <text x="266" y="294" class="t-dim">조향각, 구동·제동 토크</text>
+        </g>
+        <g stroke="var(--accent)" stroke-width="2.4" marker-end="url(#pl-ah)">
+          <line x1="365" y1="75" x2="365" y2="91"/><line x1="365" y1="153" x2="365" y2="169"/><line x1="365" y1="231" x2="365" y2="247"/>
+        </g>
+        <g stroke="var(--text-dim)" stroke-width="1.8" fill="none" marker-end="url(#pl-ah2)">
+          <path d="M186 238 H216 V45 H246"/>
+          <path d="M186 142 H232 V123 H246"/>
+          <path d="M186 142 H232 V201 H246"/>
+          <path d="M186 46 H202 V279 H246"/>
+        </g>
+        <g>
+          <text x="500" y="40" class="t-mono">수 km ~ 수백 km</text><text x="650" y="40" class="t-dim">분 단위, 필요할 때</text>
+          <text x="500" y="118" class="t-mono">수백 m</text><text x="650" y="118" class="t-dim">약 1~10 Hz</text>
+          <text x="500" y="196" class="t-mono">50~200 m, 5~10 s</text><text x="650" y="196" class="t-dim">약 10~20 Hz</text>
+          <text x="500" y="274" class="t-mono">수 m, 1 s 이내</text><text x="650" y="274" class="t-dim">약 50~100 Hz</text>
+          <text x="500" y="60" class="t-dim">보는 범위</text><text x="650" y="60" class="t-dim">갱신 주기</text>
+        </g>
+      </svg>
+      <figcaption><b>그림 20-1.</b> 계획과 제어의 계층. 아래로 갈수록 보는 범위는 짧아지고 갱신은 빨라진다. 수치는 대표적인 범위다.</figcaption>
+    </figure>
+
+    <div class="table-wrap"><table class="pl-layers">
+      <thead><tr><th>층</th><th>질문</th><th>출력</th><th>대표 기법</th></tr></thead>
+      <tbody>
+        <tr><td>예측</td><td>다른 차와 보행자는 어디로 갈까</td><td>물체별 미래 궤적과 확률</td><td>운동 모델, 차로 기반 가설, 학습 모델</td></tr>
+        <tr><td>경로 탐색</td><td>어느 길로 갈까</td><td>도로·차로의 순서</td><td>다익스트라, A*</td></tr>
+        <tr><td>행동 결정</td><td>지금 무엇을 할까</td><td>행동 목표(차로 변경, 정지선 정지 등)</td><td>상태 기계, 비용 기반 선택</td></tr>
+        <tr><td>궤적 계획</td><td>정확히 어떤 선을 어떤 속도로 그릴까</td><td>수 초 길이의 궤적</td><td>다항식 샘플링, 격자 탐색, 최적화</td></tr>
+        <tr><td>제어</td><td>그 선을 따라가려면 얼마나 꺾고 밟을까</td><td>조향·가속·제동 명령</td><td>PID, 퓨어 퍼슈트, 스탠리, LQR, MPC</td></tr>
+      </tbody>
+    </table></div>
+
+    <p>층을 나누면 각 층을 따로 설계하고 시험할 수 있다는 장점이 있다. 대신 층 사이의 약속이 어긋나면 문제가 생긴다. 행동 결정이 "차로를 바꿔라"라고 했는데 궤적 계획이 차의 운동 한계 안에서 그런 궤적을 찾지 못할 수 있다. 그래서 아래층은 실패를 위층에 알리고, 위층은 다른 행동을 고르는 되먹임이 반드시 필요하다. 최근에는 이 층들을 하나의 신경망으로 묶으려는 시도도 활발한데, 이는 장의 끝과 <a href="autonomy.html">21장</a>에서 다룬다.</p>
+    <div class="callout">
+      <b>경로와 궤적.</b> 이 장에서 <span class="term">경로</span><span class="en">(path)</span>는 공간에 그려진 선, 즉 "어디를 지나는가"만을 뜻한다. <span class="term">궤적</span><span class="en">(trajectory)</span>은 거기에 시간이 붙은 것, 즉 "언제 어디에 있는가"다. 같은 경로라도 속도 프로파일이 다르면 다른 궤적이다.
+    </div>
+  </section>
+
+  <!-- =============================================================== 2 -->
+  <section id="prediction">
+    <h2>예측: 다른 차의 몇 초 뒤</h2>
+    <p>계획은 미래에 대한 것이므로, 지금의 장면만으로는 부족하다. 교차로에 다가오는 저 차가 3초 뒤에 내 앞을 가로지를지, 속도를 줄여 우회전할지에 따라 내가 할 일이 달라진다. <span class="term">예측</span><span class="en">(prediction)</span>은 <a href="perception.html">인지</a>가 추적해 준 물체의 현재 상태(위치, 속도, 방향, 종류)를 받아 앞으로 대표적으로 약 3~8초 동안의 위치를 내놓는다.</p>
+    <h3>운동 모델로 미는 예측</h3>
+    <p>가장 단순한 방법은 "지금 하던 대로 계속한다"고 가정하는 것이다. <span class="term">등속 모델</span><span class="en">(Constant Velocity, CV)</span>은 현재 속도 벡터를 그대로 연장한다.</p>
+    <div class="formula">$$\mathbf{p}(t+\tau) = \mathbf{p}(t) + \mathbf{v}(t)\,\tau, \qquad \mathbf{p}(t+\tau) = \mathbf{p}(t) + \mathbf{v}\,\tau + \tfrac{1}{2}\mathbf{a}\,\tau^2$$
+      <div class="where">왼쪽은 등속 모델, 오른쪽은 가속도까지 유지된다고 보는 등가속 모델(CA)이다. \(\tau\)는 예측 시간.</div></div>
+    <p>회전하고 있는 차에는 요 레이트까지 유지된다고 보는 <span class="term">등속 회전 모델</span><span class="en">(Constant Turn Rate and Velocity, CTRV)</span>이 더 맞는다. 이런 운동 모델은 칼만 필터의 예측 단계와 같은 식이며, 1초 이내의 짧은 구간에서는 꽤 정확하다. 문제는 그다음이다. 도로가 굽어 있으면 등속 모델은 차를 도로 밖으로 내보내고, 교차로 앞에서 감속 중인 차에 등가속 모델을 적용하면 몇 초 뒤에는 뒤로 달리는 차가 된다. 운동 모델은 물리는 알지만 도로와 의도는 모른다.</p>
+    <h3>차로를 아는 예측, 여러 가설</h3>
+    <p>차는 대개 차로를 따라 달린다. 그래서 정밀 지도의 차로 중심선을 가져와 "이 차는 이 차로를 따라간다"고 가정하면 훨씬 먼 미래까지 그럴듯한 예측이 나온다. 다만 교차로처럼 갈 수 있는 차로가 여럿이면 하나만 고를 수 없다. 이때는 직진·좌회전·우회전 각각을 <span class="term">가설</span>로 두고, 관측이 각 가설과 얼마나 맞는지에 따라 확률을 매긴다.</p>
+    <div class="formula">$$P(m_i \mid z) \;\propto\; P(z \mid m_i)\,P(m_i)$$
+      <div class="where">\(m_i\)는 i번째 기동 가설, \(z\)는 관측(차로 중심에서 벗어난 거리, 방향 차이, 감속 여부, 방향지시등 등). 베이즈 규칙으로 사전 확률을 관측으로 고친다.</div></div>
+    <p>예측에는 위치뿐 아니라 <b>불확실성</b>도 함께 붙는다. 먼 미래일수록 가능한 위치가 넓게 퍼지므로, 계획 쪽은 확률이 낮더라도 위험한 가설을 완전히 무시하지 않도록 설계한다. 아래 시뮬레이터에서 서쪽에서 교차로로 들어오는 차를 세 가지 방법으로 예측해 보자.</p>
+
+    <div class="sim" id="sim-pr">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>교차로 진입 차량의 예측 비교</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-pr"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>재생 위치 <output id="pr-t-out"></output></span><input type="range" id="pr-t" min="0" max="8" step="0.05" value="1.6"></label>
+          <label class="ctrl"><span>예측 시간 <output id="pr-T-out"></output></span><input type="range" id="pr-T" min="1" max="6" step="0.5" value="3"></label>
+          <div class="ctrl"><span>상대 차의 실제 의도</span><div class="seg" id="pr-int"><button data-value="straight">직진</button><button data-value="left" class="on">좌회전</button><button data-value="right">우회전</button></div></div>
+          <label class="check"><input type="checkbox" id="pr-sig" checked> 방향지시등을 켠다</label>
+          <label class="check"><input type="checkbox" id="pr-cv" checked> 등속 모델(CV)</label>
+          <label class="check"><input type="checkbox" id="pr-ctrv" checked> 등속 회전 모델(CTRV)</label>
+          <label class="check"><input type="checkbox" id="pr-mh" checked> 차로 기반 다중 가설</label>
+          <button class="btn primary" id="pr-play">재생</button>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">가설 확률 (직진 / 좌 / 우)</span><span class="v" id="pr-p">—</span></div>
+        <div class="stat"><span class="k">CV 오차</span><span class="v" id="pr-ecv">—</span></div>
+        <div class="stat"><span class="k">CTRV 오차</span><span class="v" id="pr-ectrv">—</span></div>
+        <div class="stat"><span class="k">최빈 가설 오차</span><span class="v" id="pr-emh">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 테두리만 그려진 차가 예측 시간 뒤의 실제 위치(정답)다. 재생 위치를 천천히 옮기며 교차로 직전에서 세 예측의 오차를 비교한다. 방향지시등을 끄면 확률이 언제 뒤집히는지, 회전 도중에는 CTRV가 왜 CV보다 나은지, 회전이 끝난 직후에는 왜 다시 틀리는지 확인한다.</div>
+    </div>
+
+    <h3>상호작용</h3>
+    <p>지금까지의 예측은 상대를 내 행동과 무관하게 움직이는 물체로 취급했다. 실제 도로에서는 그렇지 않다. 내가 차로 변경을 시작하면 뒤차가 속도를 줄여 주고, 내가 머뭇거리면 상대가 먼저 지나간다. 예측과 계획을 완전히 분리하면 혼잡한 합류 구간에서 "빈틈이 생길 때까지 영원히 기다리는" 문제가 생긴다. 이를 줄이려고 내 후보 궤적별로 상대의 반응을 조건부로 예측하거나, 여러 참여자의 미래를 한꺼번에 추론하는 학습 기반 모델을 쓴다. 최근의 예측 모델은 지도와 주변 물체의 과거 궤적을 입력으로 받아 여러 개의 미래 궤적과 그 확률을 직접 출력한다.</p>
+  </section>
+
+  <!-- =============================================================== 3 -->
+  <section id="route">
+    <h2>전역 경로 탐색: 다익스트라와 A*</h2>
+    <p>가장 위층의 계획은 내비게이션과 같은 일을 한다. 도로망을 <span class="term">그래프</span>로 본다. 교차로나 차로의 분기점이 <b>노드</b>, 그 사이의 도로 구간이 <b>간선</b>이며, 간선에는 거리나 예상 소요 시간 같은 <b>비용</b>이 붙는다. 자율주행에서는 도로 단위가 아니라 차로 단위의 그래프를 쓰고, 차로 변경도 비용이 있는 간선으로 넣는다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 270" role="img" aria-label="도로 그래프와 A*의 평가값">
+        <g class="s-line" stroke-width="2" fill="none">
+          <line x1="70" y1="140" x2="200" y2="60"/><line x1="70" y1="140" x2="200" y2="210"/>
+          <line x1="200" y1="60" x2="360" y2="60"/><line x1="200" y1="210" x2="360" y2="200"/>
+          <line x1="200" y1="60" x2="200" y2="210"/><line x1="360" y1="60" x2="360" y2="200"/>
+          <line x1="360" y1="60" x2="490" y2="130"/><line x1="360" y1="200" x2="490" y2="130"/>
+        </g>
+        <g stroke="var(--accent)" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.85">
+          <path d="M70 140 L200 60 L360 60 L490 130"/>
+        </g>
+        <g class="t-mono" text-anchor="middle">
+          <text x="124" y="88">4</text><text x="124" y="194">3</text><text x="280" y="50">5</text><text x="280" y="224">8</text>
+          <text x="188" y="140">2</text><text x="374" y="134">3</text><text x="436" y="84">4</text><text x="436" y="184">5</text>
+        </g>
+        <g>
+          <circle cx="70" cy="140" r="17" fill="var(--ok)"/><text x="70" y="145" text-anchor="middle" fill="#fff" font-weight="700">S</text>
+          <circle cx="200" cy="60" r="17" class="f-elev" stroke="var(--accent)" stroke-width="2"/><text x="200" y="65" class="t" text-anchor="middle">A</text>
+          <circle cx="200" cy="210" r="17" class="f-elev" stroke="var(--axis)" stroke-width="2"/><text x="200" y="215" class="t" text-anchor="middle">B</text>
+          <circle cx="360" cy="60" r="17" class="f-elev" stroke="var(--accent)" stroke-width="2"/><text x="360" y="65" class="t" text-anchor="middle">C</text>
+          <circle cx="360" cy="200" r="17" class="f-elev" stroke="var(--axis)" stroke-width="2"/><text x="360" y="205" class="t" text-anchor="middle">D</text>
+          <circle cx="490" cy="130" r="17" fill="var(--bad)"/><text x="490" y="135" text-anchor="middle" fill="#fff" font-weight="700">G</text>
+        </g>
+        <g>
+          <rect x="540" y="30" width="206" height="210" rx="10" class="f-surface"/>
+          <text x="556" y="56" class="t" font-weight="700">노드 A의 평가</text>
+          <text x="556" y="84" class="t-mono">g(A) = 4</text><text x="650" y="84" class="t-dim">온 거리</text>
+          <text x="556" y="108" class="t-mono">h(A) = 8</text><text x="650" y="108" class="t-dim">남은 추정</text>
+          <text x="556" y="132" class="t-acc" font-weight="700">f = g + h = 12</text>
+          <text x="556" y="166" class="t" font-weight="700">노드 B의 평가</text>
+          <text x="556" y="190" class="t-mono">g(B) = 3, h(B) = 10</text>
+          <text x="556" y="214" class="t-mono">f = 13</text>
+          <text x="556" y="232" class="t-dim">A를 먼저 펼친다</text>
+        </g>
+      </svg>
+      <figcaption><b>그림 20-2.</b> 도로 그래프. 간선의 숫자는 비용이다. A*는 지금까지 온 비용 g와 목표까지의 추정 비용 h를 더한 f가 가장 작은 노드부터 펼친다. 굵은 선이 최단 경로(비용 13)다.</figcaption>
+    </figure>
+
+    <p><span class="term">다익스트라</span><span class="en">(Dijkstra)</span> 알고리즘은 출발점에서 가까운 노드부터 차례로 확정해 나간다. 출발점에 물을 부었을 때 물이 퍼지는 순서와 같다. 반드시 최단 경로를 찾지만, 목표가 어느 쪽에 있는지 모르는 채로 사방으로 퍼지므로 쓸데없는 곳까지 조사한다.</p>
+    <p><span class="term">A*</span>는 여기에 "목표까지 대략 얼마나 남았는가"라는 추정값, 즉 <span class="term">휴리스틱</span><span class="en">(heuristic)</span> \(h(n)\)을 더한다.</p>
+    <div class="formula">$$f(n) = g(n) + w\,h(n)$$
+      <div class="where">\(g(n)\)은 출발점에서 n까지 실제로 든 비용, \(h(n)\)은 n에서 목표까지의 추정 비용, \(w\)는 휴리스틱 가중치. \(w=0\)이면 다익스트라, \(w=1\)이면 표준 A*다.</div></div>
+    <p>휴리스틱이 실제 남은 비용을 절대 넘지 않으면(직선 거리가 대표적이다) A*는 다익스트라와 똑같이 최단 경로를 보장하면서 조사하는 노드 수를 크게 줄인다. \(w\)를 1보다 키우면 목표 쪽으로 더 탐욕스럽게 달려가 훨씬 빨라지지만, 찾은 경로가 최단이 아닐 수 있다. 계산 시간과 경로 품질을 맞바꾸는 것이다.</p>
+
+    <div class="sim" id="sim-as">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>격자 지도에서의 다익스트라와 A*</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-as" class="grab"></canvas><span class="hint">끌어서 벽 그리기 · S/G는 끌어서 이동</span></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>휴리스틱 가중치 w <output id="as-w-out"></output></span><input type="range" id="as-w" min="0" max="3" step="0.1" value="1"></label>
+          <button class="btn primary" id="as-run">탐색 과정 재생</button>
+          <div class="ctrl-row"><button class="btn" id="as-maze">예시 지도</button><button class="btn" id="as-clear">벽 지우기</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">펼친 노드 수</span><span class="v" id="as-n">—</span></div>
+        <div class="stat"><span class="k">경로 길이</span><span class="v" id="as-len">—</span></div>
+        <div class="stat"><span class="k">다익스트라 (w=0)</span><span class="v" id="as-ref">—</span></div>
+        <div class="stat"><span class="k">노드 수 절감</span><span class="v" id="as-save">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: w를 0, 1, 2로 바꿔 가며 재생한다. 색이 진할수록 나중에 펼친 칸이다. w=0에서는 원형으로 퍼지고, w=1에서는 목표 쪽으로 길쭉해진다. 예시 지도의 ㄷ자 벽처럼 목표 방향이 막힌 곳에서 w가 큰 탐색이 어떻게 헛걸음하고, 경로 길이가 최단보다 얼마나 길어지는지 확인한다.</div>
+    </div>
+
+    <p>실제 도로망은 노드가 수백만 개에 이르므로, 미리 계산해 둔 계층 구조(고속도로 우선 탐색, 축약 계층 등)를 함께 써서 대륙 규모의 경로도 밀리초 단위로 찾는다. 경로 탐색은 한 번 계산해 두고 길을 벗어나거나 통제 구간이 생겼을 때만 다시 한다.</p>
+  </section>
+
+  <!-- =============================================================== 4 -->
+  <section id="behavior">
+    <h2>행동 결정: 지금 무엇을 할 것인가</h2>
+    <p>경로가 "2 km 앞에서 오른쪽 출구로 나간다"를 정했다면, 행동 결정 층은 그 사이의 전술을 정한다. 앞차를 따라갈지, 추월할지, 언제 출구 쪽 차로로 옮길지, 신호등 앞에서 설지를 고른다. 가장 오래되고 지금도 널리 쓰이는 방법은 <span class="term">유한 상태 기계</span><span class="en">(Finite State Machine, FSM)</span>다. 차가 있을 수 있는 행동 상태를 몇 개로 나누고, 어떤 조건이 만족되면 다른 상태로 넘어가는지를 규칙으로 적는다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>현재 상태</th><th>전이 조건</th><th>다음 상태</th></tr></thead>
+      <tbody>
+        <tr><td>차로 유지</td><td>앞차와의 시간 간격이 줄어들고 앞차가 내 희망 속도보다 느림</td><td>추종</td></tr>
+        <tr><td>추종</td><td>앞차가 희망 속도보다 충분히 느린 상태가 일정 시간 지속</td><td>차로 변경 준비</td></tr>
+        <tr><td>차로 변경 준비</td><td>옆 차로의 앞·뒤 간격이 모두 필요 간격 이상</td><td>차로 변경</td></tr>
+        <tr><td>차로 변경</td><td>목표 차로 중심에 도달</td><td>차로 유지</td></tr>
+        <tr><td>추종</td><td>앞이 비거나 앞차가 빨라짐</td><td>차로 유지</td></tr>
+      </tbody>
+    </table></div>
+    <h3>간격 수락</h3>
+    <p>차로 변경이나 합류, 비보호 좌회전에서 핵심은 "저 빈틈에 들어가도 되는가"다. 이를 <span class="term">간격 수락</span><span class="en">(gap acceptance)</span>이라 한다. 옆 차로에서 내 앞에 있을 차와 뒤에 있을 차에 대해 각각 필요한 간격을 계산하고, 둘 다 만족할 때만 진입한다. 뒤차가 나보다 빠르면 그 차가 급하지 않게 감속해서 속도를 맞출 수 있을 만큼의 거리를 더 요구한다.</p>
+    <div class="formula">$$g_{\text{rear}} \ge d_0 + \tau\,v_r + \frac{\max(0,\;v_r - v_e)^2}{2\,b}$$
+      <div class="where">\(d_0\)는 정지 여유 거리, \(\tau\)는 시간 간격, \(v_r\)은 뒤차 속도, \(v_e\)는 내 속도, \(b\)는 뒤차에 기대하는 편안한 감속도.</div></div>
+    <div class="callout tip">
+      <b>계산 예.</b> 내가 70 km/h(19.4 m/s), 옆 차로 뒤차가 90 km/h(25 m/s)로 다가온다. \(d_0=3\) m, \(\tau=0.8\) s, \(b=2\ \mathrm{m/s^2}\)이면 필요한 뒤 간격은 \(3 + 0.8\times25 + (25-19.4)^2/(2\times2) \approx 3 + 20 + 7.8 = 30.8\) m다. 속도 차가 없다면 23 m면 충분하다. 추월 차로로 들어가기 전에 속도를 올려 두는 것이 왜 유리한지 숫자로 보인다.
+    </div>
+
+    <div class="sim" id="sim-fs">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>고속도로 행동 상태 기계</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-fs"></canvas><canvas id="cv-fsd"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>옆 차로 차간 거리 <output id="fs-gap-out"></output></span><input type="range" id="fs-gap" min="25" max="120" step="1" value="40"></label>
+          <label class="ctrl"><span>옆 차로 속도 <output id="fs-vl-out"></output></span><input type="range" id="fs-vl" min="70" max="120" step="5" value="90"></label>
+          <label class="ctrl"><span>앞차 속도 <output id="fs-vs-out"></output></span><input type="range" id="fs-vs" min="40" max="95" step="5" value="70"></label>
+          <button class="btn" id="fs-reset">처음부터</button>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">상태</span><span class="v" id="fs-state">—</span></div>
+        <div class="stat"><span class="k">옆 차로 앞 간격 / 필요</span><span class="v" id="fs-front">—</span></div>
+        <div class="stat"><span class="k">옆 차로 뒤 간격 / 필요</span><span class="v" id="fs-rear">—</span></div>
+        <div class="stat"><span class="k">자차 속도</span><span class="v" id="fs-v">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 자차(강조색)는 희망 속도 100 km/h로 달리다가 느린 앞차를 만난다. 처음 설정에서는 옆 차로 차간 거리가 좁아 "차로 변경 준비"에서 계속 기다린다. 차간 거리를 55 m 이상으로 넓히면 초록색 간격 창이 열리며 차로 변경으로 전이한다. 옆 차로 속도를 올리면 필요한 뒤 간격이 얼마나 늘어나는지 본다. 차는 실제보다 크게 그렸다.</div>
+    </div>
+
+    <h3>규칙 기반과 비용 기반</h3>
+    <p>상태 기계는 이해하기 쉽고, 왜 그런 결정을 했는지 추적할 수 있어 안전 검증에 유리하다. 하지만 상황이 복잡해질수록 상태와 전이 조건이 폭발적으로 늘어나고, 조건의 경계에서 결정이 이리저리 뒤집히는 문제가 생긴다. 그래서 요즘은 규칙으로 후보 행동을 걸러 낸 다음, 남은 후보마다 <b>비용</b>(예상 소요 시간, 위험도, 편안함, 교통 법규 위반 정도)을 계산해 가장 낮은 것을 고르는 방식을 많이 쓴다. 행동 트리, 확률적 의사결정 모델(POMDP의 근사), 학습 기반 정책도 같은 자리에 들어갈 수 있다. 어떤 방식이든 "한 번 정한 행동은 약간 더 싸게 쳐 준다"는 이력 효과를 넣어 결정이 떨리지 않게 한다.</p>
+  </section>
+
+  <!-- =============================================================== 5 -->
+  <section id="motion">
+    <h2>궤적 계획: 부드럽고 안전한 선</h2>
+    <p>행동이 "왼쪽 차로로 옮긴다"로 정해졌다. 이제 앞으로 몇 초 동안 차가 지나갈 정확한 선과 시각을 만들어야 한다. 좋은 궤적은 세 가지를 만족한다. 다른 물체와 부딪히지 않고(<b>안전</b>), 가속도와 그 변화가 작으며(<b>편안함</b>), 목적지에 쓸데없이 늦지 않는다(<b>효율</b>). 그리고 무엇보다 차가 실제로 따라갈 수 있어야 한다.</p>
+    <h3>프레네 좌표계</h3>
+    <p>도로는 굽어 있지만 운전자는 "차로를 따라 얼마나 갔는가"와 "차로 중심에서 옆으로 얼마나 벗어났는가"로 생각한다. <span class="term">프레네 좌표계</span><span class="en">(Frenet frame)</span>는 이 직관을 그대로 좌표로 만든 것이다. 기준선(보통 차로 중심선)을 따라 잰 거리 \(s\)와 기준선에서 수직으로 벗어난 거리 \(d\)를 쓴다. 굽은 도로를 곧게 펴서 보는 셈이어서, 차로 변경은 도로 형상과 상관없이 "\(d\)를 0에서 3.5 m로 옮기는 일"이 된다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 270" role="img" aria-label="프레네 좌표계">
+        <path d="M40 230 C 140 230, 200 120, 330 90" fill="none" stroke="var(--axis)" stroke-width="34" stroke-linecap="butt" opacity="0.22"/>
+        <path d="M40 230 C 140 230, 200 120, 330 90" fill="none" class="s-acc" stroke-width="2.5" stroke-dasharray="8 5"/>
+        <path d="M40 246 C 110 246, 150 200, 214 162" fill="none" stroke="var(--accent-2)" stroke-width="2"/>
+        <line x1="200.600" y1="152.200" x2="169.200" y2="107.100" stroke="var(--warn)" stroke-width="2.500"/>
+        <circle cx="200.600" cy="152.200" r="4" fill="var(--accent)"/>
+        <g transform="translate(169.200 107.100) rotate(-34.800)"><rect x="-20" y="-9" width="40" height="18" rx="5" fill="var(--accent)"/></g>
+        <text x="96" y="262" class="t-dim">s (기준선을 따라 잰 거리)</text>
+        <text x="150" y="140" fill="var(--warn)" font-weight="700" font-size="15">d</text>
+        <text x="258" y="80" class="t-dim">기준선</text>
+        <text x="40" y="34" class="t" font-weight="700">도로 위에서 (x, y)</text>
+
+        <text x="440" y="34" class="t" font-weight="700">프레네 좌표로 펴면 (s, d)</text>
+        <rect x="440" y="86" width="290" height="120" class="f-surface"/>
+        <line x1="440" y1="146" x2="730" y2="146" class="s-acc" stroke-width="1.5" stroke-dasharray="8 5"/>
+        <line x1="440" y1="206" x2="736" y2="206" class="s-axis" stroke-width="1.5"/><line x1="440" y1="210" x2="440" y2="70" class="s-axis" stroke-width="1.5"/>
+        <line x1="600" y1="146" x2="600" y2="108" stroke="var(--warn)" stroke-width="2.500"/>
+        <rect x="580" y="99" width="40" height="18" rx="5" fill="var(--accent)"/>
+        <line x1="440" y1="158" x2="600" y2="158" stroke="var(--accent-2)" stroke-width="2"/>
+        <text x="510" y="176" class="t-mono" text-anchor="middle">s</text>
+        <text x="608" y="134" fill="var(--warn)" font-weight="700" font-size="15">d</text>
+        <text x="726" y="226" class="t-dim" text-anchor="end">s</text><text x="428" y="80" class="t-dim" text-anchor="end">d</text>
+        <text x="446" y="140" class="t-dim">d = 0 (차로 중심)</text>
+      </svg>
+      <figcaption><b>그림 20-3.</b> 프레네 좌표계. 굽은 기준선을 따라 잰 거리 s와 수직 오프셋 d로 위치를 나타내면 도로가 곧은 띠로 펴진다.</figcaption>
+    </figure>
+
+    <h3>저크를 최소로 하는 5차 다항식</h3>
+    <p>승객이 느끼는 불쾌감은 가속도 자체보다 가속도가 변하는 빠르기, 즉 <span class="term">저크</span><span class="en">(jerk)</span>와 관계가 깊다. 시작과 끝의 위치·속도·가속도가 주어졌을 때 저크 제곱의 적분을 최소로 하는 곡선은 시간에 대한 <b>5차 다항식</b>임이 알려져 있다. 미지수가 여섯 개이고 경계 조건도 여섯 개(양 끝의 위치·속도·가속도)이므로 계수가 하나로 정해진다. 횡방향으로 정지 상태에서 정지 상태로 \(D\)만큼 옮기는 경우는 식이 특히 간단하다.</p>
+    <div class="formula">$$d(t) = D\,\bigl(10\,\tau^3 - 15\,\tau^4 + 6\,\tau^5\bigr), \qquad \tau = t/T$$
+      $$a_{y,\max} \approx 5.77\,\frac{D}{T^2}, \qquad j_{\max} = 60\,\frac{D}{T^3}, \qquad \int_0^T j^2\,dt = 720\,\frac{D^2}{T^5}$$
+      <div class="where">\(D\)는 횡 이동 거리, \(T\)는 차로 변경 시간. 최대 횡가속도는 \(T^2\)에, 최대 저크는 \(T^3\)에 반비례한다.</div></div>
+    <div class="callout tip">
+      <b>계산 예.</b> 차로 폭 3.5 m를 5초에 옮기면 최대 횡가속도는 \(5.77\times3.5/25 \approx 0.81\ \mathrm{m/s^2}\), 최대 저크는 \(60\times3.5/125 = 1.68\ \mathrm{m/s^3}\)이다. 같은 차로 변경을 2.5초에 하면 각각 3.2 m/s²와 13.4 m/s³로, 시간은 절반인데 저크는 8배가 된다. 주행 보조 시스템은 대표적으로 횡가속도 약 3 m/s², 횡저크 약 5 m/s³ 이내로 움직이도록 설계한다.
+    </div>
+    <h3>후보를 뿌리고 비용으로 고른다</h3>
+    <p>하나의 궤적만 계산하면 그 궤적이 장애물과 겹칠 때 대안이 없다. 그래서 끝 조건을 조금씩 바꾼 후보를 한꺼번에 여러 개 만든다. 차로 변경 시간 \(T\)를 여러 값으로, 목표 횡 위치 \(D\)를 차로 중심 좌우로 조금씩 바꿔 부채꼴 모양의 후보 다발을 만든 다음, 각 후보에 대해 다음을 차례로 검사한다.</p>
+    <div class="flow">
+      <div><b>운동 한계</b>가속도·저크·곡률이 한계를 넘는 후보를 버린다.</div>
+      <div><b>충돌 검사</b>예측된 다른 물체의 위치와 시각별로 겹치는지 확인한다.</div>
+      <div><b>비용 계산</b>남은 후보에 편안함·시간·목표 이탈 비용을 매긴다.</div>
+      <div><b>선택</b>비용이 가장 낮은 궤적을 제어기에 넘긴다.</div>
+    </div>
+    <div class="formula">$$J = w_j \int_0^T j^2\,dt \;+\; w_t\,T \;+\; w_d\,(D - D_{\text{target}})^2$$
+      <div class="where">첫 항은 편안함, 둘째 항은 효율(빨리 끝낼수록 좋음), 셋째 항은 목표 차로 중심에서 벗어난 정도. 가중치 \(w\)가 주행 성격을 정한다.</div></div>
+
+    <div class="sim" id="sim-lc">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>저크 최소 차로 변경과 후보 샘플링</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-lc" class="grab"></canvas><canvas id="cv-lcg"></canvas>
+          <div class="legend" style="padding-bottom:10px"><span><i style="background:var(--accent)"></i>횡가속도 [m/s²]</span><span><i style="background:var(--accent-2)"></i>횡저크 [m/s³]</span><span><i style="background:var(--ok)"></i>가속도 한계 ±3</span><span><i style="background:var(--warn)"></i>저크 한계 ±5</span></div>
+        </div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>모드</span><div class="seg" id="lc-mode"><button data-value="manual">궤적 하나</button><button data-value="sample" class="on">후보 샘플링</button></div></div>
+          <label class="ctrl"><span>차로 변경 시간 T <output id="lc-T-out"></output></span><input type="range" id="lc-T" min="2" max="8" step="0.1" value="5"></label>
+          <label class="ctrl"><span>주행 속도 <output id="lc-v-out"></output></span><input type="range" id="lc-v" min="30" max="110" step="5" value="60"></label>
+          <label class="ctrl"><span>편안함 가중치 w<sub>j</sub> <output id="lc-w-out"></output></span><input type="range" id="lc-w" min="0" max="3" step="0.05" value="0.5"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">선택된 궤적</span><span class="v" id="lc-sel">—</span></div>
+        <div class="stat"><span class="k">최대 횡가속도</span><span class="v" id="lc-a">—</span></div>
+        <div class="stat"><span class="k">최대 횡저크</span><span class="v" id="lc-j">—</span></div>
+        <div class="stat"><span class="k">변경 중 주행 거리</span><span class="v" id="lc-dist">—</span></div>
+        <div class="stat"><span class="k">살아남은 후보</span><span class="v" id="lc-n">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 정지한 장애물 차를 끌어서 옮긴다. 점선 상자는 자차 중심이 들어가면 충돌로 보는 영역(상대 차 크기에 자차 크기와 여유를 더한 것)이다. 빨간 후보는 충돌, 주황 후보는 편안함 한계 초과로 버려진다. 장애물을 가까이 당기면 긴 T 후보가 차례로 사라지고, 끝내 남는 후보가 없으면 행동 결정 층이 감속을 골라야 한다. "궤적 하나" 모드에서는 T를 줄이며 저크가 한계를 넘는 지점을 찾는다. 가로와 세로의 축척은 다르다.</div>
+    </div>
+
+    <h3>격자 탐색과 최적화</h3>
+    <p>다항식 샘플링은 차로가 분명한 도로에서 빠르고 잘 동작한다. 하지만 주차장이나 공사 구간처럼 기준선이 없는 <b>비정형 공간</b>에서는 쓸 수 없다. 이때는 앞에서 본 A*를 차에 맞게 고친 <span class="term">하이브리드 A*</span>를 쓴다. 일반 A*는 격자 칸에서 옆 칸으로 아무 방향이나 이동하지만, 차는 제자리에서 옆으로 움직일 수 없다. 하이브리드 A*는 노드를 (위치, 방향)의 연속 상태로 두고, "최대로 왼쪽·직진·최대로 오른쪽, 그리고 전진·후진"으로 짧게 굴러간 결과만을 이웃으로 삼는다. 그래서 찾은 경로는 처음부터 차의 최소 회전 반경을 지킨다.</p>
+
+    <div class="sim" id="sim-ha">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>하이브리드 A* 주차 경로</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-ha" class="grab"></canvas><span class="hint">출발 차를 끌어서 이동</span></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>최소 회전 반경 <output id="ha-r-out"></output></span><input type="range" id="ha-r" min="4" max="8" step="0.5" value="5"></label>
+          <label class="ctrl"><span>출발 방향 <output id="ha-th-out"></output></span><input type="range" id="ha-th" min="-180" max="180" step="15" value="0"></label>
+          <label class="ctrl"><span>후진 비용 배수 <output id="ha-rev-out"></output></span><input type="range" id="ha-rev" min="1" max="5" step="0.5" value="2"></label>
+          <div class="ctrl"><span>주차 방식</span><div class="seg" id="ha-goal"><button data-value="rear" class="on">후면 주차</button><button data-value="front">전면 주차</button></div></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">펼친 상태 수</span><span class="v" id="ha-n">—</span></div>
+        <div class="stat"><span class="k">경로 길이</span><span class="v" id="ha-len">—</span></div>
+        <div class="stat"><span class="k">전·후진 전환</span><span class="v" id="ha-sw">—</span></div>
+        <div class="stat"><span class="k">계산 시간</span><span class="v" id="ha-ms">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 가는 선은 탐색이 시도한 움직임, 굵은 선은 찾은 경로다(전진은 강조색, 후진은 주황). 회전 반경을 키우면 한 번에 들어가지 못하고 전·후진을 반복하는 경로가 나온다. 전면 주차와 후면 주차 중 어느 쪽이 좁은 통로에서 유리한지 비교한다. 탐색은 목표 자세의 허용 오차 안에 들면 끝나며, 실제 구현은 마지막 구간을 해석적인 곡선으로 정확히 이어 붙인다.</div>
+    </div>
+
+    <p>샘플링이나 탐색으로 얻은 궤적은 후보가 이산적이어서 조금 거칠다. <b>최적화 기반</b> 계획은 궤적을 수십 개의 점으로 나타내고, 부드러움과 장애물과의 거리, 차의 운동 한계를 비용과 제약으로 적은 다음 수치 최적화로 푼다. 품질은 가장 좋지만 좋은 초기값이 없으면 엉뚱한 해에 빠지므로, 실제 시스템은 탐색이나 샘플링으로 대략의 궤적을 찾은 뒤 최적화로 다듬는 2단 구성을 많이 쓴다.</p>
+  </section>
+
+  <!-- =============================================================== 6 -->
+  <section id="limits">
+    <h2>차가 따라갈 수 있는 궤적</h2>
+    <p>종이 위에서는 어떤 선이든 그릴 수 있지만, 차는 그렇게 움직이지 못한다. 계획이 지켜야 하는 차의 운동 제약을 가장 간단하게 담은 것이 <span class="term">기구학 자전거 모델</span><span class="en">(kinematic bicycle model)</span>이다. 좌우 바퀴를 하나로 합쳐 앞바퀴 하나와 뒷바퀴 하나로 보고, 타이어가 옆으로 미끄러지지 않는다고 가정한다. 타이어의 슬립각까지 고려하는 동역학 모델은 <a href="steering.html">10장</a>에서 다뤘다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 300" role="img" aria-label="기구학 자전거 모델과 회전 중심">
+        <line x1="60" y1="262" x2="500" y2="262" class="s-axis" stroke-width="1" stroke-dasharray="4 4"/>
+        <line x1="230" y1="262" x2="230" y2="37" stroke="var(--text-dim)" stroke-width="1.5" stroke-dasharray="6 4"/>
+        <line x1="360" y1="262" x2="230" y2="37" stroke="var(--text-dim)" stroke-width="1.5" stroke-dasharray="6 4"/>
+        <path d="M230 262 A225 225 0 0 0 424.900 149.500" fill="none" class="s-acc" stroke-width="2" stroke-dasharray="3 5"/>
+        <line x1="230" y1="262" x2="360" y2="262" stroke="var(--text)" stroke-width="5" stroke-linecap="round"/>
+        <rect x="204" y="254" width="52" height="16" rx="5" fill="var(--text)"/>
+        <g transform="translate(360 262) rotate(-30)"><rect x="-26" y="-8" width="52" height="16" rx="5" fill="var(--accent)"/><line x1="0" y1="0" x2="74" y2="0" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 3"/></g>
+        <path d="M410 262 A50 50 0 0 0 403.300 237" fill="none" stroke="var(--warn)" stroke-width="2"/>
+        <text x="418" y="252" fill="var(--warn)" font-weight="700" font-size="16">δ</text>
+        <path d="M230 97 A60 60 0 0 0 260 89" fill="none" stroke="var(--warn)" stroke-width="2"/>
+        <text x="240" y="116" fill="var(--warn)" font-weight="700" font-size="16">δ</text>
+        <circle cx="230" cy="37" r="5" fill="var(--bad)"/><text x="216" y="30" class="t" text-anchor="end">회전 중심</text>
+        <text x="216" y="156" class="t-acc" text-anchor="end" font-weight="700">R</text>
+        <line x1="230" y1="284" x2="360" y2="284" class="s-line" stroke-width="1.5"/><line x1="230" y1="278" x2="230" y2="290" class="s-line" stroke-width="1.5"/><line x1="360" y1="278" x2="360" y2="290" class="s-line" stroke-width="1.5"/>
+        <text x="295" y="298" class="t-mono" text-anchor="middle">L (휠베이스)</text>
+        <text x="150" y="250" class="t-dim" text-anchor="middle">뒷바퀴 (x, y, θ)</text>
+        <rect x="520" y="60" width="226" height="170" rx="10" class="f-surface"/>
+        <text x="536" y="88" class="t" font-weight="700">운동 방정식</text>
+        <text x="536" y="116" class="t-mono">dx/dt = v cos θ</text>
+        <text x="536" y="140" class="t-mono">dy/dt = v sin θ</text>
+        <text x="536" y="164" class="t-mono">dθ/dt = v tan δ / L</text>
+        <text x="536" y="196" class="t-acc" font-weight="700">R = L / tan δ</text>
+        <text x="536" y="216" class="t-dim">곡률 κ = 1/R</text>
+      </svg>
+      <figcaption><b>그림 20-4.</b> 기구학 자전거 모델. 두 바퀴의 축에 수직인 선이 만나는 점이 회전 중심이며, 조향각 δ가 회전 반경을 정한다.</figcaption>
+    </figure>
+
+    <div class="formula">$$\dot{x} = v\cos\theta, \qquad \dot{y} = v\sin\theta, \qquad \dot{\theta} = \frac{v}{L}\tan\delta, \qquad \kappa = \frac{1}{R} = \frac{\tan\delta}{L}$$
+      <div class="where">\((x, y)\)는 뒤 차축 중심, \(\theta\)는 차의 방향, \(v\)는 속도, \(\delta\)는 앞바퀴 조향각, \(L\)은 휠베이스, \(\kappa\)는 경로의 곡률.</div></div>
+    <p>이 식에서 두 가지 제약이 나온다. 첫째, 조향각에는 기계적 한계가 있으므로 <b>최소 회전 반경</b>이 있다. 휠베이스 2.7 m에 앞바퀴 최대 조향각이 35°라면 뒤 차축 중심 기준으로 \(R = 2.7/\tan35° \approx 3.9\) m이고, 차체 바깥 모서리 기준의 최소 회전 반경은 대표적으로 약 5~6 m다. 경로의 곡률이 \(1/R_{\min}\)보다 크면 차는 그 경로를 따라갈 수 없다. 둘째, 조향각은 순간적으로 바뀌지 못하므로 곡률은 연속이어야 한다. 직선에 원호를 바로 이어 붙인 경로는 접점에서 스티어링 휠을 순간 이동시키라고 요구하는 셈이다. 그래서 도로 설계와 궤적 계획 모두 곡률이 서서히 변하는 완화 곡선이나 스플라인을 쓴다.</p>
+    <h3>속도는 곡률이 정한다</h3>
+    <p>속도가 붙으면 타이어의 한계가 더 엄한 제약이 된다. 곡률 \(\kappa\)인 경로를 속도 \(v\)로 돌면 횡가속도는 \(a_y = v^2\kappa\)다. <a href="tire.html">7장</a>에서 본 대로 타이어가 낼 수 있는 힘은 마찰원 안에 있으므로, 횡가속도와 종가속도를 합친 크기가 \(\mu g\)를 넘을 수 없다. 자율주행차는 승차감을 위해 이보다 훨씬 낮은 편안함 한계를 스스로 건다.</p>
+    <div class="formula">$$v_{\max}(s) = \sqrt{\frac{a_{y,\max}}{|\kappa(s)|}}, \qquad a_x^2 + a_y^2 \le (\mu g)^2$$
+      <div class="where">\(a_{y,\max}\)는 허용 횡가속도. 편안한 주행에서는 대표적으로 약 2~3 m/s², 마른 노면의 물리적 한계는 약 8~9 m/s²다.</div></div>
+    <div class="callout tip">
+      <b>계산 예.</b> 반경 100 m(\(\kappa = 0.01\ \mathrm{m^{-1}}\))인 커브를 횡가속도 2 m/s² 이내로 돌려면 \(v = \sqrt{2/0.01} = 14.1\) m/s, 약 51 km/h가 한계다. 같은 커브를 마찰 한계(8 m/s²)까지 쓰면 28.3 m/s, 약 102 km/h다. 반경이 4분의 1로 줄면 제한 속도는 절반이 된다.
+    </div>
+    <p>코너 제한 속도만으로는 속도 계획이 끝나지 않는다. 코너 직전에서 순식간에 속도를 떨어뜨릴 수는 없기 때문이다. 그래서 두 번 훑는다. <b>후진 패스</b>는 경로의 끝에서 시작점 쪽으로 거슬러 오르며 "다음 지점의 속도까지 허용 감속도로 줄일 수 있는 최대 속도"로 깎는다. <b>전진 패스</b>는 시작점에서 끝으로 가며 "이전 지점에서 허용 가속도로 올릴 수 있는 최대 속도"로 다시 깎는다.</p>
+    <div class="formula">$$v_i \le \sqrt{v_{i+1}^2 + 2\,a_{\text{dec}}\,\Delta s} \;\;(\text{backward}), \qquad v_i \le \sqrt{v_{i-1}^2 + 2\,a_{\text{acc}}\,\Delta s} \;\;(\text{forward})$$
+      <div class="where">\(\Delta s\)는 이웃한 경로점 사이의 거리, \(a_{\text{dec}}\)와 \(a_{\text{acc}}\)는 허용 감속도와 가속도의 크기.</div></div>
+
+    <div class="sim" id="sim-sp">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>곡률 기반 속도 계획</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-sp" class="grab"></canvas><span class="hint" style="top:8px;bottom:auto">제어점을 끌어 도로를 바꾼다</span><canvas id="cv-spg"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>계산 단계</span><div class="seg" id="sp-stage"><button data-value="1">곡률 한계</button><button data-value="2">+후진</button><button data-value="3" class="on">+전진</button></div></div>
+          <label class="ctrl"><span>횡가속도 한계 <output id="sp-ay-out"></output></span><input type="range" id="sp-ay" min="1" max="9" step="0.5" value="3"></label>
+          <label class="ctrl"><span>가속도 한계 <output id="sp-acc-out"></output></span><input type="range" id="sp-acc" min="0.5" max="4" step="0.1" value="1.5"></label>
+          <label class="ctrl"><span>감속도 한계 <output id="sp-dec-out"></output></span><input type="range" id="sp-dec" min="1" max="9" step="0.5" value="2.5"></label>
+          <label class="ctrl"><span>도로 제한 속도 <output id="sp-vmax-out"></output></span><input type="range" id="sp-vmax" min="40" max="130" step="5" value="90"></label>
+          <label class="check"><input type="checkbox" id="sp-stop" checked> 정지에서 출발해 끝에서 정지</label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">주행 시간</span><span class="v" id="sp-time">—</span></div>
+        <div class="stat"><span class="k">최소 곡률 반경</span><span class="v" id="sp-rmin">—</span></div>
+        <div class="stat"><span class="k">가장 느린 코너</span><span class="v" id="sp-vmin">—</span></div>
+        <div class="stat"><span class="k">지금 (속도 / 종 / 횡)</span><span class="v" id="sp-now">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 도로는 가속 구간이 초록, 감속 구간이 빨강, 한계 속도로 달리는 구간이 강조색이다. 계산 단계를 하나씩 올려 점선(곡률 한계)이 후진 패스와 전진 패스로 어떻게 깎이는지 본다. 제어점을 끌어 급한 코너를 만들면 그 앞에 감속 구간이 길게 생긴다. 감속도 한계를 낮추면 브레이크를 밟기 시작하는 지점이 얼마나 앞당겨지는지 확인한다.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 7 -->
+  <section id="control">
+    <h2>제어: 궤적을 따라가는 손과 발</h2>
+    <p>궤적 계획이 내놓은 것은 "0.1초 뒤에는 여기, 0.2초 뒤에는 저기"라는 목표의 나열이다. 제어기는 지금의 위치·속도와 목표의 차이를 보고 조향각과 구동·제동 명령을 계산한다. 보통 속도를 맡는 <b>종방향 제어</b>와 조향을 맡는 <b>횡방향 제어</b>로 나누어 설계한다.</p>
+    <h3>종방향: PID</h3>
+    <p>속도 제어의 기본은 <a href="adas.html">17장</a>의 ACC에서 본 PID 제어다. 목표 속도와 실제 속도의 차이에 비례하는 항, 그 누적에 비례하는 항, 변화율에 비례하는 항을 더해 가속도 명령을 만들고, 이를 엔진·모터 토크나 브레이크 압력으로 바꾼다. 계획이 준 목표 가속도를 그대로 더해 주는 <b>앞먹임</b><span class="en">(feedforward)</span>을 함께 쓰면 오차가 생기기 전에 미리 움직일 수 있다.</p>
+    <div class="formula">$$a_{\text{cmd}} = a_{\text{ref}} + K_p\,e + K_i\!\int e\,dt + K_d\,\dot{e}, \qquad e = v_{\text{ref}} - v$$
+      <div class="where">\(a_{\text{ref}}\)는 궤적이 요구하는 가속도(앞먹임), 나머지는 오차를 줄이는 되먹임 항이다.</div></div>
+    <h3>횡방향: 퓨어 퍼슈트</h3>
+    <p><span class="term">퓨어 퍼슈트</span><span class="en">(pure pursuit)</span>는 사람이 운전할 때 "저 앞의 한 점을 보고 그쪽으로 간다"는 감각을 그대로 옮긴 기하학적 방법이다. 뒤 차축 중심에서 경로 위로 <span class="term">전방 주시 거리</span><span class="en">(lookahead distance)</span> \(L_d\)만큼 떨어진 점을 목표점으로 잡는다. 지금 자세에서 출발해 그 점을 지나는 원호는 하나뿐이고, 그 원호의 반경에 맞는 조향각을 자전거 모델로 구한다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 290" role="img" aria-label="퓨어 퍼슈트의 기하">
+        <path d="M60 262 C 220 262, 300 160, 420 60" fill="none" stroke="var(--axis)" stroke-width="2" stroke-dasharray="7 5"/>
+        <text x="430" y="56" class="t-dim">기준 경로</text>
+        <path d="M160 250 A186.700 186.700 0 0 0 343.900 95.700" fill="none" class="s-acc" stroke-width="2.500"/>
+        <line x1="160" y1="250" x2="343.900" y2="95.700" stroke="var(--warn)" stroke-width="2"/>
+        <line x1="160" y1="250" x2="160" y2="63.300" stroke="var(--text-dim)" stroke-width="1.5" stroke-dasharray="6 4"/>
+        <line x1="343.900" y1="95.700" x2="160" y2="63.300" stroke="var(--text-dim)" stroke-width="1.5" stroke-dasharray="6 4"/>
+        <line x1="160" y1="250" x2="290" y2="250" stroke="var(--text)" stroke-width="5" stroke-linecap="round"/>
+        <rect x="136" y="242" width="48" height="16" rx="5" fill="var(--text)"/>
+        <g transform="translate(290 250) rotate(-24)"><rect x="-24" y="-8" width="48" height="16" rx="5" fill="var(--accent)"/></g>
+        <line x1="290" y1="250" x2="380" y2="250" class="s-axis" stroke-width="1" stroke-dasharray="4 4"/>
+        <path d="M220 250 A60 60 0 0 0 206 211.400" fill="none" stroke="var(--warn)" stroke-width="2"/>
+        <text x="228" y="232" fill="var(--warn)" font-weight="700" font-size="16">α</text>
+        <path d="M160 103 A40 40 0 0 0 199.400 70.200" fill="none" stroke="var(--warn)" stroke-width="2"/>
+        <text x="184" y="106" fill="var(--warn)" font-weight="700" font-size="15">2α</text>
+        <circle cx="343.900" cy="95.700" r="7" fill="var(--warn)"/><text x="356" y="112" class="t">목표점</text>
+        <circle cx="160" cy="63.300" r="5" fill="var(--bad)"/><text x="150" y="56" class="t-dim" text-anchor="end">원호 중심</text>
+        <text x="262" y="160" fill="var(--warn)" font-weight="700" font-size="15">L_d</text>
+        <text x="148" y="160" class="t-acc" text-anchor="end" font-weight="700">R</text>
+        <text x="225" y="276" class="t-mono" text-anchor="middle">L</text>
+        <rect x="500" y="90" width="246" height="150" rx="10" class="f-surface"/>
+        <text x="516" y="118" class="t" font-weight="700">현의 길이와 원호 반경</text>
+        <text x="516" y="146" class="t-mono">L_d = 2 R sin α</text>
+        <text x="516" y="172" class="t-mono">κ = 1/R = 2 sin α / L_d</text>
+        <text x="516" y="204" class="t-acc" font-weight="700">δ = atan(2 L sin α / L_d)</text>
+        <text x="516" y="226" class="t-dim">자전거 모델 tan δ = L κ</text>
+      </svg>
+      <figcaption><b>그림 20-5.</b> 퓨어 퍼슈트. 뒤 차축에서 목표점까지의 선분은 원호의 현이며, 차의 방향과 이루는 각 α로부터 조향각이 정해진다.</figcaption>
+    </figure>
+
+    <div class="formula">$$\delta = \arctan\!\left(\frac{2L\sin\alpha}{L_d}\right)$$
+      <div class="where">\(\alpha\)는 차의 방향과 목표점 방향 사이의 각, \(L_d\)는 전방 주시 거리, \(L\)은 휠베이스.</div></div>
+    <div class="callout tip">
+      <b>계산 예.</b> 휠베이스 2.7 m, 주시 거리 10 m, 목표점이 진행 방향에서 10° 왼쪽에 있으면 \(\delta = \arctan(2\times2.7\times\sin10°/10) = \arctan(0.094) \approx 5.4°\)다. 주시 거리를 5 m로 줄이면 같은 각도 오차에 대해 조향각이 약 두 배가 된다. 주시 거리가 조향의 민감도를 정하는 셈이다.
+    </div>
+    <p>조정 변수는 사실상 \(L_d\) 하나다. 짧게 잡으면 경로에 바짝 붙지만 작은 오차에도 크게 꺾어 차가 좌우로 흔들린다. 길게 잡으면 부드럽지만 코너에서 안쪽을 깎아 지나간다. 그래서 보통 속도에 비례해 \(L_d = k\,v\)로 늘린다. 사람도 빨리 달릴수록 멀리 본다.</p>
+    <h3>스탠리와 LQR</h3>
+    <p><span class="term">스탠리</span><span class="en">(Stanley)</span> 제어기는 앞 차축을 기준으로 삼는다. 조향각은 두 항의 합이다. 하나는 경로의 방향과 차의 방향 차이 \(\psi_e\)를 그대로 메우고, 다른 하나는 앞 차축이 경로에서 벗어난 거리 \(e\)에 비례해 경로 쪽으로 꺾는다. 속도로 나누어 주므로 빨리 달릴수록 같은 오차에 조향을 덜 쓴다.</p>
+    <div class="formula">$$\delta = \psi_e + \arctan\!\left(\frac{k\,e}{v}\right)$$
+      <div class="where">\(\psi_e\)는 방향 오차, \(e\)는 앞 차축의 횡 오차, \(k\)는 게인, \(v\)는 속도.</div></div>
+    <p><span class="term">LQR</span><span class="en">(Linear Quadratic Regulator)</span>은 한 걸음 더 나아가 차량 모델을 직접 쓴다. 횡 오차, 방향 오차와 그 변화율을 상태로 두고, 차의 운동을 선형 모델로 적은 다음 "오차 제곱과 조향 사용량 제곱의 가중 합"을 최소로 하는 되먹임 게인을 수학적으로 구한다. 게인을 감으로 맞추는 대신 "오차를 얼마나 싫어하는가"와 "조향을 얼마나 아끼는가"의 비율만 정하면 된다.</p>
+
+    <div class="sim" id="sim-pp">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>퓨어 퍼슈트와 스탠리 경로 추종</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-pp" class="grab"></canvas><span class="hint" style="top:8px;bottom:auto">화면을 눌러 차를 옮긴다</span><canvas id="cv-ppe"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>제어기</span><div class="seg" id="pp-mode"><button data-value="pp" class="on">퓨어 퍼슈트</button><button data-value="st">스탠리</button></div></div>
+          <label class="ctrl"><span>전방 주시 거리 L<sub>d</sub> <output id="pp-ld-out"></output></span><input type="range" id="pp-ld" min="1.5" max="15" step="0.5" value="6"></label>
+          <label class="ctrl"><span>스탠리 게인 k <output id="pp-k-out"></output></span><input type="range" id="pp-k" min="0.2" max="6" step="0.1" value="1.5"></label>
+          <label class="ctrl"><span>속도 <output id="pp-v-out"></output></span><input type="range" id="pp-v" min="3" max="12" step="0.5" value="7"></label>
+          <label class="check"><input type="checkbox" id="pp-geo" checked> 작도 표시</label>
+          <div class="ctrl-row"><button class="btn" id="pp-kick">옆으로 2 m 밀기</button><button class="btn" id="pp-pause">일시 정지</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">횡 오차</span><span class="v" id="pp-e">—</span></div>
+        <div class="stat"><span class="k">횡 오차 RMS (20 s)</span><span class="v" id="pp-rms">—</span></div>
+        <div class="stat"><span class="k">조향각</span><span class="v" id="pp-steer">—</span></div>
+        <div class="stat"><span class="k">횡가속도</span><span class="v" id="pp-ay">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 차는 기구학 자전거 모델을 실제로 적분해 움직이며, 조향 액추에이터의 지연(약 0.25 s)과 조향각·조향 속도 한계가 들어 있다. 기본 속도(7 m/s)에서 주시 거리를 1.5 m로 줄이면 차가 좌우로 크게 흔들리며 경로를 벗어난다. 속도를 12 m/s로 올리면 3 m에서도 같은 일이 생긴다. 빠를수록 멀리 봐야 하는 이유다. 반대로 12 m 이상으로 늘리면 흔들림은 없지만 코너 안쪽을 1 m 넘게 깎는다. 스탠리로 바꾼 뒤 "옆으로 2 m 밀기"를 눌러 게인에 따라 경로로 돌아오는 빠르기가 어떻게 달라지는지 본다. 아래 그래프는 차 중심의 횡 오차다(양수는 경로의 왼쪽).</div>
+    </div>
+
+    <h3>MPC: 미래를 내다보는 제어</h3>
+    <p>지금까지의 제어기는 현재의 오차에 반응했다. <span class="term">모델 예측 제어</span><span class="en">(Model Predictive Control, MPC)</span>는 차량 모델로 앞으로 몇 초 동안의 움직임을 직접 계산해 보고, 그 구간 전체에서 비용이 가장 낮은 입력의 열을 최적화로 찾는다. 가속도와 저크의 한계, 앞차와의 최소 간격 같은 <b>제약</b>을 식에 그대로 넣을 수 있다는 것이 가장 큰 장점이다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 250" role="img" aria-label="MPC의 이동 구간 원리">
+        <line x1="50" y1="200" x2="730" y2="200" class="s-axis" stroke-width="1.5"/>
+        <line x1="300" y1="30" x2="300" y2="212" stroke="var(--text)" stroke-width="1.5" stroke-dasharray="5 4"/>
+        <text x="300" y="228" class="t" text-anchor="middle" font-weight="700">지금 k</text>
+        <rect x="300" y="30" width="330" height="170" class="f-acc-soft" opacity="0.6"/>
+        <text x="465" y="48" class="t-acc" text-anchor="middle" font-weight="700">예측 구간 (N 스텝)</text>
+        <line x1="630" y1="30" x2="630" y2="212" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 4"/>
+        <text x="630" y="228" class="t-dim" text-anchor="middle">k + N</text>
+        <path d="M60 86 H720" stroke="var(--ok)" stroke-width="1.5" stroke-dasharray="8 5" fill="none"/>
+        <text x="716" y="78" class="t-dim" text-anchor="end">목표</text>
+        <path d="M60 170 C 140 168, 220 150, 300 132" fill="none" stroke="var(--text)" stroke-width="2.5"/>
+        <path d="M300 132 C 380 112, 460 92, 630 87" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-dasharray="7 5"/>
+        <text x="150" y="146" class="t-dim" text-anchor="middle">지나온 출력</text>
+        <text x="470" y="118" class="t-acc" text-anchor="middle">예측한 출력</text>
+        <g fill="none" stroke="var(--accent-2)" stroke-width="2.5">
+          <path d="M300 160 H355 V172 H410 V180 H465 V186 H520 V190 H575 V192 H630" stroke-dasharray="6 4"/>
+        </g>
+        <rect x="300" y="160" width="55" height="40" fill="var(--accent-2)" opacity="0.35"/>
+        <path d="M300 160 H355" stroke="var(--accent-2)" stroke-width="4" fill="none"/>
+        <text x="328" y="152" fill="var(--accent-2)" text-anchor="middle" font-weight="700" font-size="13">첫 입력만 사용</text>
+        <text x="520" y="178" class="t-dim" text-anchor="middle">계획한 입력 열</text>
+        <path d="M60 184 H120 V178 H180 V172 H240 V166 H300" fill="none" stroke="var(--text-dim)" stroke-width="2"/>
+      </svg>
+      <figcaption><b>그림 20-6.</b> MPC의 이동 구간 원리. 매 주기마다 예측 구간 전체의 입력을 최적화하지만 실제로 쓰는 것은 첫 입력뿐이고, 다음 주기에 새 측정값으로 처음부터 다시 푼다.</figcaption>
+    </figure>
+
+    <div class="formula">$$\min_{u_0,\dots,u_{N-1}} \sum_{k=0}^{N-1} \Bigl[\, q\,(x_k - x_k^{\text{ref}})^2 + r\,u_k^2 + r_{\Delta}\,(u_k - u_{k-1})^2 \Bigr] \quad \text{s.t.}\;\; x_{k+1} = f(x_k, u_k),\;\; u_{\min} \le u_k \le u_{\max}$$
+      <div class="where">\(x_k\)는 예측한 상태, \(u_k\)는 입력, \(N\)은 예측 구간의 스텝 수, \(q, r, r_\Delta\)는 추종 오차·입력 크기·입력 변화에 대한 가중치.</div></div>
+    <p>여기서 중요한 점은 최적화로 얻은 입력 열 중 <b>첫 번째 입력만</b> 실제로 쓴다는 것이다. 다음 주기가 되면 새로 측정한 상태에서 출발해 예측 구간을 한 칸 밀고 다시 최적화한다. 이를 <span class="term">이동 구간</span><span class="en">(receding horizon)</span> 방식이라 한다. 모델이 완벽하지 않고 앞차가 예상과 다르게 움직여도, 매번 다시 계획하므로 되먹임 효과가 생긴다. 아래 시뮬레이터는 앞차를 따라가는 종방향 문제를 MPC로 풀고, 같은 상황의 PID 제어와 나란히 비교한다.</p>
+
+    <div class="sim" id="sim-mp">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>MPC 맛보기: 앞차 추종</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-mp"></canvas><canvas id="cv-mpg"></canvas>
+          <div class="legend" style="padding-bottom:10px"><span><i style="background:var(--accent)"></i>MPC</span><span><i class="dash" style="color:var(--accent);background-color:transparent"></i>MPC의 계획</span><span><i style="background:var(--accent-2)"></i>PID</span><span><i style="background:var(--text-dim)"></i>목표 간격</span></div>
+        </div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>예측 구간 길이 <output id="mp-h-out"></output></span><input type="range" id="mp-h" min="0.5" max="8" step="0.25" value="4"></label>
+          <label class="ctrl"><span>편안함 가중치 <output id="mp-c-out"></output></span><input type="range" id="mp-c" min="0.5" max="20" step="0.5" value="6"></label>
+          <div class="ctrl"><span>앞차 주행</span><div class="seg" id="mp-sc"><button data-value="wave" class="on">가감속 반복</button><button data-value="const">정속</button></div></div>
+          <div class="ctrl-row"><button class="btn primary" id="mp-brake">앞차 급제동</button><button class="btn" id="mp-reset">처음부터</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">간격 (MPC / PID)</span><span class="v" id="mp-g">—</span></div>
+        <div class="stat"><span class="k">최소 간격 (MPC / PID)</span><span class="v" id="mp-min">—</span></div>
+        <div class="stat"><span class="k">저크 RMS (MPC / PID)</span><span class="v" id="mp-j">—</span></div>
+        <div class="stat"><span class="k">속도 (앞차 / MPC / PID)</span><span class="v" id="mp-v">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: "지금" 선의 오른쪽 점선이 MPC가 방금 세운 계획이고, 왼쪽 실선이 실제로 지나온 기록이다. 계획은 매 순간 다시 그려진다. 예측 구간을 1초 이하로 줄이고 급제동을 누르면, 먼 미래의 간격 부족이 비용에 들어오지 않아 늦게 반응하고 간격이 위험 영역(빨간 띠)까지 줄어든다. 구간을 4초 이상으로 늘리면 같은 가중치로도 여유 있게 멈춘다. 편안함 가중치를 올리면 가속도 곡선이 완만해지는 대신 간격 오차가 커진다. MPC는 앞차가 지금 속도를 유지한다고 예측하므로(등속 모델) 급제동 직후의 계획은 낙관적이었다가 빠르게 고쳐진다. 잘 조정한 PID도 이 문제를 무난히 푼다. MPC의 강점은 게인을 다시 맞추지 않고 가중치와 제약만으로 성격을 바꿀 수 있다는 데 있다.</div>
+    </div>
+
+    <p>횡방향에도 같은 원리를 쓴다. 자전거 모델로 예측 구간 동안의 경로 이탈을 계산하고 조향각의 크기와 변화율 한계를 제약으로 넣는다. 종·횡을 한꺼번에 푸는 MPC는 마찰원 제약까지 다룰 수 있어 한계 주행이나 긴급 회피에 강하다. 대가는 계산량이다. 매 주기(대표적으로 10~50 ms) 안에 최적화가 끝나야 하므로, 모델을 선형화해 2차 계획 문제로 바꾸거나 전용 해법을 쓴다.</p>
+  </section>
+
+  <!-- =============================================================== 8 -->
+  <section id="reality">
+    <h2>현실의 제약: 지연, 승차감, 안전 여유</h2>
+    <h3>지연과 액추에이터 한계</h3>
+    <p>센서가 장면을 찍은 순간부터 바퀴가 실제로 꺾일 때까지는 시간이 걸린다. 인지 처리, 계획 계산, 차량 네트워크 전송, 그리고 조향 모터와 브레이크 유압이 움직이는 시간이 모두 더해지면 전체 지연은 대표적으로 약 0.1~0.3초에 이른다. 시속 100 km에서 0.2초는 5.6 m다. 제어기가 이 지연을 모른 채 게인만 높이면 앞의 퓨어 퍼슈트 시뮬레이터에서 본 것처럼 진동한다. 그래서 제어기는 "명령이 실제로 반영될 시점의 차 상태"를 모델로 미리 계산해 그 상태를 기준으로 제어하고, MPC는 지연과 액추에이터의 응답을 모델에 포함한다.</p>
+    <p>액추에이터에는 크기와 속도의 한계도 있다. 조향 모터가 낼 수 있는 조향 속도, 브레이크 압력이 올라가는 속도, 모터와 엔진이 낼 수 있는 토크는 유한하다(<a href="brake.html">8장</a>, <a href="motor.html">15장</a>). 계획이 이 한계를 무시한 궤적을 내놓으면 제어기는 따라가지 못하고 오차가 쌓인다. 좋은 스택은 위층부터 한계를 알고 계획한다.</p>
+    <h3>승차감</h3>
+    <p>사람이 운전하는 차에서는 운전자가 자기 조작을 예상하므로 멀미를 덜 느낀다. 자율주행차의 탑승자는 모두 승객이다. 그래서 가속도와 저크의 한계를 사람이 운전할 때보다 보수적으로 잡는다. 일상 주행에서 종가속도는 대표적으로 약 ±2 m/s², 저크는 약 1~2 m/s³ 이내가 편안하다고 본다. 물론 긴급 상황에서는 편안함 제약을 풀고 타이어 한계까지 쓴다. 평상시와 비상시의 한계를 구분해 두는 것도 계획의 일이다.</p>
+    <h3>안전 여유: RSS 맛보기</h3>
+    <p>"안전하게 운전한다"를 수식으로 적을 수 있을까. <span class="term">책임 민감 안전</span><span class="en">(Responsibility-Sensitive Safety, RSS)</span>은 상식적인 운전 규칙을 수학적 조건으로 옮기려는 시도다. 가장 기본이 되는 것은 앞차와의 최소 안전 거리다. 앞차가 낼 수 있는 가장 강한 제동으로 멈추고, 나는 반응 시간 동안 오히려 가속하다가 그 뒤에 약한 제동으로 멈춘다는 최악의 경우에도 부딪히지 않는 거리다.</p>
+    <div class="formula">$$d_{\min} = v_r\,\rho + \tfrac{1}{2}\,a_{\max}\,\rho^2 + \frac{(v_r + \rho\,a_{\max})^2}{2\,b_{\min}} - \frac{v_f^2}{2\,b_{\max}}$$
+      <div class="where">\(v_r\)은 뒤차(나)의 속도, \(v_f\)는 앞차 속도, \(\rho\)는 반응 시간, \(a_{\max}\)는 반응 시간 동안의 최대 가속도, \(b_{\min}\)은 내가 보장하는 최소 제동 감속도, \(b_{\max}\)는 앞차의 최대 제동 감속도. 결과가 음수면 0으로 본다.</div></div>
+    <div class="callout tip">
+      <b>계산 예.</b> 두 차 모두 90 km/h(25 m/s), \(\rho = 0.5\) s, \(a_{\max} = 2\), \(b_{\min} = 4\), \(b_{\max} = 8\ \mathrm{m/s^2}\)이면 \(d_{\min} = 12.5 + 0.25 + 26^2/8 - 25^2/16 \approx 12.5 + 0.25 + 84.5 - 39.1 = 58.2\) m다. 시간 간격으로는 약 2.3초에 해당한다. 가정한 감속도 값에 따라 결과가 크게 달라지므로, 이 매개변수를 어떻게 정하느냐가 곧 "얼마나 조심스러운 차인가"를 정한다.
+    </div>
+    <p>이런 규칙 기반 안전 검사는 계획 알고리즘과 별도로 두고, 계획이 무엇을 내놓든 마지막에 걸러 내는 <b>안전 감시층</b>으로 쓰는 경우가 많다. 횡방향 간격, 우선권, 시야가 가려진 곳에서의 속도 같은 나머지 규칙과 시스템 차원의 안전 설계는 <a href="autonomy.html">21장</a>에서 이어서 다룬다.</p>
+    <h3>학습 기반 계획</h3>
+    <p>규칙과 비용 함수를 사람이 일일이 쓰는 방식은 드문 상황이 끝없이 나오는 실제 도로에서 한계가 있다. 그래서 사람의 주행 데이터를 흉내 내도록 신경망을 학습시키는 <b>모방 학습</b>, 시뮬레이터에서 시행착오로 정책을 익히는 <b>강화 학습</b>, 그리고 센서 입력에서 궤적까지를 하나의 신경망으로 잇는 <b>엔드투엔드</b> 방식이 빠르게 발전하고 있다. 학습 기반 계획기는 복잡한 상호작용에서 사람처럼 자연스럽게 움직이는 장점이 있지만, 왜 그런 결정을 했는지 설명하기 어렵고 학습 데이터에 없던 상황에서의 동작을 보장하기 어렵다. 현재의 실용적인 구성은 학습 모델이 후보 궤적을 제안하고, 이 장에서 본 운동 제약 검사·충돌 검사·규칙 기반 안전 감시가 그 제안을 검증하는 혼합 방식이다.</p>
+    <div class="callout deep">
+      <b>심화: 왜 층 사이의 주기가 다른가.</b> 제어기는 차의 동역학(요 운동의 고유 진동수는 대표적으로 약 1~2 Hz)보다 충분히 빨라야 하므로 50~100 Hz로 돈다. 궤적 계획은 주변 물체의 움직임에 맞춰 10~20 Hz면 충분하다. 계획이 새 궤적을 내놓을 때마다 이전 궤적과 매끄럽게 이어지지 않으면 제어기가 목표의 순간 이동을 따라가려고 덜컥거린다. 그래서 새 궤적은 "지금 차의 실제 상태"가 아니라 "이전 궤적 위에서 조금 뒤의 점"에서 출발하도록 이어 붙인다.
+    </div>
+  </section>
+
+  <!-- =============================================================== summary -->
+  <section class="keypoints" id="summary">
+    <h2>핵심 정리</h2>
+    <ol>
+      <li>판단과 조작은 경로 탐색 → 행동 결정 → 궤적 계획 → 제어의 층으로 나뉘며, 아래로 갈수록 보는 범위는 짧고 갱신은 빠르다.</li>
+      <li>예측은 운동 모델(등속·등가속·등속 회전)로 짧은 미래를, 차로 기반 다중 가설과 확률로 긴 미래를 다룬다. 불확실성은 시간이 갈수록 커진다.</li>
+      <li>A*는 \(f = g + h\)가 작은 노드부터 펼친다. 휴리스틱이 실제 비용을 넘지 않으면 최단 경로를 보장하면서 다익스트라보다 적게 탐색한다.</li>
+      <li>행동 결정은 상태 기계와 비용 비교로 이루어지며, 차로 변경은 옆 차로의 앞·뒤 간격이 모두 필요 간격 이상일 때만 시작한다.</li>
+      <li>프레네 좌표의 5차 다항식은 저크가 최소인 궤적을 준다. 최대 횡가속도는 \(5.77D/T^2\), 최대 저크는 \(60D/T^3\)이며, 여러 후보를 만들어 한계 검사·충돌 검사·비용으로 고른다.</li>
+      <li>차는 최소 회전 반경과 연속 곡률을 지켜야 하고, 코너 속도는 \(v = \sqrt{a_y/\kappa}\)로 제한된다. 후진·전진 패스로 가감속 한계를 반영한 속도 프로파일을 만든다.</li>
+      <li>퓨어 퍼슈트는 전방 주시 거리 하나로 조향을 정한다. 짧으면 진동하고 길면 코너를 깎는다. 스탠리는 앞 차축의 방향 오차와 횡 오차를 함께 쓴다.</li>
+      <li>MPC는 예측 구간에서 제약을 지키며 입력을 최적화하고 첫 입력만 쓴 뒤 다시 푼다. 지연, 액추에이터 한계, 승차감, 안전 거리(RSS)가 모든 층의 설계를 제약한다.</li>
+    </ol>
+  </section>
+
+  <!-- =============================================================== quiz -->
+  <section class="quiz-sec" id="quiz">
+    <h2>확인 퀴즈</h2>
+    <div class="quiz">
+      <div class="quiz-q"><p>A*에서 휴리스틱 가중치를 0으로 두면 어떤 알고리즘과 같아지는가?</p><div class="opts">
+        <button class="opt">목표 방향으로만 가는 탐욕 탐색</button>
+        <button class="opt" data-correct>다익스트라 알고리즘</button>
+        <button class="opt">깊이 우선 탐색</button>
+        <button class="opt">하이브리드 A*</button>
+      </div><div class="quiz-exp">\(f = g + w\,h\)에서 \(w=0\)이면 지금까지 온 비용 g만으로 순서를 정하므로 다익스트라와 같다. 최단 경로는 보장되지만 목표와 무관한 방향까지 고르게 탐색한다.</div></div>
+
+      <div class="quiz-q"><p>차로 폭 3.5 m의 차로 변경을 5차 다항식으로 계획한다. 변경 시간을 6초에서 3초로 줄이면 최대 횡저크는 몇 배가 되는가?</p><div class="opts">
+        <button class="opt">2배</button>
+        <button class="opt">4배</button>
+        <button class="opt" data-correct>8배</button>
+        <button class="opt">16배</button>
+      </div><div class="quiz-exp">최대 저크는 \(60D/T^3\)으로 시간의 세제곱에 반비례한다. 시간이 절반이면 \(2^3 = 8\)배다. 6초일 때 약 0.97 m/s³, 3초일 때 약 7.8 m/s³이다. 최대 횡가속도는 \(T^2\)에 반비례하므로 4배가 된다.</div></div>
+
+      <div class="quiz-q"><p>반경 50 m 커브를 횡가속도 2 m/s² 이내로 돌 때 제한 속도에 가장 가까운 것은?</p><div class="opts">
+        <button class="opt">약 18 km/h</button>
+        <button class="opt" data-correct>약 36 km/h</button>
+        <button class="opt">약 51 km/h</button>
+        <button class="opt">약 72 km/h</button>
+      </div><div class="quiz-exp">\(v = \sqrt{a_y R} = \sqrt{2\times50} = 10\) m/s, 즉 36 km/h다. 반경 100 m일 때의 51 km/h에서 반경이 절반이 되면 속도는 \(1/\sqrt{2}\)배가 된다.</div></div>
+
+      <div class="quiz-q"><p>퓨어 퍼슈트 제어기로 달리는 차가 직선 구간에서 좌우로 계속 흔들린다. 가장 먼저 해 볼 조치는?</p><div class="opts">
+        <button class="opt">전방 주시 거리를 줄인다</button>
+        <button class="opt" data-correct>전방 주시 거리를 늘린다</button>
+        <button class="opt">속도를 올린다</button>
+        <button class="opt">휠베이스 값을 크게 넣는다</button>
+      </div><div class="quiz-exp">주시 거리가 짧으면 작은 횡 오차에도 큰 조향각이 나와, 조향 지연과 만나 진동한다. 주시 거리를 늘리면 같은 오차에 대한 조향이 작아져 안정된다. 대신 너무 길면 코너를 안쪽으로 깎으므로 보통 속도에 비례해 정한다.</div></div>
+
+      <div class="quiz-q"><p>MPC가 예측 구간 전체의 입력 열을 구하고도 첫 입력만 쓰고 다음 주기에 다시 푸는 이유로 가장 알맞은 것은?</p><div class="opts">
+        <button class="opt">계산량을 줄이기 위해서</button>
+        <button class="opt">나머지 입력은 제약을 만족하지 않기 때문에</button>
+        <button class="opt" data-correct>모델 오차와 예상 밖의 변화를 새 측정값으로 계속 바로잡기 위해서</button>
+        <button class="opt">액추에이터가 한 번에 하나의 명령만 저장할 수 있어서</button>
+      </div><div class="quiz-exp">모델은 완벽하지 않고 앞차 같은 외부 조건도 예측과 다르게 변한다. 매 주기 새로 측정한 상태에서 다시 최적화하면 계획 전체가 되먹임으로 고쳐진다. 계산량은 오히려 늘어난다.</div></div>
+
+      <div class="quiz-q"><p>교차로에서 감속 중인 차의 5초 뒤 위치를 등가속 모델로 예측했더니 차가 뒤로 가는 결과가 나왔다. 이 문제의 근본 원인은?</p><div class="opts">
+        <button class="opt">센서의 속도 측정 오차</button>
+        <button class="opt">예측 시간 간격이 너무 촘촘해서</button>
+        <button class="opt" data-correct>운동 모델은 현재의 운동 상태만 연장할 뿐 도로 구조와 운전자의 의도를 모르기 때문</button>
+        <button class="opt">칼만 필터의 공분산이 너무 작아서</button>
+      </div><div class="quiz-exp">운동 모델은 "지금 하던 대로 계속한다"는 가정이다. 감속은 정지나 회전을 위한 일시적인 행동인데 이를 무한히 연장하면 물리적으로 말이 안 되는 결과가 된다. 긴 예측에는 차로 형상과 기동 가설이 필요하다.</div></div>
+    </div>
+  </section>
+</main>
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const cs = getComputedStyle(document.documentElement);
+  const FONT = cs.getPropertyValue("--font").trim() || "sans-serif";
+  const MONO = cs.getPropertyValue("--mono").trim() || "monospace";
+  const PI = Math.PI, clamp = CB.clamp;
+  const text = (ctx, s, x, y, color, font, align, base) => { ctx.fillStyle = color; ctx.font = font; ctx.textAlign = align || "center"; ctx.textBaseline = base || "middle"; ctx.fillText(s, x, y); };
+  const wrapPi = (a) => { while (a > PI) a -= 2 * PI; while (a < -PI) a += 2 * PI; return a; };
+  const poly = (ctx, pts) => { ctx.beginPath(); pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); };
+
+  /* 이진 힙: 키가 작은 것부터 꺼낸다 */
+  function Heap() { this.k = []; this.v = []; }
+  Heap.prototype.push = function (key, val) {
+    const k = this.k, v = this.v; let i = k.length; k.push(key); v.push(val);
+    while (i > 0) { const p = (i - 1) >> 1; if (k[p] <= key) break; k[i] = k[p]; v[i] = v[p]; i = p; }
+    k[i] = key; v[i] = val;
+  };
+  Heap.prototype.pop = function () {
+    const k = this.k, v = this.v, top = v[0], lk = k.pop(), lv = v.pop(), n = k.length;
+    if (n) {
+      let i = 0;
+      for (;;) { let c = 2 * i + 1; if (c >= n) break; if (c + 1 < n && k[c + 1] < k[c]) c++; if (k[c] >= lk) break; k[i] = k[c]; v[i] = v[c]; i = c; }
+      k[i] = lk; v[i] = lv;
+    }
+    return top;
+  };
+  Object.defineProperty(Heap.prototype, "size", { get() { return this.k.length; } });
+
+  /* ================================================================ 1. 예측 비교 */
+  (function predict() {
+    const X0 = -50, X1 = 34, Y0 = -26, Y1 = 26, DT = 0.05, VC = 12;
+    const KINDS = ["straight", "left", "right"], NAMES = { straight: "직진", left: "좌회전", right: "우회전" };
+    function buildRoute(kind) {
+      const pts = [];
+      const lineTo = (x0, y0, x1, y1) => { const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 0.25); for (let i = 0; i < n; i++) pts.push([x0 + ((x1 - x0) * i) / n, y0 + ((y1 - y0) * i) / n]); };
+      let sTurn = Infinity, sEnd = Infinity, vTurn = VC;
+      if (kind === "straight") lineTo(X0, -1.75, 60, -1.75);
+      else if (kind === "left") {
+        const R = 9; lineTo(X0, -1.75, 1.75 - R, -1.75); sTurn = 1.75 - R - X0; sEnd = sTurn + (R * PI) / 2; vTurn = 6.5;
+        for (let i = 0; i < 60; i++) { const a = -PI / 2 + ((PI / 2) * i) / 60; pts.push([1.75 - R + R * Math.cos(a), -1.75 + R + R * Math.sin(a)]); }
+        lineTo(1.75, -1.75 + R, 1.75, 70);
+      } else {
+        const R = 5.25; lineTo(X0, -1.75, -1.75 - R, -1.75); sTurn = -1.75 - R - X0; sEnd = sTurn + (R * PI) / 2; vTurn = 5;
+        for (let i = 0; i < 40; i++) { const a = PI / 2 - ((PI / 2) * i) / 40; pts.push([-1.75 - R + R * Math.cos(a), -1.75 - R + R * Math.sin(a)]); }
+        lineTo(-1.75, -1.75 - R, -1.75, -70);
+      }
+      const s = [0], th = [];
+      for (let i = 1; i < pts.length; i++) s.push(s[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+      for (let i = 0; i < pts.length; i++) { const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)]; th.push(Math.atan2(b[1] - a[1], b[0] - a[0])); }
+      const R = { kind, pts, s, th, sTurn, sEnd, vTurn };
+      R.at = (sv) => {
+        let lo = 0, hi = s.length - 1;
+        if (sv >= s[hi]) return { x: pts[hi][0], y: pts[hi][1], th: th[hi] };
+        if (sv <= 0) return { x: pts[0][0], y: pts[0][1], th: th[0] };
+        while (hi - lo > 1) { const m = (lo + hi) >> 1; if (s[m] <= sv) lo = m; else hi = m; }
+        const f = (sv - s[lo]) / (s[hi] - s[lo]);
+        return { x: CB.lerp(pts[lo][0], pts[hi][0], f), y: CB.lerp(pts[lo][1], pts[hi][1], f), th: th[lo] + wrapPi(th[hi] - th[lo]) * f };
+      };
+      R.project = (x, y) => { let best = 0, bd = Infinity; for (let i = 0; i < pts.length; i += 2) { const d = (pts[i][0] - x) ** 2 + (pts[i][1] - y) ** 2; if (d < bd) { bd = d; best = i; } } return { s: s[best], d: Math.sqrt(bd), th: th[best] }; };
+      // 실제 주행 기록
+      const vAt = (sv) => (sv < sTurn ? Math.min(VC, Math.sqrt(vTurn * vTurn + 4 * (sTurn - sv))) : sv < sEnd ? vTurn : Math.min(VC, Math.sqrt(vTurn * vTurn + 3 * (sv - sEnd))));
+      R.log = [];
+      let sv = 0;
+      for (let t = 0; t <= 14.01; t += DT) { const p = R.at(sv), v = vAt(sv); R.log.push({ s: sv, x: p.x, y: p.y, th: p.th, v }); sv += v * DT; }
+      R.log.forEach((q, i) => { const n = R.log[Math.min(R.log.length - 1, i + 1)], m = R.log[Math.max(0, i - 1)]; q.a = (n.v - m.v) / (2 * DT); q.w = wrapPi(n.th - m.th) / (2 * DT); });
+      return R;
+    }
+    const routes = {}; KINDS.forEach((k) => (routes[k] = buildRoute(k)));
+    const el = $("cv-pr");
+    const chk = (id) => $(id).checked;
+    let playing = false;
+    let cv = null;
+    const redraw = () => cv && cv.redraw();
+    const tPos = CB.range("pr-t", (v) => v.toFixed(2) + " s", redraw);
+    const horizon = CB.range("pr-T", (v) => v.toFixed(1) + " s", redraw);
+    const intent = CB.seg("pr-int", redraw);
+    ["pr-sig", "pr-cv", "pr-ctrv", "pr-mh"].forEach((id) => $(id).addEventListener("change", redraw));
+    $("pr-play").addEventListener("click", () => { playing = !playing; if (playing && tPos() >= 7.95) tPos.set(0); $("pr-play").textContent = playing ? "일시 정지" : "재생"; });
+    CB.loop(el, (dt) => { if (!playing) return; let t = tPos() + dt * 0.6; if (t >= 8) { t = 8; playing = false; $("pr-play").textContent = "재생"; } tPos.set(t); });
+
+    function draw(ctx, w, h) {
+      const P = CB.palette(), sc = Math.min(w / (X1 - X0), h / (Y1 - Y0));
+      const ox = (w - sc * (X1 - X0)) / 2, oy = (h - sc * (Y1 - Y0)) / 2;
+      const X = (x) => ox + (x - X0) * sc, Y = (y) => oy + (Y1 - y) * sc;
+      const carLen = Math.max(4.5 * sc, 16);
+      // 도로
+      ctx.fillStyle = P.surface; ctx.fillRect(0, Y(3.5), w, 7 * sc); ctx.fillRect(X(-3.5), 0, 7 * sc, h);
+      ctx.strokeStyle = P.border; ctx.lineWidth = 1.5;
+      [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(([sx, sy]) => { ctx.beginPath(); ctx.moveTo(sx < 0 ? 0 : w, Y(3.5 * sy)); ctx.lineTo(X(3.5 * sx), Y(3.5 * sy)); ctx.lineTo(X(3.5 * sx), sy > 0 ? 0 : h); ctx.stroke(); });
+      ctx.strokeStyle = P.warn; ctx.setLineDash([8, 7]); ctx.lineWidth = 1.2; ctx.globalAlpha = 0.7;
+      [[[X0, 0], [-3.5, 0]], [[3.5, 0], [X1, 0]], [[0, Y0], [0, -3.5]], [[0, 3.5], [0, Y1]]].forEach(([a, b]) => { ctx.beginPath(); ctx.moveTo(X(a[0]), Y(a[1])); ctx.lineTo(X(b[0]), Y(b[1])); ctx.stroke(); });
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+
+      const R = routes[intent()], log = R.log, i = Math.min(log.length - 1, Math.round(tPos() / DT)), q = log[i], T = horizon();
+      const fut = log[Math.min(log.length - 1, i + Math.round(T / DT))];
+      const sigOn = chk("pr-sig") && R.kind !== "straight" && q.s > R.sTurn - 30 && q.s < R.sEnd;
+      // 가설 확률
+      const prior = { straight: 0.6, left: 0.2, right: 0.2 }, prob = {}, proj = {};
+      let sum = 0;
+      KINDS.forEach((k) => {
+        const r = routes[k], pj = r.project(q.x, q.y), dth = wrapPi(q.th - pj.th); proj[k] = pj;
+        let L = Math.exp(-0.5 * (pj.d / 1.0) ** 2 - 0.5 * (dth / 0.15) ** 2);
+        if (sigOn) L *= k === R.kind ? 0.9 : k === "straight" ? 0.08 : 0.02; else L *= k === "straight" ? 0.7 : 0.15;
+        const before = q.s < Math.min(routes.left.sTurn, routes.right.sTurn);
+        if (before) L *= q.a < -0.5 ? (k === "straight" ? 0.3 : 1) : k === "straight" ? 1 : 0.6;
+        prob[k] = prior[k] * L + 1e-9; sum += prob[k];
+      });
+      KINDS.forEach((k) => (prob[k] /= sum));
+      const best = KINDS.reduce((a, b) => (prob[a] >= prob[b] ? a : b));
+      const cols = { straight: P.accent, left: P.accent2, right: P.warn };
+      let eMh = NaN;
+      if (chk("pr-mh")) KINDS.forEach((k) => {
+        const r = routes[k], p = prob[k]; if (p < 0.01) return;
+        ctx.fillStyle = cols[k];
+        for (let tau = 0.5; tau <= T + 1e-6; tau += 0.5) { const c = r.at(proj[k].s + q.v * tau); ctx.globalAlpha = 0.06 + 0.3 * p; ctx.beginPath(); ctx.arc(X(c.x), Y(c.y), (0.5 + 0.38 * tau) * sc, 0, 2 * PI); ctx.fill(); }
+        ctx.globalAlpha = 0.3 + 0.7 * p; ctx.strokeStyle = cols[k]; ctx.lineWidth = 2.2; ctx.beginPath();
+        for (let tau = 0; tau <= T + 1e-6; tau += 0.1) { const c = r.at(proj[k].s + q.v * tau); tau ? ctx.lineTo(X(c.x), Y(c.y)) : ctx.moveTo(X(c.x), Y(c.y)); }
+        ctx.stroke(); ctx.globalAlpha = 1;
+        const e = r.at(proj[k].s + q.v * T);
+        text(ctx, NAMES[k] + " " + Math.round(p * 100) + "%", clamp(X(e.x), 44, w - 44), clamp(Y(e.y) - 12, 10, h - 10), cols[k], "600 12px " + FONT);
+        if (k === best) eMh = Math.hypot(e.x - fut.x, e.y - fut.y);
+      });
+      const curve = (fn, color, dash, label) => {
+        ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash(dash); ctx.beginPath(); let p;
+        for (let tau = 0; tau <= T + 1e-6; tau += 0.1) { p = fn(tau); tau ? ctx.lineTo(X(p[0]), Y(p[1])) : ctx.moveTo(X(p[0]), Y(p[1])); }
+        ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = color; ctx.beginPath(); ctx.arc(X(p[0]), Y(p[1]), 4, 0, 2 * PI); ctx.fill();
+        text(ctx, label, clamp(X(p[0]) + 8, 20, w - 30), clamp(Y(p[1]) + 12, 10, h - 8), color, "600 11px " + MONO, "left");
+        return Math.hypot(p[0] - fut.x, p[1] - fut.y);
+      };
+      const cvFn = (tau) => [q.x + q.v * tau * Math.cos(q.th), q.y + q.v * tau * Math.sin(q.th)];
+      const ctrvFn = (tau) => (Math.abs(q.w) < 1e-3 ? cvFn(tau) : [q.x + (q.v / q.w) * (Math.sin(q.th + q.w * tau) - Math.sin(q.th)), q.y - (q.v / q.w) * (Math.cos(q.th + q.w * tau) - Math.cos(q.th))]);
+      const eCv = chk("pr-cv") ? curve(cvFn, P.text, [6, 4], "CV") : NaN;
+      const eCt = chk("pr-ctrv") ? curve(ctrvFn, P.ok, [2, 4], "CTRV") : NaN;
+      // 정답(예측 시간 뒤의 실제 위치)
+      ctx.save(); ctx.translate(X(fut.x), Y(fut.y)); ctx.rotate(-fut.th); ctx.strokeStyle = P.text; ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]);
+      ctx.strokeRect(-carLen / 2, -carLen * 0.21, carLen, carLen * 0.42); ctx.restore();
+      // 자차와 상대 차
+      CB.carTop(ctx, X(1.75), Y(-15), -PI / 2, { len: carLen, color: P.dim });
+      text(ctx, "자차", X(1.75) + carLen * 0.5, Y(-15), P.dim, "12px " + FONT, "left");
+      CB.carTop(ctx, X(q.x), Y(q.y), -q.th, { len: carLen, color: P.red, brake: q.a < -0.5 });
+      if (sigOn && Math.floor(tPos() * 2.5) % 2 === 0) {
+        const side = R.kind === "left" ? 1 : -1;
+        const bx = q.x + Math.cos(q.th) * 2 - Math.sin(q.th) * side * 0.9, by = q.y + Math.sin(q.th) * 2 + Math.cos(q.th) * side * 0.9;
+        ctx.fillStyle = "#ffb000"; ctx.beginPath(); ctx.arc(X(bx), Y(by), Math.max(2.5, 0.45 * sc), 0, 2 * PI); ctx.fill();
+      }
+      text(ctx, "점선 상자: " + T.toFixed(1) + " s 뒤의 실제 위치", 8, 14, P.dim, "12px " + FONT, "left");
+      CB.stat("pr-p", KINDS.map((k) => Math.round(prob[k] * 100) + "%").join(" / "));
+      const m = (e) => (isFinite(e) ? e.toFixed(1) + " m" : "—");
+      CB.stat("pr-ecv", m(eCv)); CB.stat("pr-ectrv", m(eCt)); CB.stat("pr-emh", m(eMh));
+    }
+    cv = CB.canvas(el, draw, { aspect: 0.62, maxHeight: 440 });
+  })();
+
+  /* ================================================================ 2. 다익스트라와 A* */
+  (function astar() {
+    const COLS = 36, ROWS = 20, N = COLS * ROWS;
+    const wall = new Uint8Array(N);
+    let start = { c: 5, r: 10 }, goal = { c: 30, r: 9 };
+    let res = null, ref = null, shown = Infinity;
+    const idx = (c, r) => r * COLS + c;
+    function search(wgt) {
+      const g = new Float64Array(N).fill(Infinity), parent = new Int32Array(N).fill(-1), closed = new Uint8Array(N);
+      const order = [], open = new Heap(), s = idx(start.c, start.r), t = idx(goal.c, goal.r);
+      const hf = (i) => { const dc = Math.abs((i % COLS) - goal.c), dr = Math.abs(((i / COLS) | 0) - goal.r); return dc + dr + (Math.SQRT2 - 2) * Math.min(dc, dr); };
+      g[s] = 0; open.push(wgt * hf(s), s);
+      let found = false;
+      while (open.size) {
+        const u = open.pop(); if (closed[u]) continue;
+        closed[u] = 1; order.push(u);
+        if (u === t) { found = true; break; }
+        const uc = u % COLS, ur = (u / COLS) | 0;
+        for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+          if (!dr && !dc) continue;
+          const c = uc + dc, r = ur + dr; if (c < 0 || r < 0 || c >= COLS || r >= ROWS) continue;
+          const v = idx(c, r); if (wall[v] || closed[v]) continue;
+          if (dr && dc && (wall[idx(uc + dc, ur)] || wall[idx(uc, ur + dr)])) continue;
+          const ng = g[u] + (dr && dc ? Math.SQRT2 : 1);
+          if (ng < g[v] - 1e-9) { g[v] = ng; parent[v] = u; open.push(ng + wgt * hf(v) + 1e-4 * hf(v), v); }
+        }
+      }
+      const path = []; if (found) for (let u = t; u !== -1; u = parent[u]) path.push(u);
+      return { order, path: path.reverse(), len: found ? g[t] : NaN, found };
+    }
+    function preset() {
+      wall.fill(0);
+      for (let r = 2; r <= 17; r++) if (r !== 15 && r !== 16) wall[idx(13, r)] = 1;
+      for (let c = 20; c <= 25; c++) { wall[idx(c, 5)] = 1; wall[idx(c, 13)] = 1; }
+      for (let r = 5; r <= 13; r++) wall[idx(25, r)] = 1;
+      start = { c: 5, r: 10 }; goal = { c: 30, r: 9 };
+    }
+    const el = $("cv-as");
+    const cv = CB.canvas(el, draw, { aspect: ROWS / COLS });
+    const wgt = CB.range("as-w", (v) => (v === 0 ? "0 (다익스트라)" : v === 1 ? "1.0 (A*)" : v.toFixed(1) + (v > 1 ? " (가중 A*)" : "")), () => recompute());
+    function recompute(animate) {
+      res = search(wgt()); ref = search(0); shown = animate ? 0 : Infinity;
+      CB.stat("as-n", res.order.length + "개");
+      CB.stat("as-len", res.found ? res.len.toFixed(1) + "칸" + (res.len > ref.len + 1e-6 ? " (+" + (((res.len / ref.len) - 1) * 100).toFixed(1) + "%)" : " (최단)") : "경로 없음");
+      CB.stat("as-ref", ref.order.length + "개 / " + (ref.found ? ref.len.toFixed(1) + "칸" : "없음"));
+      CB.stat("as-save", ((1 - res.order.length / ref.order.length) * 100).toFixed(0) + "%");
+      cv.redraw();
+    }
+    $("as-run").addEventListener("click", () => recompute(true));
+    $("as-clear").addEventListener("click", () => { wall.fill(0); recompute(); });
+    $("as-maze").addEventListener("click", () => { preset(); recompute(); });
+    CB.loop(el, (dt) => { if (shown >= res.order.length) return; shown += Math.max(1, dt * Math.max(60, res.order.length / 2.5)); if (shown >= res.order.length) shown = Infinity; cv.redraw(); });
+    let dragging = null;
+    const cellAt = (p) => ({ c: clamp(Math.floor((p.x / cv.w) * COLS), 0, COLS - 1), r: clamp(Math.floor((p.y / cv.h) * ROWS), 0, ROWS - 1) });
+    const apply = (p) => {
+      const q = cellAt(p), i = idx(q.c, q.r), isS = q.c === start.c && q.r === start.r, isG = q.c === goal.c && q.r === goal.r;
+      if (dragging === "start" || dragging === "goal") { if (wall[i] || isS || isG) return; if (dragging === "start") start = q; else goal = q; }
+      else { if (isS || isG) return; const v = dragging === "draw" ? 1 : 0; if (wall[i] === v) return; wall[i] = v; }
+      recompute();
+    };
+    CB.drag(el, {
+      down(p) { const q = cellAt(p); dragging = q.c === start.c && q.r === start.r ? "start" : q.c === goal.c && q.r === goal.r ? "goal" : wall[idx(q.c, q.r)] ? "erase" : "draw"; apply(p); },
+      move: apply,
+    });
+    function draw(ctx, w, h) {
+      if (!res) return;
+      const P = CB.palette(), cw = w / COLS, ch = h / ROWS, n = Math.min(shown, res.order.length), tot = res.order.length;
+      ctx.fillStyle = P.accent;
+      for (let k = 0; k < n; k++) { const u = res.order[k]; ctx.globalAlpha = 0.14 + 0.5 * (k / tot); ctx.fillRect((u % COLS) * cw, ((u / COLS) | 0) * ch, cw, ch); }
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = P.grid; ctx.lineWidth = 1; ctx.beginPath();
+      for (let c = 1; c < COLS; c++) { ctx.moveTo(c * cw, 0); ctx.lineTo(c * cw, h); }
+      for (let r = 1; r < ROWS; r++) { ctx.moveTo(0, r * ch); ctx.lineTo(w, r * ch); }
+      ctx.stroke();
+      ctx.fillStyle = P.text; ctx.globalAlpha = 0.78;
+      for (let i = 0; i < N; i++) if (wall[i]) ctx.fillRect((i % COLS) * cw + 0.5, ((i / COLS) | 0) * ch + 0.5, cw - 1, ch - 1);
+      ctx.globalAlpha = 1;
+      const ctr = (u) => [((u % COLS) + 0.5) * cw, (((u / COLS) | 0) + 0.5) * ch];
+      if (shown === Infinity) {
+        if (ref.found && res.len > ref.len + 1e-6) { ctx.strokeStyle = P.dim; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); poly(ctx, ref.path.map(ctr)); ctx.stroke(); ctx.setLineDash([]); }
+        if (res.found) { ctx.strokeStyle = P.warn; ctx.lineWidth = Math.max(3, cw * 0.28); ctx.lineJoin = "round"; ctx.lineCap = "round"; poly(ctx, res.path.map(ctr)); ctx.stroke(); }
+      }
+      [[start, P.ok, "S"], [goal, P.bad, "G"]].forEach(([q, col, lab]) => {
+        const x = (q.c + 0.5) * cw, y = (q.r + 0.5) * ch;
+        ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, Math.max(cw * 0.46, 6), 0, 2 * PI); ctx.fill();
+        text(ctx, lab, x, y + 0.5, "#fff", "700 " + Math.max(9, Math.round(cw * 0.55)) + "px " + FONT);
+      });
+    }
+    preset(); recompute();
+  })();
+
+  /* ================================================================ 3. 행동 상태 기계 */
+  (function fsm() {
+    const el = $("cv-fs"), eld = $("cv-fsd");
+    const ST = ["keep", "follow", "prepare", "change"], LABEL = { keep: "차로 유지", follow: "추종", prepare: "변경 준비", change: "차로 변경" };
+    const VDES = 100 / 3.6, LEN = 4.5;
+    let ego, lead, left = null, state, timer, okTimer, tChange, doneTimer, G = {}, cv = null, cvd = null;
+    const gapS = CB.range("fs-gap", (v) => v + " m", respace);
+    const vL = CB.range("fs-vl", (v) => v + " km/h");
+    const vS = CB.range("fs-vs", (v) => v + " km/h");
+    function reset() {
+      ego = { x: 0, v: VDES, d: 0, a: 0 }; lead = { x: 110, v: vS() / 3.6 }; left = [];
+      for (let k = -6; k <= 8; k++) left.push({ x: 14 + k * gapS(), v: vL() / 3.6, a: 0 });
+      state = "keep"; timer = okTimer = tChange = doneTimer = 0;
+    }
+    function respace() {
+      if (!left || ego.d > 0.5) return;
+      let j = 0; left.forEach((c, i) => { if (Math.abs(c.x - ego.x) < Math.abs(left[j].x - ego.x)) j = i; });
+      const base = left[j].x; left.forEach((c, i) => (c.x = base + (i - j) * gapS()));
+    }
+    function step(dt) {
+      const vl = vL() / 3.6; lead.v = vS() / 3.6; lead.x += lead.v * dt;
+      const inLeft = ego.d > 1.75;
+      left.sort((a, b) => a.x - b.x);
+      for (let i = left.length - 1; i >= 0; i--) {
+        const c = left[i]; let lx = Infinity, lv = vl;
+        if (i < left.length - 1) { lx = left[i + 1].x; lv = left[i + 1].v; }
+        if (inLeft && ego.x > c.x && ego.x < lx) { lx = ego.x; lv = ego.v; }
+        let a = 0.8 * (vl - c.v);
+        if (isFinite(lx)) a = Math.min(a, 0.3 * (lx - c.x - LEN - (2 + 0.5 * c.v)) + 1.0 * (lv - c.v));
+        c.a = clamp(a, -5, 1.5);
+      }
+      left.forEach((c) => { c.v = Math.max(0, c.v + c.a * dt); c.x += c.v * dt; });
+      while (left[0].x > ego.x - 160) left.unshift({ x: left[0].x - gapS(), v: vl, a: 0 });
+      while (left[left.length - 1].x < ego.x + 200) left.push({ x: left[left.length - 1].x + gapS(), v: vl, a: 0 });
+      while (left.length > 2 && left[0].x < ego.x - 320) left.shift();
+      while (left.length > 2 && left[left.length - 1].x > ego.x + 360) left.pop();
+      let front = null, rear = null;
+      left.forEach((c) => { if (c.x > ego.x) { if (!front) front = c; } else rear = c; });
+      const gf = front ? front.x - ego.x - LEN : 999, gr = rear ? ego.x - rear.x - LEN : 999;
+      const nf = 3 + 0.5 * ego.v + (front ? Math.max(0, ego.v - front.v) ** 2 / 6 : 0);
+      const nr = 3 + (rear ? 0.8 * rear.v + Math.max(0, rear.v - ego.v) ** 2 / 4 : 0);
+      G = { gf, gr, nf, nr };
+      const follow = (gap, lv) => 0.25 * (gap - (4 + 1.5 * ego.v)) + 0.9 * (lv - ego.v);
+      const gapLead = lead.x - ego.x - LEN, ahead = lead.x > ego.x && ego.d < 1.75;
+      let a = 0.6 * (VDES - ego.v);
+      if (ego.d < 1.8 && lead.x > ego.x) a = Math.min(a, follow(gapLead, lead.v));
+      if (ego.d > 1.7 && front) a = Math.min(a, follow(gf, front.v));
+      a = clamp(a, -4, 1.5); ego.a += clamp(a - ego.a, -4 * dt, 4 * dt);
+      ego.v = Math.max(0, ego.v + ego.a * dt); ego.x += ego.v * dt;
+      if (state === "keep") {
+        if (ahead && gapLead < 4 + 2.5 * ego.v && lead.v < VDES - 1) { state = "follow"; timer = 0; }
+        if (ego.d > 3) { doneTimer += dt; if (doneTimer > 9) reset(); }
+      } else if (state === "follow") {
+        if (!ahead) state = "keep";
+        else if (lead.v < 0.9 * VDES) { timer += dt; if (timer > 2) { state = "prepare"; okTimer = 0; } } else timer = 0;
+      } else if (state === "prepare") {
+        if (!ahead || lead.v >= 0.9 * VDES) { state = "follow"; timer = 0; }
+        else { okTimer = gf >= nf && gr >= nr ? okTimer + dt : 0; if (okTimer > 0.3) { state = "change"; tChange = 0; } }
+      } else {
+        tChange += dt; const u = Math.min(1, tChange / 4); ego.d = 3.5 * u * u * u * (10 - 15 * u + 6 * u * u);
+        if (u >= 1) { state = "keep"; doneTimer = 0; }
+      }
+    }
+    function draw(ctx, w, h) {
+      if (!left) return;
+      const P = CB.palette(), sx = w / 180, lh = Math.min(38, h * 0.3), yc = h / 2;
+      const X = (x) => (x - ego.x + 70) * sx, Y = (d) => yc + lh / 2 - (d / 3.5) * lh;
+      const len = Math.max(LEN * sx * 1.3, 18);
+      ctx.fillStyle = P.surface; ctx.fillRect(0, yc - lh, w, 2 * lh);
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, yc - lh); ctx.lineTo(w, yc - lh); ctx.moveTo(0, yc + lh); ctx.lineTo(w, yc + lh); ctx.stroke();
+      ctx.strokeStyle = P.dim; ctx.lineWidth = 1.5; ctx.setLineDash([8 * sx, 12 * sx]); ctx.lineDashOffset = (ego.x % 20) * sx;
+      ctx.beginPath(); ctx.moveTo(0, yc); ctx.lineTo(w, yc); ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
+      if (state === "prepare" || state === "change") {
+        const zone = (x0, x1, ok) => { ctx.fillStyle = ok ? P.ok : P.bad; ctx.globalAlpha = 0.25; ctx.fillRect(X(x0), yc - lh + 3, (x1 - x0) * sx, lh - 6); ctx.globalAlpha = 1; };
+        zone(ego.x - LEN / 2 - G.nr - LEN / 2, ego.x, G.gr >= G.nr); zone(ego.x, ego.x + LEN / 2 + G.nf + LEN / 2, G.gf >= G.nf);
+        text(ctx, "필요한 간격 창", X(ego.x), yc - lh - 9, P.dim, "12px " + FONT);
+      }
+      left.forEach((c) => { const x = X(c.x); if (x > -30 && x < w + 30) CB.carTop(ctx, x, Y(3.5), 0, { len, color: P.dim, brake: c.a < -0.8 }); });
+      CB.carTop(ctx, X(lead.x), Y(0), 0, { len, color: P.accent2 });
+      text(ctx, "느린 앞차", X(lead.x), Y(0) + lh * 0.5 + 12, P.dim, "12px " + FONT);
+      const hd = state === "change" ? -0.12 * Math.sin(Math.min(1, tChange / 4) * PI) : 0;
+      CB.carTop(ctx, X(ego.x), Y(ego.d), hd, { len, color: P.accent, brake: ego.a < -0.8 });
+      if ((state === "prepare" || state === "change") && Math.floor(performance.now() / 350) % 2 === 0) { ctx.fillStyle = "#ffb000"; ctx.beginPath(); ctx.arc(X(ego.x) + len * 0.42, Y(ego.d) - len * 0.2, 3, 0, 2 * PI); ctx.fill(); }
+      text(ctx, "자차", X(ego.x), Y(0) + lh * 0.5 + 12, P.accent, "600 12px " + FONT);
+    }
+    function drawD(ctx, w, h) {
+      if (!left) return;
+      const P = CB.palette(), nw = Math.min(120, w / 4 - 18), nh = 34, y = h * 0.46, fs = w < 420 ? 11 : 13;
+      const cx = (i) => (w * (i + 0.5)) / 4;
+      const arrow = (x1, y1, x2, y2, col) => CB.arrow(ctx, x1, y1, x2, y2, col, 1.6);
+      const cur = ST.indexOf(state);
+      const labs = ["앞차 접근", "느린 앞차 2 s", "간격 수락"];
+      for (let i = 0; i < 3; i++) {
+        arrow(cx(i) + nw / 2 + 2, y - 6, cx(i + 1) - nw / 2 - 2, y - 6, cur === i ? P.accent : P.dim);
+        text(ctx, labs[i], (cx(i) + cx(i + 1)) / 2, y + nh / 2 + 14 + (i % 2) * 15, cur === i ? P.accent : P.dim, fs - 1 + "px " + FONT);
+        if (i < 2) arrow(cx(i + 1) - nw / 2 - 2, y + 6, cx(i) + nw / 2 + 2, y + 6, P.faint);
+      }
+      ctx.strokeStyle = cur === 3 ? P.accent : P.dim; ctx.lineWidth = 1.6; ctx.beginPath();
+      ctx.moveTo(cx(3), y - nh / 2 - 2); ctx.lineTo(cx(3), y - nh / 2 - 16); ctx.lineTo(cx(0), y - nh / 2 - 16); ctx.stroke();
+      arrow(cx(0), y - nh / 2 - 16, cx(0), y - nh / 2 - 2, cur === 3 ? P.accent : P.dim);
+      text(ctx, "변경 완료", w / 2, y - nh / 2 - 25, cur === 3 ? P.accent : P.dim, fs - 1 + "px " + FONT);
+      ST.forEach((s, i) => {
+        const on = i === cur;
+        ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(cx(i) - nw / 2, y - nh / 2, nw, nh, 9); else ctx.rect(cx(i) - nw / 2, y - nh / 2, nw, nh);
+        ctx.fillStyle = on ? P.accent : P.surface; ctx.fill(); ctx.strokeStyle = on ? P.accent : P.border; ctx.lineWidth = 1.5; ctx.stroke();
+        text(ctx, LABEL[s], cx(i), y + 1, on ? "#fff" : P.text, (on ? "700 " : "") + fs + "px " + FONT);
+      });
+    }
+    $("fs-reset").addEventListener("click", reset);
+    reset(); step(0.01);
+    cv = CB.canvas(el, draw, { aspect: 0.26, minHeight: 140, maxHeight: 190 });
+    cvd = CB.canvas(eld, drawD, { aspect: 0.3, minHeight: 130, maxHeight: 150 });
+    CB.loop(el, (dt) => {
+      step(dt); cv.redraw(); cvd.redraw();
+      const m = (g, n) => (g > 500 ? "—" : Math.max(0, g).toFixed(0) + " m") + " / " + n.toFixed(0) + " m";
+      CB.stat("fs-state", LABEL[state] + (state === "keep" && ego.d > 3 ? " (추월 차로)" : ""));
+      CB.stat("fs-front", `<span style="color:var(--${G.gf >= G.nf ? "ok" : "bad"})">${m(G.gf, G.nf)}</span>`);
+      CB.stat("fs-rear", `<span style="color:var(--${G.gr >= G.nr ? "ok" : "bad"})">${m(G.gr, G.nr)}</span>`);
+      CB.stat("fs-v", (ego.v * 3.6).toFixed(0) + " km/h");
+    });
+  })();
+
+  /* ================================================================ 4. 저크 최소 차로 변경 */
+  (function lanechange() {
+    const el = $("cv-lc"), elg = $("cv-lcg");
+    const ALIM = 3, JLIM = 5, DTG = 3.5, HOR = 8.4;
+    const q = (u) => u * u * u * (10 - 15 * u + 6 * u * u), q1 = (u) => 30 * u * u - 60 * u * u * u + 30 * u * u * u * u;
+    const qa = (u) => 60 * u - 180 * u * u + 120 * u * u * u, qj = (u) => 60 - 360 * u + 360 * u * u;
+    let obs = { s: 75, d: 0 }, cands = [], active = null, tAnim = 0, cv = null, cvg = null;
+    const mode = CB.seg("lc-mode", update);
+    const Tm = CB.range("lc-T", (v) => v.toFixed(1) + " s", update);
+    const vK = CB.range("lc-v", (v) => v + " km/h", update);
+    const wj = CB.range("lc-w", (v) => v.toFixed(2), update);
+    function evalC(T, D, keep) {
+      const v = vK() / 3.6, c = { T, D, keep, amax: keep ? 0 : (5.7735 * D) / (T * T), jmax: keep ? 0 : (60 * D) / (T * T * T), hit: false };
+      for (let t = 0; t <= HOR; t += 0.05) { const d = keep ? 0 : D * q(Math.min(1, t / T)); if (Math.abs(v * t - obs.s) < 6.5 && Math.abs(d - obs.d) < 2.3) { c.hit = true; break; } }
+      c.rough = c.amax > ALIM || c.jmax > JLIM;
+      c.cost = keep ? 60 : (wj() * 720 * D * D) / Math.pow(T, 5) + T + 4 * (D - DTG) * (D - DTG);
+      return c;
+    }
+    function update() {
+      const manual = mode() === "manual";
+      if (manual) { active = evalC(Tm(), DTG, false); cands = [active]; }
+      else {
+        cands = [evalC(1, 0, true)]; active = null;
+        for (let T = 2; T <= 7.01; T += 0.5) [2.9, 3.5, 4.1].forEach((D) => cands.push(evalC(T, D, false)));
+        cands.forEach((c) => { if (!c.hit && !c.rough && (!active || c.cost < active.cost)) active = c; });
+      }
+      const c = active;
+      CB.stat("lc-sel", !c ? '<span style="color:var(--bad)">없음: 감속 필요</span>' : c.keep ? "차로 유지 (변경 불가)" : "T = " + c.T.toFixed(1) + " s, D = " + c.D.toFixed(1) + " m" + (c.hit ? ' <span style="color:var(--bad)">충돌</span>' : ""));
+      const lim = (v, L, u) => `<span style="color:var(--${v > L ? "bad" : "ok"})">${v.toFixed(2)} ${u}</span>`;
+      CB.stat("lc-a", c && !c.keep ? lim(c.amax, ALIM, "m/s²") : "—");
+      CB.stat("lc-j", c && !c.keep ? lim(c.jmax, JLIM, "m/s³") : "—");
+      CB.stat("lc-dist", c && !c.keep ? ((vK() / 3.6) * c.T).toFixed(0) + " m" : "—");
+      CB.stat("lc-n", manual ? "—" : cands.filter((k) => !k.hit && !k.rough).length + " / " + cands.length);
+      if (cv) { cv.redraw(); cvg.redraw(); }
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), v = vK() / 3.6, S = v * HOR, X = (s) => 10 + (s / S) * (w - 20), Y = (d) => (h * (6.1 - d)) / 8.7, sy = h / 8.7, sxp = (w - 20) / S;
+      ctx.fillStyle = P.surface; ctx.fillRect(0, Y(5.25), w, Y(-1.75) - Y(5.25));
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, Y(5.25)); ctx.lineTo(w, Y(5.25)); ctx.moveTo(0, Y(-1.75)); ctx.lineTo(w, Y(-1.75)); ctx.stroke();
+      ctx.strokeStyle = P.dim; ctx.lineWidth = 1.5; ctx.setLineDash([10, 10]); ctx.beginPath(); ctx.moveTo(0, Y(1.75)); ctx.lineTo(w, Y(1.75)); ctx.stroke(); ctx.setLineDash([]);
+      for (let s = 50; s < S; s += S > 180 ? 100 : 50) text(ctx, s + " m", X(s), h - 9, P.faint, "11px " + MONO);
+      const manual = mode() === "manual";
+      const trace = (c) => { ctx.beginPath(); for (let t = 0; t <= HOR + 1e-6; t += 0.1) { const d = c.keep ? 0 : c.D * q(Math.min(1, t / c.T)); t ? ctx.lineTo(X(v * t), Y(d)) : ctx.moveTo(X(v * t), Y(d)); } ctx.stroke(); };
+      cands.forEach((c) => {
+        if (c === active && !manual) return;
+        ctx.strokeStyle = c.hit ? P.bad : c.rough ? P.warn : manual ? P.ok : P.dim; ctx.lineWidth = manual ? 3 : 1.3; ctx.globalAlpha = manual ? 1 : 0.65;
+        ctx.setLineDash(c.hit && !manual ? [4, 4] : []); trace(c);
+      });
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+      if (active && !manual) { ctx.strokeStyle = P.ok; ctx.lineWidth = 3.5; trace(active); }
+      // 장애물과 금지 영역
+      ctx.strokeStyle = P.bad; ctx.lineWidth = 1.3; ctx.setLineDash([5, 4]); ctx.strokeRect(X(obs.s - 6.5), Y(obs.d + 2.3), 13 * sxp, 4.6 * sy); ctx.setLineDash([]);
+      CB.carTop(ctx, X(obs.s), Y(obs.d), 0, { len: 30, color: P.dim });
+      text(ctx, "정지 차량 (끌기)", X(obs.s), Y(obs.d + 2.3) - 9, P.dim, "12px " + FONT);
+      const c = active;
+      let es = 0, ed = 0, hd = 0;
+      if (c) { const u = c.keep ? 0 : Math.min(1, tAnim / c.T); es = v * tAnim; ed = c.keep ? 0 : c.D * q(u); if (!c.keep && u < 1) hd = -Math.atan2(((c.D * q1(u)) / c.T) * sy, v * sxp); }
+      CB.carTop(ctx, X(es), Y(ed), hd, { len: 30, color: P.accent });
+      if (!c) text(ctx, "통과할 수 있는 후보가 없다", w / 2, Y(6.1) + 12, P.bad, "600 13px " + FONT);
+    }
+    function drawG(ctx, w, h) {
+      const P = CB.palette(), c = active, sa = [], sj = [];
+      if (c && !c.keep) for (let t = 0; t <= c.T + 1e-6; t += c.T / 80) { const u = Math.min(1, t / c.T); sa.push([t, (c.D * qa(u)) / (c.T * c.T)]); sj.push([t, (c.D * qj(u)) / (c.T * c.T * c.T)]); }
+      CB.chart(ctx, { x: 46, y: 12, w: w - 62, h: h - 58 }, {
+        x: [0, 8], y: [-8, 8], xLabel: "시간 [s]", yTicks: [-8, -5, -3, 0, 3, 5, 8],
+        series: [{ data: sa, color: P.accent, width: 2.4 }, { data: sj, color: P.accent2, width: 2.4 }],
+        hlines: [{ y: ALIM, color: P.ok }, { y: -ALIM, color: P.ok }, { y: JLIM, color: P.warn }, { y: -JLIM, color: P.warn }],
+        vlines: c && !c.keep && tAnim <= c.T ? [{ x: tAnim, color: P.text }] : [],
+      });
+    }
+    const setObs = (p) => { const v = vK() / 3.6, S = v * HOR; obs.s = clamp(((p.x - 10) / (cv.w - 20)) * S, 8, S); obs.d = clamp(6.1 - (p.y / cv.h) * 8.7, -0.9, 4.4); update(); };
+    CB.drag(el, { down: setObs, move: setObs });
+    cv = CB.canvas(el, draw, { aspect: 0.3, minHeight: 150, maxHeight: 220 });
+    cvg = CB.canvas(elg, drawG, { aspect: 0.32, minHeight: 170, maxHeight: 230 });
+    update();
+    CB.loop(el, (dt) => { tAnim += dt; if (tAnim > HOR) tAnim = 0; cv.redraw(); cvg.redraw(); });
+  })();
+
+  /* ================================================================ 5. 하이브리드 A* 주차 */
+  /*@pure:hybrid*/
+  const HY = { RES: 0.25, CR: 1.1, OFF: [-0.27, 0.81, 1.89, 2.97] };
+  function hyOcc(W, H, rects) {
+    const GW = Math.ceil(W / HY.RES), GH = Math.ceil(H / HY.RES), occ = new Uint8Array(GW * GH);
+    for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) {
+      const x = (i + 0.5) * HY.RES, y = (j + 0.5) * HY.RES;
+      let b = x < HY.CR || y < HY.CR || x > W - HY.CR || y > H - HY.CR;
+      for (let k = 0; k < rects.length && !b; k++) { const r = rects[k], dx = Math.max(r[0] - x, 0, x - r[2]), dy = Math.max(r[1] - y, 0, y - r[3]); b = dx * dx + dy * dy < HY.CR * HY.CR; }
+      occ[j * GW + i] = b ? 1 : 0;
+    }
+    return { occ, GW, GH, W, H };
+  }
+  function hyFree(M, x, y, th) {
+    const c = Math.cos(th), s = Math.sin(th);
+    for (let k = 0; k < 4; k++) {
+      const i = Math.floor((x + c * HY.OFF[k]) / HY.RES), j = Math.floor((y + s * HY.OFF[k]) / HY.RES);
+      if (i < 0 || j < 0 || i >= M.GW || j >= M.GH || M.occ[j * M.GW + i]) return false;
+    }
+    return true;
+  }
+  function hyPlan(M, start, goal, Rmin, revCost, maxExp) {
+    const out = { found: false, n: 0, path: [], explored: [], len: 0, sw: 0 };
+    if (!hyFree(M, start.x, start.y, start.th) || !hyFree(M, goal.x, goal.y, goal.th)) return out;
+    const GW = M.GW, GH = M.GH, RES = HY.RES;
+    // 장애물만 고려한 2차원 거리(휴리스틱)
+    const d2 = new Float32Array(GW * GH).fill(Infinity), hq = new Heap();
+    const gi = Math.floor(goal.x / RES), gj = Math.floor(goal.y / RES);
+    d2[gj * GW + gi] = 0; hq.push(0, gj * GW + gi);
+    while (hq.size) {
+      const dk = hq.k[0], u = hq.pop(); if (dk > d2[u] + 1e-6) continue;
+      const ui = u % GW, uj = (u / GW) | 0;
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+        if (!di && !dj) continue; const i = ui + di, j = uj + dj; if (i < 0 || j < 0 || i >= GW || j >= GH) continue;
+        const v = j * GW + i; if (M.occ[v]) continue;
+        const nd = d2[u] + (di && dj ? 1.4142 : 1) * RES; if (nd < d2[v]) { d2[v] = nd; hq.push(nd, v); }
+      }
+    }
+    const XY = 0.5, NTH = 72, CW = Math.ceil(M.W / XY), CH = Math.ceil(M.H / XY);
+    const best = new Float32Array(CW * CH * NTH).fill(Infinity), closed = new Uint8Array(CW * CH * NTH);
+    const nx = [], ny = [], nth = [], ng = [], np = [], nd = [], nk = [];
+    const keyOf = (x, y, th) => { let t = Math.round(th / ((2 * Math.PI) / NTH)) % NTH; if (t < 0) t += NTH; return (t * CH + Math.floor(y / XY)) * CW + Math.floor(x / XY); };
+    const hOf = (x, y) => Math.max(Math.hypot(x - goal.x, y - goal.y), d2[Math.floor(y / RES) * GW + Math.floor(x / RES)]);
+    const angd = (a) => { a = Math.abs(a) % (2 * Math.PI); return a > Math.PI ? 2 * Math.PI - a : a; };
+    const open = new Heap(), STEP = 0.8, KS = [-1, -0.5, 0, 0.5, 1];
+    nx.push(start.x); ny.push(start.y); nth.push(start.th); ng.push(0); np.push(-1); nd.push(0); nk.push(0);
+    best[keyOf(start.x, start.y, start.th)] = 0; open.push(1.6 * hOf(start.x, start.y), 0);
+    let goalNode = -1;
+    while (open.size && out.n < maxExp) {
+      const u = open.pop(), ku = keyOf(nx[u], ny[u], nth[u]);
+      if (closed[ku]) continue; closed[ku] = 1; out.n++;
+      if (Math.abs(nx[u] - goal.x) < 0.4 && Math.abs(ny[u] - goal.y) < 0.4 && angd(nth[u] - goal.th) < 0.13) { goalNode = u; break; }
+      for (let dir = 1; dir >= -1; dir -= 2) for (let ki = 0; ki < 5; ki++) {
+        const kap = KS[ki] / Rmin; let x = nx[u], y = ny[u], th = nth[u], ok = true;
+        for (let sub = 0; sub < 2 && ok; sub++) {
+          const l = (dir * STEP) / 2, t2 = th + kap * l;
+          if (Math.abs(kap) < 1e-6) { x += l * Math.cos(th); y += l * Math.sin(th); } else { x += (Math.sin(t2) - Math.sin(th)) / kap; y -= (Math.cos(t2) - Math.cos(th)) / kap; }
+          th = t2; ok = hyFree(M, x, y, th);
+        }
+        if (!ok) continue;
+        const kv = keyOf(x, y, th); if (closed[kv]) continue;
+        const g = ng[u] + STEP * (dir < 0 ? revCost : 1) + (nd[u] && nd[u] !== dir ? 3 : 0) + 0.3 * Math.abs(KS[ki] - nk[u]) + 0.05 * Math.abs(KS[ki]);
+        if (g >= best[kv]) continue;
+        const h = hOf(x, y); if (!isFinite(h)) continue;
+        best[kv] = g; const id = nx.length;
+        nx.push(x); ny.push(y); nth.push(th); ng.push(g); np.push(u); nd.push(dir); nk.push(KS[ki]);
+        open.push(g + 1.6 * h, id);
+        if (out.explored.length < 16000) out.explored.push(nx[u], ny[u], x, y);
+      }
+    }
+    if (goalNode < 0) return out;
+    out.found = true;
+    for (let u = goalNode; u !== -1; u = np[u]) out.path.push({ x: nx[u], y: ny[u], th: nth[u], dir: nd[u] || 0, k: nk[u] });
+    out.path.reverse();
+    for (let i = 1; i < out.path.length; i++) { out.len += STEP; if (i > 1 && out.path[i].dir !== out.path[i - 1].dir) out.sw++; }
+    return out;
+  }
+  /*@end*/
+  (function hybrid() {
+    const el = $("cv-ha"), W = 40, H = 22, SLOT = 2.7;
+    const rects = [];
+    for (let i = 0; i < 12; i++) { const x = 3.8 + SLOT * i; if (i !== 6) rects.push([x + 0.45, 15.5, x + 2.25, 20]); if (i !== 2 && i !== 9) rects.push([x + 0.45, 2, x + 2.25, 6.5]); }
+    rects.push([28.5, 9.2, 29.7, 10.4]);
+    const M = hyOcc(W, H, rects), gx = 3.8 + SLOT * 6.5;
+    let start = { x: 8, y: 11 }, res = null, dense = [], tAnim = 0, timer = 0, cv = null;
+    const plan = () => { clearTimeout(timer); timer = setTimeout(doPlan, 120); };
+    const Rm = CB.range("ha-r", (v) => v.toFixed(1) + " m", plan);
+    const th0 = CB.range("ha-th", (v) => v + "°", plan);
+    const rev = CB.range("ha-rev", (v) => "×" + v.toFixed(1), plan);
+    const gmode = CB.seg("ha-goal", plan);
+    const goal = () => (gmode() === "rear" ? { x: gx, y: 19.1, th: -PI / 2 } : { x: gx, y: 16.4, th: PI / 2 });
+    function doPlan() {
+      const t0 = performance.now(), s = { x: start.x, y: start.y, th: (th0() * PI) / 180 };
+      res = hyPlan(M, s, goal(), Rm(), rev(), 60000); dense = [];
+      const ms = performance.now() - t0;
+      for (let i = 1; i < res.path.length; i++) {
+        const a = res.path[i - 1], b = res.path[i], kap = b.k / Rm(); let x = a.x, y = a.y, th = a.th;
+        for (let sub = 0; sub < 4; sub++) {
+          const l = (b.dir * 0.8) / 4, t2 = th + kap * l;
+          if (Math.abs(kap) < 1e-6) { x += l * Math.cos(th); y += l * Math.sin(th); } else { x += (Math.sin(t2) - Math.sin(th)) / kap; y -= (Math.cos(t2) - Math.cos(th)) / kap; }
+          th = t2; dense.push({ x, y, th, dir: b.dir, k: b.k });
+        }
+      }
+      tAnim = 0;
+      CB.stat("ha-n", res.n.toLocaleString("en-US") + "개");
+      CB.stat("ha-len", res.found ? res.len.toFixed(1) + " m" : '<span style="color:var(--bad)">경로 없음</span>');
+      CB.stat("ha-sw", res.found ? res.sw + "회" : "—");
+      CB.stat("ha-ms", ms.toFixed(0) + " ms");
+      if (cv) cv.redraw();
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), sc = Math.min(w / W, h / H), ox = (w - sc * W) / 2, oy = (h - sc * H) / 2;
+      const X = (x) => ox + x * sc, Y = (y) => oy + (H - y) * sc;
+      ctx.strokeStyle = P.border; ctx.lineWidth = 1.5;
+      for (let i = 0; i <= 12; i++) { const x = X(3.8 + SLOT * i); ctx.beginPath(); ctx.moveTo(x, Y(20.6)); ctx.lineTo(x, Y(15)); ctx.moveTo(x, Y(7)); ctx.lineTo(x, Y(1.4)); ctx.stroke(); }
+      rects.forEach((r, i) => {
+        if (i === rects.length - 1) { ctx.fillStyle = P.warn; ctx.fillRect(X(r[0]), Y(r[3]), (r[2] - r[0]) * sc, (r[3] - r[1]) * sc); return; }
+        CB.carTop(ctx, X((r[0] + r[2]) / 2), Y((r[1] + r[3]) / 2), r[1] > 10 ? PI / 2 : -PI / 2, { len: 4.5 * sc, wid: 1.8 * sc, color: P.dim, alpha: 0.75 });
+      });
+      const g = goal();
+      ctx.strokeStyle = P.ok; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.strokeRect(X(gx - SLOT / 2 + 0.2), Y(20.3), (SLOT - 0.4) * sc, 5 * sc); ctx.setLineDash([]);
+      text(ctx, "목표", X(gx), Y(21.2), P.ok, "600 12px " + FONT);
+      const car = (p, color, alpha, steer) => CB.carTop(ctx, X(p.x + 1.35 * Math.cos(p.th)), Y(p.y + 1.35 * Math.sin(p.th)), -p.th, { len: 4.5 * sc, wid: 1.8 * sc, color, alpha, wheels: steer != null, steer });
+      if (res) {
+        ctx.strokeStyle = P.dim; ctx.globalAlpha = 0.3; ctx.lineWidth = 1; ctx.beginPath();
+        const E = res.explored; for (let i = 0; i < E.length; i += 4) { ctx.moveTo(X(E[i]), Y(E[i + 1])); ctx.lineTo(X(E[i + 2]), Y(E[i + 3])); }
+        ctx.stroke(); ctx.globalAlpha = 1;
+        ctx.lineWidth = 3; ctx.lineCap = "round";
+        for (let i = 1; i < dense.length; i++) { ctx.strokeStyle = dense[i].dir > 0 ? P.accent : P.warn; ctx.beginPath(); ctx.moveTo(X(dense[i - 1].x), Y(dense[i - 1].y)); ctx.lineTo(X(dense[i].x), Y(dense[i].y)); ctx.stroke(); }
+      }
+      car(g, P.ok, 0.25);
+      const s = { x: start.x, y: start.y, th: (th0() * PI) / 180 };
+      car(s, hyFree(M, s.x, s.y, s.th) ? P.accent2 : P.bad, 0.55);
+      if (res && res.found && dense.length) { const p = dense[Math.min(dense.length - 1, Math.floor(tAnim * 14))]; car(p, P.accent, 1, -Math.atan((2.7 * p.k) / Rm())); }
+      else if (res && !res.found) text(ctx, hyFree(M, s.x, s.y, s.th) ? "경로를 찾지 못했다" : "출발 위치가 장애물과 겹친다", w / 2, Y(11), P.bad, "600 13px " + FONT);
+    }
+    const setStart = (p) => { const sc = Math.min(cv.w / W, cv.h / H), ox = (cv.w - sc * W) / 2, oy = (cv.h - sc * H) / 2; const th = (th0() * PI) / 180; start.x = clamp((p.x - ox) / sc - 1.35 * Math.cos(th), 1, W - 1); start.y = clamp(H - (p.y - oy) / sc - 1.35 * Math.sin(th), 1, H - 1); res = null; dense = []; cv.redraw(); };
+    CB.drag(el, { down: setStart, move: setStart, up: doPlan });
+    cv = CB.canvas(el, draw, { aspect: H / W });
+    doPlan();
+    CB.loop(el, (dt) => { if (!res || !res.found) return; tAnim += dt; if (tAnim * 14 > dense.length + 20) tAnim = 0; cv.redraw(); });
+  })();
+
+  /* ================================================================ 6. 곡률 기반 속도 계획 */
+  (function speedplan() {
+    const el = $("cv-sp"), elg = $("cv-spg"), WX = 240, WY = 120, K = 24, SPEEDUP = 3;
+    const cp = [[15, 25], [75, 22], [125, 42], [105, 85], [150, 104], [205, 80], [190, 35], [228, 18]];
+    let R = null, tAnim = 0, hit = -1, cv = null, cvg = null;
+    const upd = () => compute();
+    const stage = CB.seg("sp-stage", () => redraw());
+    const ayL = CB.range("sp-ay", (v) => v.toFixed(1) + " m/s²", upd);
+    const acc = CB.range("sp-acc", (v) => v.toFixed(1) + " m/s²", upd);
+    const dec = CB.range("sp-dec", (v) => v.toFixed(1) + " m/s²", upd);
+    const vmax = CB.range("sp-vmax", (v) => v + " km/h", upd);
+    $("sp-stop").addEventListener("change", upd);
+    const redraw = () => { if (cv) { cv.redraw(); cvg.redraw(); } };
+    function compute() {
+      const n = cp.length, Q = [cp[0], cp[0]].concat(cp, [cp[n - 1], cp[n - 1]]);
+      const x = [], y = [], kap = [], hd = [];
+      const sample = (i, t) => {
+        const a = Q[i], b = Q[i + 1], c = Q[i + 2], d = Q[i + 3], u = 1 - t;
+        const b0 = (u * u * u) / 6, b1 = (3 * t * t * t - 6 * t * t + 4) / 6, b2 = (-3 * t * t * t + 3 * t * t + 3 * t + 1) / 6, b3 = (t * t * t) / 6;
+        const d0 = (-u * u) / 2, d1 = (3 * t * t - 4 * t) / 2, d2 = (-3 * t * t + 2 * t + 1) / 2, d3 = (t * t) / 2;
+        const e0 = u, e1 = 3 * t - 2, e2 = -3 * t + 1, e3 = t;
+        const f = (k, w0, w1, w2, w3) => w0 * a[k] + w1 * b[k] + w2 * c[k] + w3 * d[k];
+        const dx = f(0, d0, d1, d2, d3), dy = f(1, d0, d1, d2, d3), ddx = f(0, e0, e1, e2, e3), ddy = f(1, e0, e1, e2, e3), sp = Math.hypot(dx, dy);
+        x.push(f(0, b0, b1, b2, b3)); y.push(f(1, b0, b1, b2, b3));
+        kap.push(sp > 0.5 ? (dx * ddy - dy * ddx) / (sp * sp * sp) : 0); hd.push(sp > 1e-6 ? Math.atan2(dy, dx) : NaN);
+      };
+      for (let i = 0; i + 3 < Q.length; i++) for (let k = 0; k < K; k++) sample(i, k / K);
+      sample(Q.length - 4, 1);
+      const N = x.length, s = [0];
+      for (let i = 1; i < N; i++) s.push(s[i - 1] + Math.hypot(x[i] - x[i - 1], y[i] - y[i - 1]));
+      for (let i = 0; i < N; i++) if (isNaN(hd[i])) hd[i] = Math.atan2(y[Math.min(N - 1, i + 1)] - y[Math.max(0, i - 1)], x[Math.min(N - 1, i + 1)] - x[Math.max(0, i - 1)]);
+      const vm = vmax() / 3.6, stop = $("sp-stop").checked;
+      const v1 = kap.map((k) => Math.min(vm, Math.sqrt(ayL() / Math.max(Math.abs(k), 1e-6))));
+      const v2 = v1.slice(); if (stop) v2[N - 1] = 0;
+      for (let i = N - 2; i >= 0; i--) v2[i] = Math.min(v2[i], Math.sqrt(v2[i + 1] * v2[i + 1] + 2 * dec() * (s[i + 1] - s[i])));
+      const v3 = v2.slice(); if (stop) v3[0] = 0;
+      for (let i = 1; i < N; i++) v3[i] = Math.min(v3[i], Math.sqrt(v3[i - 1] * v3[i - 1] + 2 * acc() * (s[i] - s[i - 1])));
+      const tc = [0];
+      for (let i = 1; i < N; i++) tc.push(tc[i - 1] + (2 * (s[i] - s[i - 1])) / Math.max(v3[i] + v3[i - 1], 0.2));
+      let kmax = 0, vmin = Infinity; kap.forEach((k, i) => { kmax = Math.max(kmax, Math.abs(k)); vmin = Math.min(vmin, v1[i]); });
+      R = { x, y, kap, hd, s, v1, v2, v3, tc, N };
+      CB.stat("sp-time", tc[N - 1].toFixed(1) + " s");
+      CB.stat("sp-rmin", kmax > 1e-4 ? (1 / kmax).toFixed(0) + " m" : "직선");
+      CB.stat("sp-vmin", (vmin * 3.6).toFixed(0) + " km/h");
+      if (tAnim > tc[N - 1]) tAnim = 0;
+      redraw();
+    }
+    function carIdx() { let i = 0; while (i < R.N - 2 && R.tc[i + 1] < tAnim) i++; return i; }
+    const geom = (w, h) => { const sc = Math.min(w / WX, h / WY); return { sc, ox: (w - sc * WX) / 2, oy: (h - sc * WY) / 2 }; };
+    function draw(ctx, w, h) {
+      if (!R) return;
+      const P = CB.palette(), g = geom(w, h), X = (x) => g.ox + x * g.sc, Y = (y) => g.oy + (WY - y) * g.sc;
+      ctx.lineJoin = ctx.lineCap = "round";
+      ctx.strokeStyle = P.surface; ctx.lineWidth = Math.max(12, 10 * g.sc); poly(ctx, R.x.map((x, i) => [X(x), Y(R.y[i])])); ctx.stroke();
+      ctx.lineWidth = 3.2;
+      for (let i = 0; i < R.N - 1; i++) {
+        const a = (R.v3[i + 1] ** 2 - R.v3[i] ** 2) / (2 * Math.max(R.s[i + 1] - R.s[i], 1e-6));
+        ctx.strokeStyle = a > 0.15 ? P.ok : a < -0.15 ? P.bad : P.accent;
+        ctx.beginPath(); ctx.moveTo(X(R.x[i]), Y(R.y[i])); ctx.lineTo(X(R.x[i + 1]), Y(R.y[i + 1])); ctx.stroke();
+      }
+      ctx.strokeStyle = P.faint; ctx.lineWidth = 1; ctx.setLineDash([4, 4]); poly(ctx, cp.map((p) => [X(p[0]), Y(p[1])])); ctx.stroke(); ctx.setLineDash([]);
+      cp.forEach((p, i) => { ctx.beginPath(); ctx.arc(X(p[0]), Y(p[1]), 7, 0, 2 * PI); ctx.fillStyle = P.bg; ctx.fill(); ctx.strokeStyle = i === hit ? P.warn : P.accent2; ctx.lineWidth = 2.5; ctx.stroke(); });
+      const i = carIdx(), f = clamp((tAnim - R.tc[i]) / Math.max(R.tc[i + 1] - R.tc[i], 1e-6), 0, 1);
+      CB.carTop(ctx, X(CB.lerp(R.x[i], R.x[i + 1], f)), Y(CB.lerp(R.y[i], R.y[i + 1], f)), -R.hd[i], { len: 24, color: P.text });
+      text(ctx, SPEEDUP + "배속 재생", 8, h - 10, P.faint, "11px " + FONT, "left");
+      const v = CB.lerp(R.v3[i], R.v3[i + 1], f), ax = (R.v3[i + 1] ** 2 - R.v3[i] ** 2) / (2 * Math.max(R.s[i + 1] - R.s[i], 1e-6));
+      CB.stat("sp-now", (v * 3.6).toFixed(0) + " km/h / " + ax.toFixed(1) + " / " + (v * v * Math.abs(R.kap[i])).toFixed(1) + " m/s²");
+    }
+    function drawG(ctx, w, h) {
+      if (!R) return;
+      const P = CB.palette(), st = Number(stage()), kmh = (arr) => arr.map((v, i) => [R.s[i], v * 3.6]);
+      const i = carIdx(), series = [{ data: kmh(R.v1), color: P.dim, width: 1.5, dash: [5, 4] }];
+      if (st >= 2) series.push({ data: kmh(R.v2), color: st === 2 ? P.accent : P.accent2, width: st === 2 ? 2.6 : 1.5 });
+      if (st >= 3) series.push({ data: kmh(R.v3), color: P.accent, width: 2.6 });
+      CB.chart(ctx, { x: 50, y: 12, w: w - 66, h: h - 60 }, {
+        x: [0, R.s[R.N - 1]], y: [0, vmax() * 1.1], xLabel: "경로 거리 s [m]", yLabel: "속도 [km/h]", series,
+        vlines: [{ x: R.s[i], color: P.text }], points: [{ x: R.s[i], y: R.v3[i] * 3.6, color: P.text, r: 4 }],
+      });
+    }
+    CB.drag(el, {
+      down(p) { const g = geom(cv.w, cv.h); hit = -1; cp.forEach((c, i) => { if (Math.hypot(g.ox + c[0] * g.sc - p.x, g.oy + (WY - c[1]) * g.sc - p.y) < 22) hit = i; }); if (hit < 0) return false; },
+      move(p) { const g = geom(cv.w, cv.h); cp[hit] = [clamp((p.x - g.ox) / g.sc, 4, WX - 4), clamp(WY - (p.y - g.oy) / g.sc, 4, WY - 4)]; compute(); },
+      up() { hit = -1; redraw(); },
+    });
+    cv = CB.canvas(el, draw, { aspect: WY / WX, maxHeight: 380 });
+    cvg = CB.canvas(elg, drawG, { aspect: 0.34, minHeight: 180, maxHeight: 240 });
+    compute();
+    CB.loop(el, (dt) => { tAnim += dt * SPEEDUP; if (tAnim > R.tc[R.N - 1] + 2) tAnim = 0; redraw(); });
+  })();
+
+  /* ================================================================ 7. 퓨어 퍼슈트 / 스탠리 */
+  /*@pure:track*/
+  function ppTrack() {
+    const pts = [], n = 600;
+    for (let i = 0; i < n; i++) { const p = (i / n) * 2 * Math.PI; pts.push([50 + 41 * Math.cos(p) - 3 * Math.cos(2 * p), 29 + 20 * Math.sin(p) + 5 * Math.sin(2 * p) + 3 * Math.sin(3 * p)]); }
+    return pts;
+  }
+  /*@end*/
+  (function pursuit() {
+    const el = $("cv-pp"), ele = $("cv-ppe"), WX = 96, WY = 58, L = 2.7, DMAX = 0.6, RATE = 2.5, TAU = 0.25;
+    const pts = ppTrack(), n = pts.length;
+    const tang = pts.map((p, i) => { const a = pts[(i + n - 1) % n], b = pts[(i + 1) % n]; return Math.atan2(b[1] - a[1], b[0] - a[0]); });
+    const car = { x: pts[0][0], y: pts[0][1], th: tang[0], delta: 0 };
+    let near = 0, nearF = 0, t = 0, hist = [], trail = [], geo = null, running = true, cv = null, cve = null;
+    const mode = CB.seg("pp-mode", () => { hist = []; });
+    const Ld = CB.range("pp-ld", (v) => v.toFixed(1) + " m");
+    const kS = CB.range("pp-k", (v) => v.toFixed(1));
+    const vS = CB.range("pp-v", (v) => v.toFixed(1) + " m/s (" + (v * 3.6).toFixed(0) + " km/h)");
+    const nearest = (x, y, from, global) => {
+      let best = from, bd = Infinity; const span = global ? n : 60;
+      for (let k = global ? 0 : -8; k < span; k++) { const i = (from + k + n) % n, d = (pts[i][0] - x) ** 2 + (pts[i][1] - y) ** 2; if (d < bd) { bd = d; best = i; } }
+      return best;
+    };
+    const cross = (x, y, i) => -(x - pts[i][0]) * Math.sin(tang[i]) + (y - pts[i][1]) * Math.cos(tang[i]);
+    function relocate() { near = nearest(car.x, car.y, 0, true); nearF = nearest(car.x + L * Math.cos(car.th), car.y + L * Math.sin(car.th), 0, true); }
+    function step(dt) {
+      const v = vS(); let cmd;
+      near = nearest(car.x, car.y, near);
+      if (Math.hypot(pts[near][0] - car.x, pts[near][1] - car.y) > 5) relocate();
+      const fx = car.x + L * Math.cos(car.th), fy = car.y + L * Math.sin(car.th);
+      nearF = nearest(fx, fy, nearF);
+      if (mode() === "pp") {
+        const ld = Ld(); let gx = pts[near][0], gy = pts[near][1];
+        for (let k = Math.round((0.7 * ld) / 0.35); k < n; k++) {
+          const a = pts[(near + k) % n], b = pts[(near + k + 1) % n], da = Math.hypot(a[0] - car.x, a[1] - car.y), db = Math.hypot(b[0] - car.x, b[1] - car.y);
+          if (db >= ld) { const f = da < ld ? (ld - da) / (db - da) : 0; gx = a[0] + (b[0] - a[0]) * f; gy = a[1] + (b[1] - a[1]) * f; break; }
+        }
+        const alpha = wrapPi(Math.atan2(gy - car.y, gx - car.x) - car.th), dist = Math.hypot(gx - car.x, gy - car.y);
+        cmd = Math.atan2(2 * L * Math.sin(alpha), dist);
+        geo = { gx, gy, kap: (2 * Math.sin(alpha)) / Math.max(dist, 0.1), alpha, dist };
+      } else {
+        const e = cross(fx, fy, nearF), psi = wrapPi(tang[nearF] - car.th);
+        cmd = psi + Math.atan2(-kS() * e, v + 0.5);
+        geo = { fx, fy, px: pts[nearF][0], py: pts[nearF][1], e };
+      }
+      const target = clamp(cmd, -DMAX, DMAX);
+      car.delta += clamp((target - car.delta) / TAU, -RATE, RATE) * dt;
+      car.x += v * Math.cos(car.th) * dt; car.y += v * Math.sin(car.th) * dt; car.th = wrapPi(car.th + ((v * Math.tan(car.delta)) / L) * dt);
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), sc = Math.min(w / WX, h / WY), ox = (w - sc * WX) / 2, oy = (h - sc * WY) / 2;
+      const X = (x) => ox + x * sc, Y = (y) => oy + (WY - y) * sc;
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = P.surface; ctx.lineWidth = 7 * sc; poly(ctx, pts.map((p) => [X(p[0]), Y(p[1])])); ctx.closePath(); ctx.stroke();
+      ctx.strokeStyle = P.dim; ctx.lineWidth = 1.5; ctx.setLineDash([7, 5]); poly(ctx, pts.map((p) => [X(p[0]), Y(p[1])])); ctx.closePath(); ctx.stroke(); ctx.setLineDash([]);
+      if (trail.length > 1) { ctx.strokeStyle = P.accent2; ctx.lineWidth = 2; ctx.globalAlpha = 0.8; poly(ctx, trail.map((p) => [X(p[0]), Y(p[1])])); ctx.stroke(); ctx.globalAlpha = 1; }
+      if ($("pp-geo").checked && geo) {
+        if (mode() === "pp") {
+          ctx.strokeStyle = P.faint; ctx.lineWidth = 1; ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.arc(X(car.x), Y(car.y), Ld() * sc, 0, 2 * PI); ctx.stroke(); ctx.setLineDash([]);
+          ctx.strokeStyle = P.warn; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(X(car.x), Y(car.y)); ctx.lineTo(X(geo.gx), Y(geo.gy)); ctx.stroke();
+          ctx.strokeStyle = P.accent; ctx.lineWidth = 2.5; ctx.beginPath();
+          const kap = geo.kap, len = Math.abs(kap) > 1e-4 ? (2 * geo.alpha) / kap : geo.dist;
+          for (let i = 0; i <= 24; i++) {
+            const l = (len * i) / 24, a = car.th + kap * l;
+            const px = Math.abs(kap) > 1e-4 ? car.x + (Math.sin(a) - Math.sin(car.th)) / kap : car.x + l * Math.cos(car.th);
+            const py = Math.abs(kap) > 1e-4 ? car.y - (Math.cos(a) - Math.cos(car.th)) / kap : car.y + l * Math.sin(car.th);
+            i ? ctx.lineTo(X(px), Y(py)) : ctx.moveTo(X(px), Y(py));
+          }
+          ctx.stroke();
+          ctx.fillStyle = P.warn; ctx.beginPath(); ctx.arc(X(geo.gx), Y(geo.gy), 5, 0, 2 * PI); ctx.fill();
+        } else {
+          ctx.strokeStyle = P.bad; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(X(geo.fx), Y(geo.fy)); ctx.lineTo(X(geo.px), Y(geo.py)); ctx.stroke();
+          const tg = tang[nearF]; ctx.strokeStyle = P.warn; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(X(geo.px - 5 * Math.cos(tg)), Y(geo.py - 5 * Math.sin(tg))); ctx.lineTo(X(geo.px + 5 * Math.cos(tg)), Y(geo.py + 5 * Math.sin(tg))); ctx.stroke();
+          ctx.fillStyle = P.warn; ctx.beginPath(); ctx.arc(X(geo.px), Y(geo.py), 4, 0, 2 * PI); ctx.fill();
+        }
+      }
+      CB.carTop(ctx, X(car.x + 1.35 * Math.cos(car.th)), Y(car.y + 1.35 * Math.sin(car.th)), -car.th, { len: Math.max(4.5 * sc, 18), color: P.accent, wheels: true, steer: -car.delta });
+    }
+    function drawE(ctx, w, h) {
+      const P = CB.palette(); let m = 0.5; hist.forEach((p) => (m = Math.max(m, Math.abs(p[1]))));
+      const ym = m <= 0.5 ? 0.5 : m <= 1 ? 1 : m <= 2 ? 2 : Math.ceil(m);
+      CB.chart(ctx, { x: 50, y: 12, w: w - 66, h: h - 60 }, { x: [Math.max(0, t - 20), Math.max(20, t)], y: [-ym, ym], xLabel: "시간 [s]", yLabel: "횡 오차 [m]", series: [{ data: hist, color: P.accent, width: 2 }], hlines: [{ y: 0, color: P.faint }] });
+    }
+    CB.drag(el, {
+      down(p) { place(p); }, move(p) { place(p); },
+    });
+    function place(p) { const sc = Math.min(cv.w / WX, cv.h / WY), ox = (cv.w - sc * WX) / 2, oy = (cv.h - sc * WY) / 2; car.x = (p.x - ox) / sc; car.y = WY - (p.y - oy) / sc; trail = []; relocate(); cv.redraw(); }
+    $("pp-kick").addEventListener("click", () => { car.x += -2 * Math.sin(car.th); car.y += 2 * Math.cos(car.th); relocate(); });
+    $("pp-pause").addEventListener("click", () => { running = !running; $("pp-pause").textContent = running ? "일시 정지" : "계속"; });
+    $("pp-geo").addEventListener("change", () => cv.redraw());
+    cv = CB.canvas(el, draw, { aspect: WY / WX, maxHeight: 420 });
+    cve = CB.canvas(ele, drawE, { aspect: 0.3, minHeight: 170, maxHeight: 220 });
+    CB.loop(el, (dt) => {
+      if (!running) return;
+      for (let k = 0; k < 4; k++) step(dt / 4);
+      t += dt;
+      const cx = car.x + 1.35 * Math.cos(car.th), cy = car.y + 1.35 * Math.sin(car.th), e = cross(cx, cy, nearest(cx, cy, near));
+      hist.push([t, e]); while (hist.length && hist[0][0] < t - 20) hist.shift();
+      trail.push([cx, cy]); if (trail.length > 500) trail.shift();
+      const rms = Math.sqrt(hist.reduce((s, p) => s + p[1] * p[1], 0) / hist.length), v = vS(), ay = (v * v * Math.tan(car.delta)) / L;
+      CB.stat("pp-e", e.toFixed(2) + " m"); CB.stat("pp-rms", rms.toFixed(2) + " m");
+      CB.stat("pp-steer", ((car.delta * 180) / PI).toFixed(1) + "°" + (Math.abs(car.delta) >= DMAX - 1e-3 ? " (한계)" : ""));
+      CB.stat("pp-ay", `<span style="color:var(--${Math.abs(ay) > 8 ? "bad" : "text"})">${Math.abs(ay).toFixed(1)} m/s²</span>`);
+      cv.redraw(); cve.redraw();
+    });
+  })();
+
+  /* ================================================================ 8. MPC 앞차 추종 */
+  /*@pure:mpc*/
+  const MP = { h: 0.25, amin: -6, amax: 2.5, d0: 4, th: 1.5 };
+  function mpcRoll(a, st, c, res) {
+    let g = st.g, v = st.v, ap = st.a; const out = res ? null : { g: [], v: [] };
+    const wa = Math.sqrt(c), wj = Math.sqrt(0.5 * c), wv = Math.sqrt(3), wb = Math.sqrt(60);
+    for (let k = 0; k < a.length; k++) {
+      const v2 = Math.max(0, v + a[k] * MP.h); g += (st.vl - (v + v2) / 2) * MP.h; v = v2;
+      if (res) { res.push(g - (MP.d0 + MP.th * v), wv * (v - st.vl), wa * a[k], (wj * (a[k] - ap)) / MP.h, wb * Math.max(0, 2 + 0.6 * v - g)); ap = a[k]; }
+      else { out.g.push(g); out.v.push(v); }
+    }
+    return out;
+  }
+  function mpcSolve(a, st, c) {
+    const N = a.length, cost = (x) => { const r = []; mpcRoll(x, st, c, r); let s = 0; for (let i = 0; i < r.length; i++) s += r[i] * r[i]; return s; };
+    let J0 = cost(a);
+    for (let it = 0; it < 4; it++) {
+      const r0 = []; mpcRoll(a, st, c, r0); const M = r0.length, Jc = [];
+      for (let j = 0; j < N; j++) { const x = a.slice(); x[j] += 1e-4; const r = []; mpcRoll(x, st, c, r); for (let i = 0; i < M; i++) r[i] = (r[i] - r0[i]) * 1e4; Jc.push(r); }
+      const A = [], b = [];
+      for (let i = 0; i < N; i++) { A.push(new Array(N)); let s = 0; for (let m = 0; m < M; m++) s += Jc[i][m] * r0[m]; b.push(-s); }
+      for (let i = 0; i < N; i++) for (let j = i; j < N; j++) { let s = 0; for (let m = 0; m < M; m++) s += Jc[i][m] * Jc[j][m]; A[i][j] = A[j][i] = s + (i === j ? 1e-6 : 0); }
+      for (let i = 0; i < N; i++) {
+        let p = i; for (let r = i + 1; r < N; r++) if (Math.abs(A[r][i]) > Math.abs(A[p][i])) p = r;
+        if (p !== i) { const tA = A[i]; A[i] = A[p]; A[p] = tA; const tb = b[i]; b[i] = b[p]; b[p] = tb; }
+        for (let r = i + 1; r < N; r++) { const f = A[r][i] / A[i][i]; if (!f) continue; for (let q = i; q < N; q++) A[r][q] -= f * A[i][q]; b[r] -= f * b[i]; }
+      }
+      const d = new Array(N);
+      for (let i = N - 1; i >= 0; i--) { let s = b[i]; for (let q = i + 1; q < N; q++) s -= A[i][q] * d[q]; d[i] = s / A[i][i]; }
+      let improved = false;
+      for (const al of [1, 0.5, 0.25, 0.1]) {
+        const x = a.map((v, i) => Math.min(MP.amax, Math.max(MP.amin, v + al * d[i]))), J = cost(x);
+        if (J < J0 - 1e-9) { a = x; J0 = J; improved = true; break; }
+      }
+      if (!improved) break;
+    }
+    return a;
+  }
+  /*@end*/
+  (function mpc() {
+    const el = $("cv-mp"), elg = $("cv-mpg"), DT = 0.05, LEN = 4.5, JMAX = 10;
+    let lead, M, Pd, t, acc, seq, hist, brake, plan, cv = null, cvg = null;
+    const Hh = CB.range("mp-h", (v) => v.toFixed(2) + " s");
+    const Cw = CB.range("mp-c", (v) => v.toFixed(1));
+    const sc = CB.seg("mp-sc");
+    function reset() {
+      lead = { v: 20, a: 0 }; t = 0; acc = 0; seq = []; hist = []; brake = 0; plan = null;
+      M = { g: 34, v: 20, a: 0, min: 99, hit: false }; Pd = { g: 34, v: 20, a: 0, min: 99, hit: false, I: 0 };
+    }
+    function plant(c, u) {
+      const a0 = c.a; c.a += clamp(clamp(u, MP.amin, MP.amax) - c.a, -JMAX * DT, JMAX * DT);
+      const v2 = Math.max(0, c.v + c.a * DT); c.g += (lead.v - (c.v + v2) / 2) * DT; c.v = v2;
+      if (c.g < 0) { c.g = 0; c.v = Math.min(c.v, lead.v); c.hit = true; }
+      c.min = Math.min(c.min, c.g); c.j = (c.a - a0) / DT;
+    }
+    function step() {
+      const vt = sc() === "wave" ? 20 + 6 * Math.sin((2 * PI * t) / 24) : 22;
+      if (brake === 1) { lead.a = -6; if (lead.v <= 4) { brake = 2; acc = 0; } }
+      else if (brake === 2) { lead.a = 0; acc += DT; if (acc > 2.5) brake = 0; }
+      else lead.a = clamp(0.8 * (vt - lead.v), -3, 1.5);
+      lead.v = Math.max(0, lead.v + lead.a * DT);
+      const N = Math.max(2, Math.round(Hh() / MP.h));
+      while (seq.length < N) seq.push(seq.length ? seq[seq.length - 1] : 0);
+      seq.length = N;
+      const st = { g: M.g, v: M.v, a: M.a, vl: lead.v };
+      seq = mpcSolve(seq, st, Cw());
+      const r = mpcRoll(seq, st, Cw());
+      plan = { g: r.g, a: seq.slice() };
+      plant(M, seq[0]);
+      const e = Pd.g - (MP.d0 + MP.th * Pd.v); Pd.I = clamp(Pd.I + e * DT, -20, 20);
+      plant(Pd, 0.22 * e + 0.9 * (lead.v - Pd.v) + 0.02 * Pd.I);
+      t += DT;
+      hist.push({ t, gM: M.g, gP: Pd.g, ref: MP.d0 + MP.th * M.v, aM: M.a, aP: Pd.a, jM: M.j, jP: Pd.j });
+      while (hist.length > 300) hist.shift();
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), s = (w * 0.76) / 70, len = Math.max(LEN * s, 18), xl = w - 14 - len / 2;
+      [[M, "MPC", P.accent, h * 0.28], [Pd, "PID", P.accent2, h * 0.72]].forEach(([c, name, col, y], i) => {
+        ctx.fillStyle = P.surface; ctx.fillRect(0, y - h * 0.17, w, h * 0.34);
+        const gs = 2 + 0.6 * c.v, back = xl - len / 2;
+        ctx.fillStyle = P.bad; ctx.globalAlpha = 0.2; ctx.fillRect(back - gs * s, y - h * 0.13, gs * s, h * 0.26); ctx.globalAlpha = 1;
+        const xr = back - (MP.d0 + MP.th * c.v) * s;
+        ctx.strokeStyle = P.dim; ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(xr, y - h * 0.15); ctx.lineTo(xr, y + h * 0.15); ctx.stroke(); ctx.setLineDash([]);
+        if (i === 0 && plan) { ctx.fillStyle = col; ctx.globalAlpha = 0.45; plan.g.forEach((g) => { ctx.beginPath(); ctx.arc(back - g * s, y, 2.2, 0, 2 * PI); ctx.fill(); }); ctx.globalAlpha = 1; }
+        CB.carTop(ctx, xl, y, 0, { len, color: P.dim, brake: lead.a < -0.5 });
+        CB.carTop(ctx, Math.max(back - c.g * s - len / 2, -len), y, 0, { len, color: c.hit ? P.bad : col, brake: c.a < -0.5 });
+        text(ctx, name, 8, y - h * 0.17 + 10, col, "700 12px " + FONT, "left");
+      });
+    }
+    function drawG(ctx, w, h) {
+      const P = CB.palette(), bh = (h - 96) / 2, bx = { x: 46, w: w - 62 };
+      const S = (k) => hist.map((q) => [q.t - t, q[k]]);
+      const pg = plan ? [[0, M.g]].concat(plan.g.map((g, k) => [(k + 1) * MP.h, g])) : [];
+      const pa = plan ? plan.a.map((a, k) => [k * MP.h, a]) : [];
+      const now = [{ x: 0, color: P.text, label: "지금" }];
+      CB.chart(ctx, { x: bx.x, y: 12, w: bx.w, h: bh }, { x: [-12, 8], y: [0, 60], yLabel: "간격 [m]", xFmt: () => "",
+        series: [{ data: S("ref"), color: P.dim, width: 1.4 }, { data: S("gP"), color: P.accent2, width: 2 }, { data: S("gM"), color: P.accent, width: 2.4 }, { data: pg, color: P.accent, width: 2, dash: [5, 4] }], vlines: now });
+      CB.chart(ctx, { x: bx.x, y: 12 + bh + 26, w: bx.w, h: bh }, { x: [-12, 8], y: [-6.5, 3], xLabel: "시간 (0 = 지금) [s]", yLabel: "가속도 [m/s²]",
+        series: [{ data: S("aP"), color: P.accent2, width: 2 }, { data: S("aM"), color: P.accent, width: 2.4 }, { data: pa, color: P.accent, width: 2, dash: [5, 4] }],
+        vlines: [{ x: 0, color: P.text }], hlines: [{ y: MP.amin, color: P.bad }, { y: MP.amax, color: P.bad }] });
+    }
+    $("mp-brake").addEventListener("click", () => { if (!brake) brake = 1; });
+    $("mp-reset").addEventListener("click", reset);
+    reset(); step();
+    cv = CB.canvas(el, draw, { aspect: 0.22, minHeight: 120, maxHeight: 150 });
+    cvg = CB.canvas(elg, drawG, { aspect: 0.66, minHeight: 300, maxHeight: 400 });
+    let lag = 0;
+    CB.loop(el, (dt) => {
+      lag += dt; let k = 0; while (lag >= DT && k < 2) { step(); lag -= DT; k++; } if (lag > DT) lag = 0;
+      const rms = (key) => Math.sqrt(hist.reduce((s, q) => s + q[key] * q[key], 0) / Math.max(1, hist.length)).toFixed(2);
+      const mn = (c) => (c.hit ? '<span style="color:var(--bad)">충돌</span>' : c.min.toFixed(1) + " m");
+      CB.stat("mp-g", M.g.toFixed(1) + " / " + Pd.g.toFixed(1) + " m");
+      CB.stat("mp-min", mn(M) + " / " + mn(Pd));
+      CB.stat("mp-j", rms("jM") + " / " + rms("jP") + " m/s³");
+      CB.stat("mp-v", [lead.v, M.v, Pd.v].map((v) => (v * 3.6).toFixed(0)).join(" / ") + " km/h");
+      cv.redraw(); cvg.redraw();
+    });
+  })();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1345 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>전장과 차량 네트워크 · CarBook</title>
+<meta name="description" content="12 V 전원계와 충전 계통, ECU와 센서·액추에이터, PID 제어, CAN 프레임과 중재, 버스 부하, 진단, 존 아키텍처와 SDV까지 자동차의 전기·전자 시스템을 시뮬레이터로 익힌다.">
+<link rel="canonical" href="https://carbook.euiyun.com/chapters/electrical.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="CarBook">
+<meta property="og:title" content="전장과 차량 네트워크 · CarBook">
+<meta property="og:description" content="12 V 전원계와 충전 계통, ECU와 센서·액추에이터, PID 제어, CAN 프레임과 중재, 버스 부하, 진단, 존 아키텍처와 SDV까지 자동차의 전기·전자 시스템을 시뮬레이터로 익힌다.">
+<meta property="og:url" content="https://carbook.euiyun.com/chapters/electrical.html">
+<meta property="og:image" content="https://carbook.euiyun.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TechArticle","headline":"전장과 차량 네트워크","name":"전장과 차량 네트워크 · CarBook","url":"https://carbook.euiyun.com/chapters/electrical.html","mainEntityOfPage":"https://carbook.euiyun.com/chapters/electrical.html","inLanguage":"ko","isAccessibleForFree":true,"learningResourceType":"interactive textbook chapter","position":13,"image":"https://carbook.euiyun.com/og.png","dateModified":"2026-10-02","isPartOf":{"@type":"Book","@id":"https://carbook.euiyun.com/#book","name":"CarBook — 인터랙티브 자동차 교과서","url":"https://carbook.euiyun.com/"},"publisher":{"@type":"Organization","name":"CarBook","url":"https://carbook.euiyun.com/"},"description":"12 V 전원계와 충전 계통, ECU와 센서·액추에이터, PID 제어, CAN 프레임과 중재, 버스 부하, 진단, 존 아키텍처와 SDV까지 자동차의 전기·전자 시스템을 시뮬레이터로 익힌다."},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"CarBook","item":"https://carbook.euiyun.com/"},{"@type":"ListItem","position":2,"name":"13 전장과 차량 네트워크","item":"https://carbook.euiyun.com/chapters/electrical.html"}]}]}</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="../css/style.css">
+<script src="../js/common.js"></script>
+<style>
+  .el-in { font-family: var(--mono); font-size: 14px; width: 100%; min-width: 0; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); text-transform: uppercase; }
+  .el-in:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .el-info { padding: 12px 18px; border-top: 1px solid var(--border); font-size: 14.5px; line-height: 1.6; color: var(--text-dim); min-height: 4.4em; }
+  .el-info b { color: var(--text); margin-right: 6px; }
+  .el-info code { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+  .el-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); border-top: 1px solid var(--border); }
+  .el-two > div { min-width: 0; background: var(--canvas-bg); }
+  .el-two canvas { display: block; width: 100%; }
+  .el-checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px 12px; }
+  .el-checks .check { font-size: 13.5px; }
+  .el-ids { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .el-ids label { display: grid; gap: 3px; font-size: 12px; color: var(--text-dim); min-width: 0; }
+  #cv-fr { cursor: crosshair; }
+</style>
+</head>
+<body data-chapter="electrical">
+<main class="chapter">
+  <header class="chapter-hero">
+    <div class="eyebrow">Chapter 13</div>
+    <h1>전장과 차량 네트워크</h1>
+    <p class="lead">가속 페달을 밟으면 엔진이 반응하지만, 요즘 차에서 페달과 스로틀 사이에는 케이블이 없다. 페달 센서의 전압을 컴퓨터가 읽고, 계산하고, 모터를 돌린다. 이런 컴퓨터가 차 한 대에 수십 개에서 백여 개 들어 있고, 서로 초당 수천 개의 메시지를 주고받는다. 이 장은 그 전기를 공급하는 12 V 전원계에서 시작해 제어기의 속, 차량 통신의 표준인 CAN, 그리고 차 전체를 다시 설계하고 있는 존 아키텍처까지 따라간다.</p>
+    <ul class="objectives">
+      <li>배터리·알터네이터·부하 사이의 전류 균형과 시동 시 전압 강하, 암전류 방전을 계산한다.</li>
+      <li>ECU의 구성과 대표적인 센서·액추에이터의 동작 원리, PWM 구동을 설명한다.</li>
+      <li>PID 제어기의 세 항과 샘플링 주기가 응답에 미치는 영향을 이해한다.</li>
+      <li>CAN 프레임의 각 필드, 비트 스터핑, CRC, 비트 단위 중재를 비트 수준에서 읽는다.</li>
+      <li>버스 부하율과 최악 응답 시간을 구하고 CAN FD·LIN·FlexRay·이더넷의 쓰임새를 구분한다.</li>
+      <li>분산·도메인·존 아키텍처의 차이와 SDV, OTA, 보안이 왜 함께 논의되는지 설명한다.</li>
+    </ul>
+  </header>
+
+  <!-- =============================================================== 1 -->
+  <section id="intro">
+    <h2>바퀴 달린 컴퓨터 네트워크</h2>
+    <p>1970년대까지 자동차의 전기 장치는 점화, 시동, 등화, 와이퍼 정도였다. 배출가스 규제가 강화되면서 연료와 점화를 정밀하게 맞출 필요가 생겼고(<a href="combustion.html">4장</a>), 그 일을 맡은 것이 마이크로컨트롤러를 넣은 전자 제어 장치<span class="en">(Electronic Control Unit, ECU)</span>다. 이후 ABS, 에어백, 자동 변속기, 차체 자세 제어, 공조, 계기판이 차례로 자기 ECU를 갖게 되었다. 현재 양산 승용차에는 대표적으로 70~100개 이상의 ECU가 들어가고, 소프트웨어는 고급차 기준으로 1억 줄 수준이라고 알려져 있다.</p>
+    <p>ECU 하나가 하는 일은 단순한 반복이다. 센서로 물리량을 <b>읽고</b>, 정해진 주기로 <b>계산</b>하고, 액추에이터를 <b>구동</b>한다. 여기에 다른 ECU와 값을 <b>주고받는</b> 통신이 붙는다. 엔진 ECU가 계산한 회전수는 변속기 ECU, 계기판, ESC가 모두 필요로 하므로 한 번 측정해서 버스에 올려 두면 모두가 받아 쓴다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 270" role="img" aria-label="센서, ECU, 액추에이터와 버스의 관계">
+        <defs><marker id="el-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker></defs>
+        <rect x="16" y="28" width="150" height="130" rx="10" class="f-acc2-soft"/>
+        <text x="91" y="52" class="t" text-anchor="middle" font-weight="700">센서</text>
+        <text x="91" y="78" class="t-dim" text-anchor="middle">온도 · 압력</text>
+        <text x="91" y="98" class="t-dim" text-anchor="middle">회전 · 위치</text>
+        <text x="91" y="118" class="t-dim" text-anchor="middle">산소 농도</text>
+        <text x="91" y="144" class="t-mono" text-anchor="middle">0.5~4.5 V, 펄스</text>
+        <rect x="236" y="14" width="288" height="158" rx="12" class="f-acc-soft"/>
+        <text x="380" y="38" class="t" text-anchor="middle" font-weight="700">ECU</text>
+        <rect x="250" y="52" width="76" height="104" rx="6" class="f-elev s-line"/>
+        <text x="288" y="98" class="t-dim" text-anchor="middle">입력</text><text x="288" y="116" class="t-dim" text-anchor="middle">회로</text>
+        <rect x="342" y="52" width="76" height="104" rx="6" class="f-elev s-acc"/>
+        <text x="380" y="98" class="t" text-anchor="middle">MCU</text><text x="380" y="116" class="t-mono" text-anchor="middle">1~10 ms</text>
+        <rect x="434" y="52" width="76" height="104" rx="6" class="f-elev s-line"/>
+        <text x="472" y="98" class="t-dim" text-anchor="middle">출력</text><text x="472" y="116" class="t-dim" text-anchor="middle">드라이버</text>
+        <rect x="594" y="28" width="150" height="130" rx="10" class="f-surface"/>
+        <text x="669" y="52" class="t" text-anchor="middle" font-weight="700">액추에이터</text>
+        <text x="669" y="78" class="t-dim" text-anchor="middle">인젝터 · 점화 코일</text>
+        <text x="669" y="98" class="t-dim" text-anchor="middle">솔레노이드 밸브</text>
+        <text x="669" y="118" class="t-dim" text-anchor="middle">모터 · 램프</text>
+        <text x="669" y="144" class="t-mono" text-anchor="middle">PWM, 수 A~수십 A</text>
+        <g stroke="var(--accent)" stroke-width="2.5" marker-end="url(#el-ah)">
+          <line x1="168" y1="93" x2="232" y2="93"/><line x1="526" y1="93" x2="590" y2="93"/>
+          <line x1="328" y1="104" x2="340" y2="104"/><line x1="420" y1="104" x2="432" y2="104"/>
+        </g>
+        <line x1="40" y1="222" x2="720" y2="222" stroke="var(--accent-2)" stroke-width="4"/>
+        <line x1="40" y1="230" x2="720" y2="230" stroke="var(--accent-2)" stroke-width="4" opacity=".45"/>
+        <line x1="380" y1="172" x2="380" y2="220" stroke="var(--accent-2)" stroke-width="2.5"/>
+        <g class="f-elev s-line"><rect x="80" y="238" width="90" height="24" rx="5"/><rect x="230" y="238" width="90" height="24" rx="5"/><rect x="440" y="238" width="90" height="24" rx="5"/><rect x="590" y="238" width="90" height="24" rx="5"/></g>
+        <g stroke="var(--accent-2)" stroke-width="2"><line x1="125" y1="230" x2="125" y2="238"/><line x1="275" y1="230" x2="275" y2="238"/><line x1="485" y1="230" x2="485" y2="238"/><line x1="635" y1="230" x2="635" y2="238"/></g>
+        <g class="t-dim" text-anchor="middle" font-size="13"><text x="125" y="255">변속기</text><text x="275" y="255">ESC</text><text x="485" y="255">계기판</text><text x="635" y="255">게이트웨이</text></g>
+        <text x="40" y="208" class="t-acc">CAN 버스 (전선 두 가닥을 모두가 공유)</text>
+      </svg>
+      <figcaption><b>그림 13-1.</b> ECU의 기본 순환. 센서 신호를 읽어 계산하고 액추에이터를 구동하며, 다른 ECU와는 공유 버스로 값을 주고받는다.</figcaption>
+    </figure>
+
+    <p>이 구조가 가능하려면 세 가지가 필요하다. 모든 장치에 전기를 대 주는 <b>전원계</b>, 전기 신호를 다루는 <b>ECU와 센서·액추에이터</b>, 그리고 이들을 묶는 <b>네트워크</b>다. 이 순서대로 살펴본다. 고전압 구동 배터리와 모터는 <a href="motor.html">15장</a>과 <a href="battery.html">16장</a>에서 따로 다루고, 여기서는 내연기관차와 전기차가 공통으로 쓰는 저전압 계통에 집중한다.</p>
+  </section>
+
+  <!-- =============================================================== 2 -->
+  <section id="power">
+    <h2>12 V 전원계</h2>
+    <p>승용차의 저전압 계통은 공칭 12 V다. 이 숫자는 납산 배터리<span class="en">(lead-acid battery)</span>에서 왔다. 납산 셀 하나의 전압이 약 2.1 V이고 여섯 개를 직렬로 묶으면 완충 상태에서 약 12.6 V가 된다. 음극의 납(Pb)과 양극의 이산화납(PbO₂)이 묽은 황산과 반응해 양쪽 모두 황산납(PbSO₄)이 되면서 전기를 내고, 충전하면 반대로 돌아간다. 에너지 밀도는 리튬 이온 전지의 4분의 1 수준으로 낮지만, 값이 싸고 영하의 온도에서도 수백 암페어를 순간적으로 낼 수 있어 150년이 지난 지금도 시동용 배터리의 표준이다. 승용차용 용량은 대표적으로 45~90 Ah다.</p>
+
+    <h3>시동 모터와 알터네이터</h3>
+    <p>시동 모터<span class="en">(starter)</span>는 차에서 가장 큰 전류를 쓰는 부하다. 출력 1~2 kW급 직류 모터가 피니언 기어로 플라이휠의 링 기어를 돌려 엔진을 200~300 rpm으로 회전시킨다. 멈춰 있는 모터에는 역기전력이 없으므로 처음 순간에는 배터리와 모터의 저항만이 전류를 제한해 500 A 이상이 흐르고, 회전이 붙으면 150~300 A로 줄어든다. 이때 배터리 내부 저항 때문에 단자 전압이 크게 떨어진다. 내부 저항이 5 mΩ인 배터리에서 600 A를 뽑으면 강하는 \(600 \times 0.005 = 3\) V다. ECU들은 이 순간에도 꺼지지 않도록 대략 6 V까지는 동작하게 설계한다.</p>
+    <p>시동이 걸리면 알터네이터<span class="en">(alternator)</span>가 전기를 만든다. 벨트로 크랭크축에 연결된 3상 교류 발전기이고, 풀리 비는 대표적으로 2.5~3이라 엔진이 800 rpm일 때 알터네이터는 2,000 rpm 남짓으로 돈다. 회전자(로터)의 계자 코일에 전류를 흘려 자기장을 만들고, 이 자기장이 고정자 코일을 지나가며 교류를 유도한다. 다이오드 여섯 개로 된 정류기가 이를 직류로 바꾼다. 발전 전압은 회전수와 계자 전류에 비례하므로, 전압 조정기<span class="en">(voltage regulator)</span>가 계자 전류를 조절해 회전수와 부하가 바뀌어도 출력 전압을 13.8~14.5 V 범위로 유지한다. 배터리 전압(12.6 V)보다 높아야 충전 전류가 배터리로 흘러 들어가기 때문이다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 290" role="img" aria-label="충전 계통 회로">
+        <line x1="90" y1="60" x2="690" y2="60" stroke="var(--red)" stroke-width="3.5"/>
+        <line x1="90" y1="250" x2="690" y2="250" class="s-axis" stroke-width="3"/>
+        <text x="700" y="64" class="t-mono">B+</text><text x="700" y="254" class="t-mono">GND</text>
+        <text x="390" y="275" class="t-dim" text-anchor="middle">차체(접지)가 귀환 전선 역할을 한다</text>
+        <line x1="120" y1="60" x2="120" y2="110" stroke="var(--red)" stroke-width="2.5"/><line x1="120" y1="200" x2="120" y2="250" class="s-axis" stroke-width="2"/>
+        <circle cx="120" cy="155" r="45" class="f-acc-soft s-acc"/>
+        <text x="120" y="150" class="t" text-anchor="middle" font-weight="700">알터네이터</text><text x="120" y="170" class="t-mono" text-anchor="middle">3상 + 정류</text>
+        <rect x="36" y="212" width="70" height="26" rx="5" class="f-elev s-line"/><text x="71" y="230" class="t-dim" text-anchor="middle" font-size="12">전압 조정기</text>
+        <line x1="280" y1="60" x2="280" y2="118" stroke="var(--red)" stroke-width="2.5"/><line x1="280" y1="192" x2="280" y2="250" class="s-axis" stroke-width="2"/>
+        <rect x="225" y="118" width="110" height="74" rx="8" class="f-surface s-line"/>
+        <text x="280" y="148" class="t" text-anchor="middle" font-weight="700">배터리</text><text x="280" y="170" class="t-mono" text-anchor="middle">12.6 V · 60 Ah</text>
+        <line x1="430" y1="60" x2="430" y2="110" stroke="var(--red)" stroke-width="5"/><line x1="430" y1="200" x2="430" y2="250" class="s-axis" stroke-width="2"/>
+        <circle cx="430" cy="155" r="45" class="f-acc2-soft"/>
+        <text x="430" y="150" class="t" text-anchor="middle" font-weight="700">시동 모터</text><text x="430" y="170" class="t-mono" text-anchor="middle">150~600 A</text>
+        <line x1="600" y1="60" x2="600" y2="84" stroke="var(--red)" stroke-width="2.5"/>
+        <rect x="548" y="84" width="104" height="34" rx="6" class="f-elev s-line"/><text x="600" y="106" class="t" text-anchor="middle">퓨즈 · 릴레이</text>
+        <line x1="570" y1="118" x2="570" y2="150" stroke="var(--red)" stroke-width="1.6"/><line x1="600" y1="118" x2="600" y2="150" stroke="var(--red)" stroke-width="1.6"/><line x1="630" y1="118" x2="630" y2="150" stroke="var(--red)" stroke-width="1.6"/>
+        <rect x="548" y="150" width="104" height="56" rx="6" class="f-surface"/><text x="600" y="174" class="t" text-anchor="middle">부하</text><text x="600" y="194" class="t-dim" text-anchor="middle" font-size="12">ECU · 램프 · 모터</text>
+        <line x1="600" y1="206" x2="600" y2="250" class="s-axis" stroke-width="2"/>
+        <text x="200" y="48" class="t-acc" text-anchor="middle">13.8~14.5 V</text>
+        <text x="505" y="48" class="t-dim" text-anchor="middle">굵은 선: 시동 전류</text>
+      </svg>
+      <figcaption><b>그림 13-2.</b> 12 V 전원계. 알터네이터, 배터리, 부하가 모두 B+ 모선에 병렬로 물려 있다. 엔진이 돌 때는 알터네이터가 부하를 감당하고 남는 전류로 배터리를 충전한다.</figcaption>
+    </figure>
+
+    <p>세 요소가 병렬이므로 전류는 단순한 덧셈이다. 알터네이터 전류에서 부하 전류를 뺀 것이 배터리로 들어가는 전류다.</p>
+    <div class="formula">$$I_{bat} = I_{alt} - I_{load}, \qquad I_{alt} \le I_{max}(n)$$<div class="where">여기서 \(I_{bat}\)는 배터리 충전 전류(음수면 방전), \(I_{max}(n)\)은 회전수 \(n\)에서 알터네이터가 낼 수 있는 최대 전류다.</div></div>
+    <p>문제는 \(I_{max}\)가 회전수에 따라 크게 달라진다는 점이다. 정격 130 A인 알터네이터도 공회전에서는 그 절반 정도만 낸다. 겨울밤 정체 구간에서 전조등, 열선, 블로어, 와이퍼를 모두 켜면 부하가 공회전 발전량을 넘고, 모자란 만큼은 배터리가 메운다. 이때 시스템 전압은 14 V대에서 12 V대로 내려간다. 아래에서 직접 확인해 보자.</p>
+
+    <div class="sim" id="sim-chg">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>충전 계통: 누가 전기를 대고 있는가</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-chg"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>엔진 회전수 <output id="chg-rpm-out"></output></span><input type="range" id="chg-rpm" min="0" max="6000" step="100" value="800"></label>
+          <div class="ctrl"><span>전기 부하</span>
+            <div class="el-checks">
+              <label class="check"><input type="checkbox" class="chg-load" data-a="12" checked> 전조등 12 A</label>
+              <label class="check"><input type="checkbox" class="chg-load" data-a="16"> 뒷유리 열선 16 A</label>
+              <label class="check"><input type="checkbox" class="chg-load" data-a="10"> 시트 열선 10 A</label>
+              <label class="check"><input type="checkbox" class="chg-load" data-a="18"> 블로어 최대 18 A</label>
+              <label class="check"><input type="checkbox" class="chg-load" data-a="6"> 와이퍼 6 A</label>
+              <label class="check"><input type="checkbox" class="chg-load" data-a="28"> 냉각 팬 28 A</label>
+              <label class="check"><input type="checkbox" class="chg-load" data-a="8"> 오디오 8 A</label>
+            </div>
+          </div>
+          <label class="ctrl"><span>배터리 충전 상태 <output id="chg-soc-out"></output></span><input type="range" id="chg-soc" min="30" max="100" step="5" value="80"></label>
+          <label class="ctrl"><span>기온 <output id="chg-temp-out"></output></span><input type="range" id="chg-temp" min="-25" max="40" step="5" value="20"></label>
+          <label class="ctrl"><span>암전류 <output id="chg-dark-out"></output></span><input type="range" id="chg-dark" min="10" max="300" step="10" value="30"></label>
+        </div>
+      </div>
+      <div class="el-two">
+        <div><canvas id="cv-chg-a"></canvas></div>
+        <div><canvas id="cv-chg-c"></canvas></div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">시스템 전압</span><span class="v" id="o-chg-v">—</span></div>
+        <div class="stat"><span class="k">알터네이터 출력 / 최대</span><span class="v" id="o-chg-ia">—</span></div>
+        <div class="stat"><span class="k">부하 전류</span><span class="v" id="o-chg-il">—</span></div>
+        <div class="stat"><span class="k">배터리 전류</span><span class="v" id="o-chg-ib">—</span></div>
+        <div class="stat"><span class="k">엔진이 내주는 동력</span><span class="v" id="o-chg-pm">—</span></div>
+        <div class="stat"><span class="k">시동 시 최저 전압</span><span class="v" id="o-chg-vmin">—</span></div>
+        <div class="stat"><span class="k">방치 가능 일수</span><span class="v" id="o-chg-days">—</span></div>
+      </div>
+      <div class="sim-note">모델: 정격 130 A 알터네이터(풀리 비 2.7, 조정 전압 14.2 V, 효율 60 %), 60 Ah 납산 배터리, 엔진 구동에 필요한 기본 부하 20 A(연료 펌프·점화·ECU). 500 rpm 미만은 엔진 정지로 본다. 화살표 굵기는 전류에 비례한다. 왼쪽 아래 그래프는 회전수에 따른 알터네이터 최대 전류와 현재 필요한 전류, 오른쪽 아래는 지금 상태의 배터리로 시동을 걸 때의 전압 파형이다. 방치 가능 일수는 충전 상태가 40 %로 떨어질 때까지 걸리는 시간이다. 해볼 것: 공회전에서 부하를 하나씩 켜 배터리 전류가 음수로 바뀌는 지점을 찾는다. 그 상태에서 회전수를 2,000 rpm으로 올려 본다. 기온을 영하 20도로, 충전 상태를 50 %로 내리면 시동 전압이 어디까지 떨어지는지 본다.</div>
+    </div>
+
+    <div class="callout tip">
+      <strong>계산 예: 전기는 공짜가 아니다</strong>
+      <p>열선과 블로어를 켜서 알터네이터가 14.2 V에서 70 A를 낸다면 전기 출력은 \(14.2 \times 70 \approx 994\) W다. 알터네이터 효율을 60 %로 보면 엔진이 벨트로 내주는 동력은 \(994 / 0.6 \approx 1.66\) kW다. 시속 60 km로 정속 주행할 때 필요한 구동 출력이 6~8 kW 수준이므로(<a href="dynamics.html">2장</a>), 전기 부하만으로 연료 소비가 눈에 띄게 늘어난다.</p>
+    </div>
+
+    <h3>암전류와 전력 예산</h3>
+    <p>시동을 끄고 문을 잠가도 전류는 완전히 0이 되지 않는다. 스마트키 수신기, 도난 경보, 시계, 각 ECU의 대기 회로가 조금씩 쓴다. 이것이 암전류<span class="en">(quiescent current, dark current)</span>이고, 설계 목표는 대표적으로 수십 mA 이하다. ECU들은 버스에 통신이 없어지면 차례로 잠들어<span class="en">(sleep)</span> 수십 µA~수 mA만 쓰다가, 문 손잡이 신호나 특정 CAN 메시지를 받으면 깨어난다. ECU 하나가 잠들지 못하고 버스를 계속 깨워 두면 암전류가 수백 mA로 늘어 며칠 만에 배터리가 방전된다.</p>
+    <div class="callout tip">
+      <strong>계산 예: 공항 주차장에 3주</strong>
+      <p>60 Ah 배터리가 90 % 충전 상태이고 시동에는 최소 40 %가 필요하다고 하자. 쓸 수 있는 전하는 \(60 \times (0.9 - 0.4) = 30\) Ah다. 암전류가 30 mA면 \(30 / 0.03 = 1{,}000\) 시간, 약 42일을 버틴다. 블랙박스의 주차 녹화처럼 300 mA를 쓰는 장치가 붙으면 100시간, 약 4일로 줄어든다.</p>
+    </div>
+
+    <h3>48 V와 전기차의 DC-DC 컨버터</h3>
+    <p>같은 전력을 보낼 때 전압이 낮으면 전류가 커진다. \(P = VI\)이고 전선의 손실은 \(I^2R\)이므로, 12 V에서 3 kW를 보내려면 250 A가 필요하고 전선이 굵어진다. 전동 컴프레서, 능동 롤 제어, 전기 가열 촉매처럼 수 kW를 쓰는 장치가 늘면서 48 V 계통이 추가되었다. 48 V인 이유는 충전 중 최대 전압까지 포함해도 직류 60 V 미만이어서 감전 보호를 위한 고전압 안전 설계가 필요 없는 상한이기 때문이다. 48 V 마일드 하이브리드는 알터네이터 자리에 10~15 kW급 벨트 구동 시동 발전기를 달아 회생 제동과 가속 보조를 한다(<a href="hybrid.html">14장</a>).</p>
+    <p>전기차에는 알터네이터가 없다. 대신 400 V 또는 800 V 구동 배터리의 전압을 12 V대로 내리는 DC-DC 컨버터(대표적으로 1.5~3 kW)가 그 역할을 한다. 그래도 12 V 배터리는 남아 있다. 구동 배터리의 접촉기(컨택터)를 닫으려면 먼저 12 V로 제어기가 깨어나야 하고, 고전압이 차단된 사고 상황에서도 비상등, 도어 잠금 해제, 에어백 제어기는 동작해야 하기 때문이다.</p>
+
+    <h3>와이어링 하네스, 퓨즈, 릴레이</h3>
+    <p>전기를 나르는 전선 다발이 와이어링 하네스<span class="en">(wiring harness)</span>다. 중형 승용차 한 대에 전선 총 길이가 대표적으로 1.5~4 km, 무게가 30~60 kg이며 엔진과 차체 다음으로 무겁고 비싼 부품에 속한다. 전선 굵기는 흐르는 전류와 허용 전압 강하로 정한다.</p>
+    <div class="formula">$$R = \rho \frac{L}{A}, \qquad \Delta V = I R, \qquad P_{loss} = I^2 R$$<div class="where">여기서 \(\rho\)는 구리의 비저항(약 \(1.72 \times 10^{-8}\ \Omega\cdot\text{m}\)), \(L\)은 전선 길이, \(A\)는 단면적이다.</div></div>
+    <div class="callout tip">
+      <strong>계산 예: 뒷유리 열선까지 5 m</strong>
+      <p>단면적 0.5 mm²인 전선 5 m의 저항은 \(1.72\times10^{-8} \times 5 / (0.5\times10^{-6}) = 0.172\ \Omega\)다. 여기에 16 A를 흘리면 전압 강하가 2.75 V, 발열이 44 W다. 전선이 뜨거워지고 열선에는 11 V 남짓만 걸린다. 3 mm² 전선으로 바꾸면 저항 0.029 Ω, 강하 0.46 V, 발열 7 W가 된다. 대신 구리가 여섯 배 든다. 하네스 설계는 이런 타협의 연속이다.</p>
+    </div>
+    <p>퓨즈<span class="en">(fuse)</span>는 장치가 아니라 <b>전선</b>을 지킨다. 전선이 차체에 닿아 단락되면 배터리는 수백 암페어를 흘릴 수 있고 전선 피복이 녹아 불이 난다. 퓨즈는 그 회로의 전선이 견디는 전류보다 조금 낮은 값에서 먼저 녹아 끊어진다. 릴레이<span class="en">(relay)</span>는 작은 전류로 큰 전류를 여닫는 전자석 스위치다. 코일에 0.15 A 정도를 흘리면 접점이 붙어 30 A를 흘릴 수 있으므로, 스위치와 ECU 출력은 가는 전선으로도 충분하다. 최근에는 릴레이와 퓨즈를 반도체 스위치로 합친 지능형 전력 스위치<span class="en">(smart FET, eFuse)</span>가 늘고 있다. 전류를 스스로 측정해 과전류를 수 ms 안에 차단하고, 고장을 진단해 보고하며, 소프트웨어로 복구할 수 있다.</p>
+  </section>
+
+  <!-- =============================================================== 3 -->
+  <section id="ecu">
+    <h2>ECU, 센서, 액추에이터</h2>
+    <p>ECU의 뚜껑을 열면 기판 위에 다섯 가지 영역이 보인다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 300" role="img" aria-label="ECU 내부 블록도">
+        <rect x="150" y="14" width="460" height="272" rx="14" class="f-surface s-line"/>
+        <rect x="316" y="92" width="128" height="116" rx="8" class="f-acc-soft s-acc"/>
+        <text x="380" y="126" class="t" text-anchor="middle" font-weight="700">MCU</text>
+        <text x="380" y="148" class="t-dim" text-anchor="middle" font-size="13">CPU · 플래시 · RAM</text>
+        <text x="380" y="168" class="t-dim" text-anchor="middle" font-size="13">ADC · 타이머 · CAN</text>
+        <text x="380" y="192" class="t-mono" text-anchor="middle">32비트, 수백 MHz</text>
+        <rect x="170" y="92" width="112" height="116" rx="8" class="f-elev s-line"/>
+        <text x="226" y="126" class="t" text-anchor="middle">입력 회로</text>
+        <text x="226" y="150" class="t-dim" text-anchor="middle" font-size="13">풀업 · 분압</text><text x="226" y="170" class="t-dim" text-anchor="middle" font-size="13">필터 · 보호</text><text x="226" y="190" class="t-dim" text-anchor="middle" font-size="13">비교기</text>
+        <rect x="478" y="92" width="112" height="116" rx="8" class="f-elev s-line"/>
+        <text x="534" y="126" class="t" text-anchor="middle">출력 드라이버</text>
+        <text x="534" y="150" class="t-dim" text-anchor="middle" font-size="13">로우/하이 사이드</text><text x="534" y="170" class="t-dim" text-anchor="middle" font-size="13">H-브리지</text><text x="534" y="190" class="t-dim" text-anchor="middle" font-size="13">전류 감지</text>
+        <rect x="170" y="30" width="200" height="44" rx="8" class="f-elev s-line"/>
+        <text x="270" y="50" class="t" text-anchor="middle">전원부</text><text x="270" y="67" class="t-dim" text-anchor="middle" font-size="12">12 V → 5 V / 3.3 V, 서지 보호</text>
+        <rect x="390" y="30" width="200" height="44" rx="8" class="f-elev s-line"/>
+        <text x="490" y="50" class="t" text-anchor="middle">워치독</text><text x="490" y="67" class="t-dim" text-anchor="middle" font-size="12">응답 없으면 MCU 리셋</text>
+        <rect x="280" y="226" width="200" height="44" rx="8" class="f-acc2-soft"/>
+        <text x="380" y="246" class="t" text-anchor="middle">통신 트랜시버</text><text x="380" y="263" class="t-dim" text-anchor="middle" font-size="12">CAN · LIN · 이더넷 PHY</text>
+        <g class="s-acc" stroke-width="2"><line x1="282" y1="150" x2="316" y2="150"/><line x1="444" y1="150" x2="478" y2="150"/><line x1="380" y1="208" x2="380" y2="226"/><line x1="440" y1="74" x2="420" y2="92"/><line x1="320" y1="74" x2="340" y2="92"/></g>
+        <g class="s-line" stroke-width="2"><line x1="60" y1="120" x2="170" y2="120"/><line x1="60" y1="150" x2="170" y2="150"/><line x1="60" y1="180" x2="170" y2="180"/><line x1="590" y1="120" x2="700" y2="120"/><line x1="590" y1="150" x2="700" y2="150"/><line x1="590" y1="180" x2="700" y2="180"/><line x1="380" y1="270" x2="380" y2="296"/></g>
+        <text x="60" y="108" class="t-dim">센서</text><text x="700" y="108" class="t-dim" text-anchor="end">액추에이터</text>
+      </svg>
+      <figcaption><b>그림 13-3.</b> ECU 내부. 차의 12 V는 시동 때 6 V까지 떨어지고 부하가 끊길 때는 수십 V의 서지가 생기므로, 전원부와 입출력 보호 회로가 기판의 상당 부분을 차지한다.</figcaption>
+    </figure>
+
+    <ul>
+      <li><b>MCU</b><span class="en">(microcontroller)</span>: CPU, 플래시 메모리, RAM, 아날로그-디지털 변환기(ADC), 타이머, 통신 컨트롤러가 칩 하나에 들어 있다. 안전이 중요한 ECU는 같은 연산을 두 코어가 동시에 수행해 결과를 비교하는 락스텝<span class="en">(lockstep)</span> 구조를 쓴다.</li>
+      <li><b>입력 회로</b>: 센서 신호를 MCU가 읽을 수 있는 0~5 V 범위로 맞추고, 잡음을 거르고, 정전기와 단락으로부터 보호한다.</li>
+      <li><b>출력 드라이버</b>: MCU 핀은 수 mA만 낼 수 있으므로 MOSFET으로 수 A~수십 A를 여닫는다. 부하의 단선과 단락을 감지하는 진단 기능이 붙는다.</li>
+      <li><b>전원부</b>: 요동치는 차량 전원에서 안정된 5 V와 3.3 V를 만든다.</li>
+      <li><b>워치독</b><span class="en">(watchdog)</span>: MCU가 정해진 시간 안에 "살아 있다"는 신호를 보내지 않으면 강제로 리셋한다. 소프트웨어가 무한 루프에 빠져도 밸브가 열린 채 멈춰 있지 않게 하는 마지막 방어선이다.</li>
+    </ul>
+    <p>엔진룸에 놓이는 ECU는 영하 40도에서 125도까지의 온도, 진동, 수분을 15년 넘게 견뎌야 한다. 차량용 반도체가 따로 인증되는 이유다.</p>
+
+    <h3>센서: 물리량을 전압으로</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>센서</th><th>원리</th><th>신호</th><th>쓰이는 곳</th></tr></thead>
+      <tbody>
+        <tr><td>온도 (NTC 서미스터)</td><td>온도가 오르면 저항이 지수적으로 감소</td><td>풀업 저항과 분압한 전압</td><td>냉각수, 흡기, 오일, 실내</td></tr>
+        <tr><td>압력</td><td>실리콘 다이어프램 위의 압저항 브리지</td><td>0.5~4.5 V, 전원에 비례</td><td>흡기 매니폴드, 연료 레일, 브레이크, 타이어</td></tr>
+        <tr><td>회전 (홀 효과)</td><td>자석 또는 톱니가 지나갈 때 자속 변화</td><td>구형파 펄스</td><td>크랭크·캠 각도, 휠 속도, 변속기</td></tr>
+        <tr><td>위치</td><td>전위차계 또는 홀 소자 각도 센서</td><td>아날로그 전압 2채널</td><td>가속 페달, 스로틀, 조향각</td></tr>
+        <tr><td>산소 (지르코니아)</td><td>배기와 대기의 산소 농도 차로 기전력</td><td>0.1~0.9 V 또는 펌핑 전류</td><td>공연비 피드백 (<a href="combustion.html">4장</a>)</td></tr>
+      </tbody>
+    </table></div>
+    <p>NTC<span class="en">(Negative Temperature Coefficient)</span> 서미스터의 저항은 \(R(T) = R_0 \exp\!\left[B\left(\tfrac{1}{T} - \tfrac{1}{T_0}\right)\right]\)을 따른다. ECU는 이를 풀업 저항과 직렬로 연결해 가운데 전압을 ADC로 읽고, 표를 찾아 온도로 바꾼다.</p>
+    <div class="callout tip">
+      <strong>계산 예: 냉각수 온도 센서</strong>
+      <p>20 °C에서 2.5 kΩ, \(B = 3500\) K인 서미스터를 5 V, 2.49 kΩ 풀업에 연결한다. 20 °C에서 전압은 \(5 \times 2500/(2500+2490) \approx 2.51\) V다. 90 °C(363 K)에서는 \(R = 2500 \times \exp[3500 \times (1/363.15 - 1/293.15)] \approx 250\ \Omega\)이고 전압은 \(5 \times 250/2740 \approx 0.46\) V다. 전선이 끊어지면 5 V, 접지에 단락되면 0 V가 읽히므로, ECU는 양 끝 값을 고장으로 판정한다. 정상 신호 범위를 0.5~4.5 V로 잡는 이유가 여기에 있다.</p>
+    </div>
+    <p>회전 센서는 톱니를 센다. 크랭크축에는 보통 60개 자리 중 2개를 비운 톱니바퀴(60−2)가 달려 있어, 이 빠진 자리로 기준 위치를 찾고 톱니 간격으로 6도 단위의 각도를 안다. 3,000 rpm이면 초당 50회전이므로 펄스가 초당 약 3,000개 들어온다. 휠 속도 센서도 같은 원리이고 ABS와 ESC의 기본 입력이다(<a href="brake.html">8장</a>).</p>
+    <p>가속 페달 위치 센서는 <b>이중화</b>의 좋은 예다. 페달과 스로틀 사이에 기계적 연결이 없으므로(전자식 스로틀), 센서가 잘못된 값을 내면 의도하지 않은 가속이 일어날 수 있다. 그래서 독립된 센서 두 개를 넣고 출력 기울기를 다르게 한다. 예를 들어 채널 1이 0.8~4.0 V로 움직일 때 채널 2는 그 절반인 0.4~2.0 V로 움직인다. 두 전선이 서로 단락되면 두 값이 같아져서 1:2 관계가 깨지고, ECU는 이를 감지해 출력을 제한하는 비상 주행 모드<span class="en">(limp-home)</span>로 들어간다.</p>
+
+    <h3>액추에이터와 PWM</h3>
+    <p>출력 쪽의 대표는 솔레노이드와 모터다. 솔레노이드는 코일에 전류를 흘려 철심을 당기는 전자석으로, 연료 인젝터, 변속기 유압 밸브, 가변 밸브 타이밍 제어 밸브에 쓰인다. 힘은 전류에 따라 정해지므로 전류를 연속적으로 조절하고 싶지만, 트랜지스터를 반쯤 켜 두면 트랜지스터가 열로 타 버린다. 그래서 완전히 켜고 완전히 끄기를 빠르게 반복하면서 켜진 시간의 비율을 바꾼다. 이것이 펄스 폭 변조<span class="en">(Pulse Width Modulation, PWM)</span>이고, 켜진 시간의 비율이 듀티<span class="en">(duty)</span>다.</p>
+    <p>코일은 인덕턴스 \(L\)을 가지므로 전류가 전압처럼 계단으로 변하지 못하고 시상수 \(\tau = L/R\)로 완만하게 따라간다. 스위치가 꺼진 동안에는 환류 다이오드<span class="en">(freewheeling diode)</span>를 통해 전류가 계속 돈다. PWM 주기가 \(\tau\)보다 충분히 짧으면 전류는 거의 일정해지고 그 평균은 듀티에 비례한다.</p>
+    <div class="formula">$$\bar{I} = D\,\frac{V}{R}, \qquad \Delta I \approx \frac{V}{L}\,D(1-D)\,T \quad (T \ll \tau)$$<div class="where">여기서 \(D\)는 듀티(0~1), \(T\)는 PWM 주기, \(\Delta I\)는 전류 리플의 폭이다. 리플은 듀티 50 %에서 가장 크다.</div></div>
+
+    <div class="sim" id="sim-pwm">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>PWM과 인덕턴스 부하, H-브리지</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-pwm"></canvas><canvas id="cv-hb"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>듀티 <output id="pwm-d-out"></output></span><input type="range" id="pwm-d" min="0" max="100" step="1" value="40"></label>
+          <label class="ctrl"><span>PWM 주파수 <output id="pwm-f-out"></output></span><input type="range" id="pwm-f" min="0" max="100" step="1" value="30"></label>
+          <label class="ctrl"><span>부하 인덕턴스 <output id="pwm-l-out"></output></span><input type="range" id="pwm-l" min="0.5" max="20" step="0.5" value="5"></label>
+          <div class="ctrl"><span>H-브리지 모드</span><div class="seg" id="hb-mode"><button data-value="fwd" class="on">정방향</button><button data-value="rev">역방향</button><button data-value="brake">제동</button><button data-value="coast">개방</button></div></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">평균 전압</span><span class="v" id="o-pwm-v">—</span></div>
+        <div class="stat"><span class="k">평균 전류</span><span class="v" id="o-pwm-i">—</span></div>
+        <div class="stat"><span class="k">전류 리플</span><span class="v" id="o-pwm-rip">—</span></div>
+        <div class="stat"><span class="k">시상수 τ / 주기 T</span><span class="v" id="o-pwm-tau">—</span></div>
+        <div class="stat"><span class="k">부하 평균 전력</span><span class="v" id="o-pwm-p">—</span></div>
+        <div class="stat"><span class="k">모터 단자 평균 전압</span><span class="v" id="o-hb-v">—</span></div>
+      </div>
+      <div class="sim-note">모델: 전원 13.5 V, 코일 저항 4 Ω, 이상적인 스위치와 환류 다이오드. 위 그래프는 세 주기 동안의 코일 전압과 정상 상태 전류(지수 곡선을 해석적으로 계산)다. 아래 그림은 모터를 양방향으로 돌리는 H-브리지로, 스위치 네 개 중 대각선 한 쌍을 켜면 전류 방향이 정해진다. 위쪽 스위치에 같은 듀티의 PWM을 건다. 해볼 것: 듀티 50 %에서 주파수를 100 Hz부터 올려 리플이 줄어드는 것을 본다. 인덕턴스를 줄이면 같은 리플을 위해 주파수가 얼마나 더 필요한가? H-브리지에서 왼쪽 위·아래 스위치를 동시에 켜면 어떻게 될지도 생각해 보자(전원이 단락된다. 그래서 전환 사이에 둘 다 꺼 두는 짧은 데드 타임을 둔다).</div>
+    </div>
+
+    <p>모터를 한 방향으로만 돌린다면 스위치 하나로 충분하지만, 전자식 스로틀, 파워 윈도, 시트, 전동 주차 브레이크처럼 정·역회전이 모두 필요하면 스위치 네 개를 H 모양으로 배치한 H-브리지를 쓴다. 아래쪽 두 스위치를 함께 켜면 모터 단자가 단락되어, 돌고 있는 모터가 자기 역기전력으로 전류를 흘리며 빠르게 멈춘다(발전 제동). 3상 모터를 돌리는 인버터는 이 구조에 다리를 하나 더 붙인 것이다(<a href="motor.html">15장</a>).</p>
+  </section>
+
+  <!-- =============================================================== 4 -->
+  <section id="control">
+    <h2>제어 루프: 목표와 현실의 차이를 줄이기</h2>
+    <p>ECU 소프트웨어의 핵심은 피드백 제어다. 목표값과 측정값의 차이인 오차 \(e\)를 계산하고, 오차가 줄어드는 방향으로 액추에이터를 움직인다. 가장 널리 쓰이는 형태가 PID 제어기다.</p>
+    <div class="formula">$$u(t) = K_p\,e(t) + K_i \int_0^t e(\tau)\,d\tau + K_d\,\frac{de(t)}{dt}$$<div class="where">여기서 \(u\)는 제어 출력, \(e\)는 목표값에서 측정값을 뺀 오차, \(K_p, K_i, K_d\)는 비례·적분·미분 게인이다.</div></div>
+    <ul>
+      <li><b>비례(P)</b>: 오차에 비례해 민다. 단순하지만 외란이 계속 걸리면 오차가 0이 되지 않는다. 오차가 0이면 출력도 0이 되어 외란을 버틸 힘이 사라지기 때문이다.</li>
+      <li><b>적분(I)</b>: 오차를 누적한다. 작은 오차라도 남아 있으면 출력이 계속 커지므로 정상 상태 오차를 없앤다. 너무 크면 지나쳐서 출렁인다.</li>
+      <li><b>미분(D)</b>: 오차가 변하는 속도에 반응해 미리 제동을 건다. 오버슈트를 줄이지만 센서 잡음도 함께 증폭한다.</li>
+    </ul>
+    <p>MCU는 연속 시간으로 계산하지 못하므로 일정한 샘플링 주기 \(T_s\)마다 한 번씩 계산한다. 적분은 덧셈으로, 미분은 뺄셈으로 바뀐다.</p>
+    <div class="formula">$$u_k = K_p e_k + K_i T_s \sum_{j=0}^{k} e_j + K_d \frac{e_k - e_{k-1}}{T_s}$$</div>
+    <p>샘플링 주기는 제어 대상의 빠르기에 맞춘다. 대표적으로 섀시 제어(ESC, EPS)는 1~10 ms, 엔진의 공기·연료 제어는 10 ms와 크랭크 각도 동기 작업, 공조와 차체 제어는 20~100 ms다. 주기가 길면 그만큼 지연이 더해져 같은 게인에서도 불안정해진다.</p>
+    <p>공회전 속도 제어를 예로 보자. 에어컨 컴프레서가 켜지면 엔진에 갑자기 부하가 걸려 회전수가 떨어진다. ECU는 회전수를 읽어 목표(약 800 rpm)와 비교하고 스로틀을 더 열어 토크를 보충한다. 스로틀을 열어도 공기가 흡기 매니폴드를 채우고 실린더에서 연소되기까지 시간이 걸리므로, 이 지연이 제어를 어렵게 만든다.</p>
+
+    <div class="sim" id="sim-pid">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>PID 공회전 속도 제어</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-pid"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>K<sub>p</sub> <output id="pid-kp-out"></output></span><input type="range" id="pid-kp" min="0" max="0.4" step="0.005" value="0.04"></label>
+          <label class="ctrl"><span>K<sub>i</sub> <output id="pid-ki-out"></output></span><input type="range" id="pid-ki" min="0" max="0.6" step="0.01" value="0.08"></label>
+          <label class="ctrl"><span>K<sub>d</sub> <output id="pid-kd-out"></output></span><input type="range" id="pid-kd" min="0" max="0.03" step="0.001" value="0.003"></label>
+          <label class="ctrl"><span>샘플링 주기 <output id="pid-ts-out"></output></span><input type="range" id="pid-ts" min="5" max="200" step="5" value="10"></label>
+          <label class="ctrl"><span>목표 회전수 <output id="pid-tgt-out"></output></span><input type="range" id="pid-tgt" min="650" max="1200" step="10" value="800"></label>
+          <div class="ctrl-row"><button class="btn primary" id="pid-ac">에어컨 켜기</button><button class="btn" id="pid-open">제어 끄기</button><button class="btn" id="pid-def">기본 게인</button><button class="btn" id="pid-reset">다시 시동</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">엔진 회전수</span><span class="v" id="o-pid-n">—</span></div>
+        <div class="stat"><span class="k">오차</span><span class="v" id="o-pid-e">—</span></div>
+        <div class="stat"><span class="k">스로틀 명령</span><span class="v" id="o-pid-u">—</span></div>
+        <div class="stat"><span class="k">적분 항</span><span class="v" id="o-pid-i">—</span></div>
+        <div class="stat"><span class="k">외란 후 최대 편차</span><span class="v" id="o-pid-dip">—</span></div>
+        <div class="stat"><span class="k">상태</span><span class="v" id="o-pid-st">—</span></div>
+      </div>
+      <div class="sim-note">모델: 스로틀 1 %당 정상 상태 40 rpm, 엔진 회전 시상수 0.5 s, 흡기 지연 0.15 s와 전달 지연 0.08 s, 에어컨 부하는 250 rpm에 해당하는 토크, 회전수 측정 잡음 약 ±4 rpm. 회전수가 300 rpm 아래로 떨어지면 시동이 꺼진다. 위 그래프는 회전수와 목표, 아래 그래프는 스로틀 명령이고 색칠된 구간이 에어컨이 켜진 시간이다. 해볼 것: "제어 끄기"로 게인을 모두 0으로 두고 에어컨을 켠다. K<sub>p</sub>만 올려 남는 오차를 본 뒤 K<sub>i</sub>를 더한다. K<sub>p</sub>를 0.25 이상으로 올리면 어떻게 되는가? 샘플링 주기를 150 ms로 늘리면 같은 게인이 여전히 안정한가? K<sub>d</sub>를 크게 하면 스로틀 명령이 왜 거칠어지는가?</div>
+    </div>
+
+    <p>실제 ECU는 PID만으로 제어하지 않는다. 에어컨이 켜진다는 사실은 스위치 신호로 미리 알 수 있으므로, 컴프레서 클러치를 붙이기 전에 스로틀을 미리 여는 <b>피드포워드</b>를 더한다. 피드백은 그래도 남는 오차만 처리한다. 또 출력이 한계(스로틀 0 %나 100 %)에 붙어 있는 동안 적분이 계속 쌓이지 않게 막는 안티 와인드업도 필수다. 같은 구조가 차간 거리 제어와 조향 제어에도 쓰인다(<a href="adas.html">17장</a>, <a href="planning.html">20장</a>).</p>
+  </section>
+
+  <!-- =============================================================== 5 -->
+  <section id="can">
+    <h2>CAN: 전선 두 가닥으로 모두가 말하기</h2>
+    <p>ECU가 몇 개뿐일 때는 필요한 신호마다 전선을 하나씩 이으면 되었다. 그러나 ECU \(n\)개가 서로 직접 연결되려면 \(n(n-1)/2\)개의 연결이 필요하다. 10개면 45개, 30개면 435개다. 신호 종류까지 곱하면 하네스가 감당할 수 없게 커진다. 1980년대 보쉬가 이 문제를 풀기 위해 개발해 1986년에 발표한 것이 CAN<span class="en">(Controller Area Network)</span>이고, 1991년 양산차에 처음 실린 뒤 사실상 모든 자동차의 기본 통신이 되었다(ISO 11898).</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 250" role="img" aria-label="점대점 배선과 버스 배선 비교">
+        <g id="el-p2p">
+          <g class="s-line" stroke-width="1.3" opacity=".8">
+            <line x1="190" y1="40" x2="277" y2="90"/><line x1="190" y1="40" x2="277" y2="170"/><line x1="190" y1="40" x2="190" y2="220"/><line x1="190" y1="40" x2="103" y2="170"/><line x1="190" y1="40" x2="103" y2="90"/>
+            <line x1="277" y1="90" x2="277" y2="170"/><line x1="277" y1="90" x2="190" y2="220"/><line x1="277" y1="90" x2="103" y2="170"/><line x1="277" y1="90" x2="103" y2="90"/>
+            <line x1="277" y1="170" x2="190" y2="220"/><line x1="277" y1="170" x2="103" y2="170"/><line x1="277" y1="170" x2="103" y2="90"/>
+            <line x1="190" y1="220" x2="103" y2="170"/><line x1="190" y1="220" x2="103" y2="90"/><line x1="103" y1="170" x2="103" y2="90"/>
+          </g>
+          <g class="f-acc"><circle cx="190" cy="40" r="11"/><circle cx="277" cy="90" r="11"/><circle cx="277" cy="170" r="11"/><circle cx="190" cy="220" r="11"/><circle cx="103" cy="170" r="11"/><circle cx="103" cy="90" r="11"/></g>
+          <text x="40" y="30" class="t" font-weight="700">점대점</text>
+          <text x="40" y="240" class="t-mono">6노드 → 연결 15개</text>
+        </g>
+        <g>
+          <line x1="430" y1="126" x2="720" y2="126" stroke="var(--accent-2)" stroke-width="4"/><line x1="430" y1="134" x2="720" y2="134" stroke="var(--accent-2)" stroke-width="4" opacity=".45"/>
+          <g stroke="var(--accent-2)" stroke-width="2"><line x1="470" y1="70" x2="470" y2="126"/><line x1="575" y1="70" x2="575" y2="126"/><line x1="680" y1="70" x2="680" y2="126"/><line x1="470" y1="134" x2="470" y2="190"/><line x1="575" y1="134" x2="575" y2="190"/><line x1="680" y1="134" x2="680" y2="190"/></g>
+          <g class="f-acc"><circle cx="470" cy="62" r="11"/><circle cx="575" cy="62" r="11"/><circle cx="680" cy="62" r="11"/><circle cx="470" cy="198" r="11"/><circle cx="575" cy="198" r="11"/><circle cx="680" cy="198" r="11"/></g>
+          <rect x="418" y="118" width="12" height="24" class="f-elev s-line"/><rect x="720" y="118" width="12" height="24" class="f-elev s-line"/>
+          <text x="424" y="162" class="t-mono" text-anchor="middle">120Ω</text><text x="726" y="162" class="t-mono" text-anchor="middle">120Ω</text>
+          <text x="420" y="30" class="t" font-weight="700">버스</text>
+          <text x="420" y="240" class="t-mono">6노드 → 꼬임쌍선 1조</text>
+        </g>
+      </svg>
+      <figcaption><b>그림 13-4.</b> 점대점 배선은 노드 수의 제곱에 비례해 늘어난다. 버스는 꼬인 전선 한 쌍을 모두가 공유하고, 양 끝에 120 Ω 종단 저항을 달아 신호 반사를 막는다.</figcaption>
+    </figure>
+
+    <h3>차동 신호와 우성·열성</h3>
+    <p>CAN은 CAN_H와 CAN_L 두 선의 <b>전압 차</b>로 비트를 나타낸다. 아무도 구동하지 않으면 두 선이 모두 약 2.5 V여서 차이가 0 V다. 이 상태가 열성<span class="en">(recessive)</span>이고 논리 1이다. 어느 한 노드가 CAN_H를 약 3.5 V로 올리고 CAN_L을 약 1.5 V로 내리면 차이가 약 2 V가 된다. 이 상태가 우성<span class="en">(dominant)</span>이고 논리 0이다. 두 선을 꼬아 두면 외부 잡음이 양쪽에 똑같이 실려서 차를 구할 때 상쇄된다. 점화 코일과 모터가 내는 잡음 속에서도 CAN이 견디는 이유다.</p>
+    <p>이름이 중요하다. 한 노드라도 우성을 내면 버스는 우성이 된다. 열성은 모두가 열성을 낼 때만 유지된다. 즉 버스는 모든 노드 출력의 논리곱(AND)이다. 0이 1을 이긴다. 이 단순한 전기적 성질 위에 CAN의 중재 방식이 세워져 있다.</p>
+
+    <h3>프레임 구조</h3>
+    <p>CAN에는 주소가 없다. 프레임에는 "누구에게"가 아니라 "무슨 내용인지"를 뜻하는 식별자<span class="en">(identifier, ID)</span>가 붙고, 모든 노드가 모든 프레임을 받아서 자기에게 필요한 ID만 골라 쓴다. 표준 데이터 프레임의 구성은 다음과 같다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>필드</th><th>비트 수</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>SOF</td><td>1</td><td>프레임 시작. 우성 1비트. 모든 노드가 이 하강 에지에 시계를 맞춘다</td></tr>
+        <tr><td>ID</td><td>11</td><td>메시지 식별자이자 우선순위. 값이 작을수록 우선 (확장 프레임은 29비트)</td></tr>
+        <tr><td>RTR · IDE · r0</td><td>3</td><td>원격 요청 여부, 확장 ID 여부, 예약 비트</td></tr>
+        <tr><td>DLC</td><td>4</td><td>데이터 길이(바이트 수, 0~8)</td></tr>
+        <tr><td>데이터</td><td>0~64</td><td>신호들. 예: 엔진 회전수 16비트, 냉각수 온도 8비트</td></tr>
+        <tr><td>CRC</td><td>15 + 1</td><td>오류 검출 부호와 구분 비트</td></tr>
+        <tr><td>ACK</td><td>1 + 1</td><td>송신자는 열성을 내고, 정상 수신한 노드가 우성으로 덮어쓴다</td></tr>
+        <tr><td>EOF · IFS</td><td>7 + 3</td><td>프레임 끝(열성 7비트)과 프레임 간 간격</td></tr>
+      </tbody>
+    </table></div>
+    <p>CAN에는 별도의 클록 선이 없어서, 수신 노드는 비트가 바뀌는 에지를 보고 자기 시계를 다시 맞춘다. 같은 값이 오래 이어지면 에지가 없어 시계가 어긋난다. 그래서 송신 노드는 같은 비트가 다섯 번 연속되면 반대 값의 비트를 하나 끼워 넣고, 수신 노드는 그것을 빼낸다. 이것이 <b>비트 스터핑</b><span class="en">(bit stuffing)</span>이다. SOF부터 CRC까지 적용된다. 8바이트 프레임은 스터핑 전 111비트(프레임 간 간격 포함)이고 최악의 경우 24비트가 더 붙어 135비트가 된다. 500 kbps에서 비트 하나는 2 µs이므로 프레임 하나에 0.22~0.27 ms가 걸린다.</p>
+    <p>CRC는 SOF부터 데이터까지의 비트열을 생성 다항식 \(x^{15}+x^{14}+x^{10}+x^{8}+x^{7}+x^{4}+x^{3}+1\) (16진 0x4599)로 나눈 나머지다. 수신 노드가 같은 계산을 해서 값이 다르면 프레임을 버린다.</p>
+
+    <div class="sim" id="sim-frame">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>CAN 프레임 해부</h3></div>
+      <div class="sim-body">
+        <div class="sim-view"><canvas id="cv-fr"></canvas></div>
+        <div class="el-info" id="fr-info"></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>ID (16진 000~7FF)</span><input type="text" class="el-in" id="fr-id" value="123" maxlength="3" inputmode="text" autocomplete="off" spellcheck="false"></label>
+          <label class="ctrl"><span>DLC <output id="fr-dlc-out"></output></span><input type="range" id="fr-dlc" min="0" max="8" step="1" value="4"></label>
+          <label class="ctrl"><span>데이터 (16진 바이트)</span><input type="text" class="el-in" id="fr-data" value="1A F8 00 7D 00 00 00 00" maxlength="23" autocomplete="off" spellcheck="false"></label>
+          <div class="ctrl-row"><button class="btn" id="fr-rand">무작위 프레임</button><button class="btn" id="fr-stuff">스터프가 많은 예</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">프레임 길이</span><span class="v" id="o-fr-bits">—</span></div>
+        <div class="stat"><span class="k">스터프 비트</span><span class="v" id="o-fr-stuff">—</span></div>
+        <div class="stat"><span class="k">CRC-15</span><span class="v" id="o-fr-crc">—</span></div>
+        <div class="stat"><span class="k">전송 시간 (500 kbps)</span><span class="v" id="o-fr-time">—</span></div>
+        <div class="stat"><span class="k">데이터 비율</span><span class="v" id="o-fr-eff">—</span></div>
+      </div>
+      <div class="sim-note">각 칸이 비트 하나이고 색이 필드를 구분한다. 빗금 친 칸은 송신기가 끼워 넣은 스터프 비트다. 아래 두 줄은 CAN_H(위로 올라감)와 CAN_L(아래로 내려감)의 전압으로, 벌어진 곳이 우성(0), 붙은 곳이 열성(1)이다. 칸을 가리키거나 누르면 그 필드의 설명이 나온다. CRC는 표준 다항식으로 실제 계산한 값이다. 해볼 것: ID를 000, 데이터를 모두 00으로 두고 스터프 비트가 얼마나 늘어나는지 본다. 데이터를 55나 AA로 바꾸면 스터프가 사라지는 이유는 무엇인가? 데이터 한 비트만 바꿔 CRC가 얼마나 달라지는지 본다.</div>
+    </div>
+
+    <h3>비트 단위 중재</h3>
+    <p>버스가 비어 있을 때 두 노드가 동시에 보내기 시작하면 어떻게 될까. 이더넷의 초기 방식은 충돌을 감지하면 둘 다 멈추고 임의의 시간 뒤에 다시 시도했다. 그러면 지연을 보장할 수 없다. CAN은 다르게 푼다. 모든 송신 노드는 자기가 낸 비트와 버스에서 읽은 비트를 매번 비교한다. 자기는 열성(1)을 냈는데 버스가 우성(0)이면, 더 우선순위가 높은 누군가가 보내고 있다는 뜻이므로 즉시 송신을 멈추고 수신자로 돌아선다. 우성을 낸 쪽은 자기 비트가 그대로 읽히므로 아무 일도 없었던 것처럼 계속 보낸다.</p>
+    <p>ID는 상위 비트부터 전송되므로, 처음으로 다른 비트에서 0을 가진 쪽, 즉 <b>ID 값이 작은 쪽이 이긴다.</b> 이긴 프레임은 손상되지 않았고 시간도 낭비되지 않았다. 그래서 이 방식을 비파괴 중재<span class="en">(non-destructive arbitration)</span>라 부른다. 진 노드는 버스가 비면 자동으로 다시 시도한다.</p>
+
+    <div class="sim" id="sim-arb">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>버스 중재: 낮은 ID가 이긴다</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-arb"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>노드 ID (16진 000~7FF)</span>
+            <div class="el-ids">
+              <label>A<input type="text" class="el-in" id="arb-a" value="325" maxlength="3" autocomplete="off" spellcheck="false"></label>
+              <label>B<input type="text" class="el-in" id="arb-b" value="32C" maxlength="3" autocomplete="off" spellcheck="false"></label>
+              <label>C<input type="text" class="el-in" id="arb-c" value="3A1" maxlength="3" autocomplete="off" spellcheck="false"></label>
+            </div>
+          </div>
+          <label class="check"><input type="checkbox" id="arb-con" checked> 노드 C도 참여</label>
+          <div class="ctrl-row"><button class="btn primary" id="arb-step">다음 비트</button><button class="btn" id="arb-auto">자동 재생</button><button class="btn" id="arb-reset">처음으로</button></div>
+        </div>
+      </div>
+      <div class="el-info" id="arb-msg"></div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">진행</span><span class="v" id="o-arb-bit">—</span></div>
+        <div class="stat"><span class="k">아직 송신 중</span><span class="v" id="o-arb-left">—</span></div>
+        <div class="stat"><span class="k">버스를 얻은 노드</span><span class="v" id="o-arb-win">—</span></div>
+      </div>
+      <div class="sim-note">세 노드가 같은 순간에 SOF를 내고 ID를 상위 비트부터 보낸다. 맨 아래 줄은 버스에 실제로 나타나는 값(모든 송신 비트의 AND)과 차동 파형이다. 열성(1)을 냈는데 버스가 우성(0)인 노드는 그 비트에서 탈락하고 이후로는 듣기만 한다. 해볼 것: "다음 비트"를 눌러 가며 각 노드가 어느 비트에서 탈락하는지 미리 맞혀 본다. ID를 바꿔 마지막 비트에서 승부가 나게 만들어 본다. 두 노드에 같은 ID를 주면 중재가 끝나지 않는다. 그래서 한 버스에서 같은 ID를 두 노드가 송신하도록 설계하면 안 된다.</div>
+    </div>
+
+    <h3>오류 처리</h3>
+    <p>CAN의 오류 검출은 다섯 겹이다. 송신 노드는 자기가 낸 비트와 버스 값이 다른지(비트 오류), 아무도 ACK를 내지 않았는지(ACK 오류) 본다. 수신 노드는 여섯 비트 연속 같은 값이 왔는지(스터프 오류), CRC가 맞는지(CRC 오류), 구분 비트와 EOF가 열성인지(형식 오류) 본다. 누구든 오류를 발견하면 우성 6비트로 된 오류 프레임을 낸다. 이것은 일부러 스터프 규칙을 깨는 신호라서 다른 모든 노드도 오류를 알게 되고, 프레임은 폐기된 뒤 자동으로 재전송된다.</p>
+    <p>고장 난 노드가 버스를 계속 방해하면 안 되므로 각 노드는 송신 오류 카운터와 수신 오류 카운터를 가진다. 오류가 나면 올라가고 성공하면 내려간다. 카운터가 127을 넘으면 오류 프레임을 우성으로 내지 못하는 수동 상태가 되고, 송신 카운터가 255를 넘으면 버스에서 스스로 떨어져 나간다<span class="en">(bus off)</span>. 한 노드의 고장이 전체 통신을 멈추지 못하게 하는 장치다.</p>
+  </section>
+
+  <!-- =============================================================== 6 -->
+  <section id="networks">
+    <h2>버스 부하와 여러 가지 네트워크</h2>
+    <p>CAN 메시지 대부분은 주기적으로 보낸다. 엔진 회전수는 10 ms마다, 냉각수 온도는 100 ms마다, 도어 상태는 변할 때와 1초마다 보내는 식이다. 버스가 프레임 전송에 쓰이는 시간의 비율이 버스 부하율이다.</p>
+    <div class="formula">$$U = \sum_i \frac{C_i}{T_i}, \qquad C_i = \frac{N_{bits,i}}{f_{bit}}$$<div class="where">여기서 \(C_i\)는 메시지 \(i\)의 전송 시간, \(T_i\)는 주기, \(N_{bits}\)는 프레임 비트 수, \(f_{bit}\)는 비트레이트다.</div></div>
+    <p>부하율이 100 %보다 낮다고 안심할 수는 없다. 우선순위가 낮은 메시지는 자기보다 높은 메시지가 모두 지나갈 때까지 기다려야 하고, 이미 전송이 시작된 프레임은 우선순위가 낮아도 끝날 때까지 끼어들 수 없다. 메시지 \(m\)이 겪는 최악의 대기 시간 \(w_m\)은 다음 식을 반복해서 풀어 구한다.</p>
+    <div class="formula">$$w_m = B_m + \sum_{k \in hp(m)} \left\lceil \frac{w_m + \tau_{bit}}{T_k} \right\rceil C_k, \qquad R_m = w_m + C_m$$<div class="where">여기서 \(B_m\)은 이미 전송 중인 낮은 우선순위 프레임에 막히는 시간(최대 한 프레임), \(hp(m)\)은 \(m\)보다 우선순위가 높은 메시지의 집합, \(R_m\)은 최악 응답 시간이다.</div></div>
+    <p>\(R_m\)이 그 메시지의 주기(마감)보다 짧아야 한다. 실무에서는 재전송과 향후 확장을 위한 여유를 두어 평균 부하율을 대표적으로 30~50 % 이하로 설계한다.</p>
+
+    <div class="sim" id="sim-load">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>버스 부하와 최악 지연</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-ld"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>비트레이트 (kbps)</span><div class="seg" id="ld-rate"><button data-value="125">125</button><button data-value="250">250</button><button data-value="500" class="on">500</button><button data-value="1000">1000</button></div></div>
+          <label class="ctrl"><span>10 ms 주기 메시지 <output id="ld-n10-out"></output></span><input type="range" id="ld-n10" min="0" max="40" step="1" value="12"></label>
+          <label class="ctrl"><span>100 ms 주기 메시지 <output id="ld-n100-out"></output></span><input type="range" id="ld-n100" min="0" max="80" step="1" value="30"></label>
+          <label class="ctrl"><span>데이터 길이 <output id="ld-len-out"></output></span><input type="range" id="ld-len" min="1" max="8" step="1" value="8"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">버스 부하율</span><span class="v" id="o-ld-u">—</span></div>
+        <div class="stat"><span class="k">프레임 전송 시간</span><span class="v" id="o-ld-c">—</span></div>
+        <div class="stat"><span class="k">최우선 메시지 최악 지연</span><span class="v" id="o-ld-r1">—</span></div>
+        <div class="stat"><span class="k">10 ms 그룹 최악 지연</span><span class="v" id="o-ld-r10">—</span></div>
+        <div class="stat"><span class="k">최하위 메시지 최악 지연</span><span class="v" id="o-ld-rl">—</span></div>
+        <div class="stat"><span class="k">판정</span><span class="v" id="o-ld-ok">—</span></div>
+      </div>
+      <div class="sim-note">모델: 10 ms 메시지에 낮은 ID(높은 우선순위)를, 100 ms 메시지에 높은 ID를 주었다. 프레임 길이는 스터핑이 최악인 경우로 계산한다. 위 타임라인은 모든 메시지가 t = 0에 동시에 대기열에 들어온 가장 불리한 순간부터 20 ms 동안 버스에 프레임이 줄 서서 나가는 모습이다(주황: 10 ms 그룹, 파랑: 100 ms 그룹, 빈 곳: 버스 유휴). 아래 그래프는 우선순위 순서대로 본 최악 응답 시간이고 점선이 각 그룹의 마감이다. 해볼 것: 10 ms 메시지를 늘려 100 ms 그룹의 지연이 급격히 늘어나는 지점을 찾는다. 비트레이트를 125 kbps로 낮추면 같은 메시지 집합이 버스에 들어가는가? 부하율이 100 %에 가까워지면 최하위 메시지는 어떻게 되는가?</div>
+    </div>
+
+    <h3>CAN FD와 그 밖의 버스</h3>
+    <p>CAN의 한계는 8바이트와 1 Mbps다. 비트 단위 중재가 성립하려면 가장 먼 노드까지 신호가 갔다가 돌아오는 시간이 비트 하나보다 짧아야 하므로, 버스 길이가 40 m면 1 Mbps가 상한이다. CAN FD<span class="en">(Flexible Data-rate)</span>는 이 제약을 피해 간다. 중재 구간은 기존 속도로 보내고, 승자가 정해져 송신자가 하나뿐인 데이터 구간에서는 비트레이트를 2~5 Mbps로 올린다. 데이터도 최대 64바이트까지 싣는다. ECU 소프트웨어를 다시 쓰는 리프로그래밍 시간이 크게 줄어들고, 메시지 인증 부호를 붙일 자리가 생긴다.</p>
+    <p>모든 통신에 CAN이 필요한 것은 아니다. 용도에 따라 값과 성능이 다른 버스를 섞어 쓴다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>네트워크</th><th>속도</th><th>배선</th><th>방식</th><th>주 용도</th></tr></thead>
+      <tbody>
+        <tr><td>LIN</td><td>최대 20 kbps</td><td>단선 + 차체 접지</td><td>주 노드 하나가 순서대로 호출</td><td>윈도, 시트, 와이퍼, 우적 센서</td></tr>
+        <tr><td>CAN</td><td>125 kbps~1 Mbps</td><td>꼬임쌍선</td><td>ID 우선순위 중재</td><td>파워트레인, 섀시, 차체</td></tr>
+        <tr><td>CAN FD</td><td>데이터 구간 2~5 Mbps</td><td>꼬임쌍선</td><td>CAN과 같은 중재, 최대 64바이트</td><td>신형 차량의 기본 버스</td></tr>
+        <tr><td>FlexRay</td><td>10 Mbps</td><td>꼬임쌍선 1~2채널</td><td>시분할, 정해진 시각에 송신</td><td>섀시 제어, 바이 와이어</td></tr>
+        <tr><td>차량용 이더넷</td><td>100 Mbps~수 Gbps</td><td>꼬임쌍선 1조, 점대점 + 스위치</td><td>전이중 패킷 교환</td><td>카메라, 레이더, 백본, 진단</td></tr>
+      </tbody>
+    </table></div>
+    <ul>
+      <li><b>LIN</b><span class="en">(Local Interconnect Network)</span>: 전선 한 가닥과 저렴한 MCU로 구현한다. 주 노드가 정해진 순서표에 따라 헤더를 보내면 해당 종 노드가 응답한다. 도어 안의 스위치와 모터처럼 느려도 되는 말단 장치를 CAN ECU 아래에 매단다.</li>
+      <li><b>FlexRay</b>: 시간을 슬롯으로 나누어 각 노드가 정해진 시각에만 보낸다. 지연이 완전히 예측 가능하고 두 채널로 이중화할 수 있어 능동 서스펜션과 조향에 쓰였다. 비용이 높아 신규 설계에서는 CAN FD와 이더넷으로 대체되는 추세다.</li>
+      <li><b>차량용 이더넷</b>: 사무실 이더넷과 달리 차폐 없는 꼬임쌍선 한 쌍으로 양방향 통신을 한다. 100BASE-T1은 100 Mbps, 1000BASE-T1은 1 Gbps이고 링크 길이는 15 m까지다. 버스가 아니라 스위치를 거치는 점대점 연결이다. 카메라와 라이다가 내는 대용량 데이터(<a href="sensors.html">18장</a>), 소프트웨어 업데이트, 제어기 사이의 백본에 쓰인다. 시간 민감 네트워킹(TSN) 표준이 지연 상한을 보장한다.</li>
+    </ul>
+    <p>성격이 다른 버스들을 잇는 것이 <b>게이트웨이</b>다. 파워트레인 CAN의 차속 신호를 차체 CAN과 인포테인먼트 이더넷으로 옮겨 주고, 반대로 외부와 연결된 인포테인먼트 쪽에서 제동·조향 버스로 임의의 메시지가 넘어가지 못하게 걸러 낸다.</p>
+  </section>
+
+  <!-- =============================================================== 7 -->
+  <section id="diag">
+    <h2>진단: 차가 스스로 고장을 말하게 하기</h2>
+    <p>ECU는 제어만큼이나 많은 코드를 자기 감시에 쓴다. 센서 전압이 범위를 벗어났는지, 두 센서의 값이 서로 모순되지 않는지, 액추에이터 전류가 명령대로 흐르는지, 다른 ECU의 메시지가 제때 오는지를 계속 확인한다. 이상이 일정 조건 이상 지속되면 고장 코드<span class="en">(Diagnostic Trouble Code, DTC)</span>를 비휘발성 메모리에 기록하고, 그 순간의 회전수와 온도 같은 상태(프리즈 프레임)를 함께 남긴다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 230" role="img" aria-label="고장 코드 P0301의 구조">
+        <g font-family="var(--mono)" font-size="64" font-weight="700" text-anchor="middle">
+          <text x="150" y="92" fill="var(--accent)">P</text><text x="270" y="92" fill="var(--accent-2)">0</text><text x="390" y="92" class="t" font-size="64">3</text><text x="540" y="92" class="t-dim" font-size="64">01</text>
+        </g>
+        <g class="s-line" stroke-width="1.5"><line x1="150" y1="104" x2="150" y2="130"/><line x1="270" y1="104" x2="270" y2="130"/><line x1="390" y1="104" x2="390" y2="130"/><line x1="540" y1="104" x2="540" y2="130"/></g>
+        <g text-anchor="middle">
+          <text x="150" y="150" class="t" font-weight="700">계통</text><text x="150" y="172" class="t-dim" font-size="13">P 파워트레인</text><text x="150" y="190" class="t-dim" font-size="13">C 섀시 · B 차체</text><text x="150" y="208" class="t-dim" font-size="13">U 네트워크</text>
+          <text x="270" y="150" class="t" font-weight="700">정의 주체</text><text x="270" y="172" class="t-dim" font-size="13">0 공통 규격</text><text x="270" y="190" class="t-dim" font-size="13">1 제조사 고유</text>
+          <text x="390" y="150" class="t" font-weight="700">하위 계통</text><text x="390" y="172" class="t-dim" font-size="13">3 점화 · 실화</text><text x="390" y="190" class="t-dim" font-size="13">1, 2 연료 · 공기</text><text x="390" y="208" class="t-dim" font-size="13">4 배출가스 보조</text>
+          <text x="540" y="150" class="t" font-weight="700">세부 고장</text><text x="540" y="172" class="t-dim" font-size="13">01 = 1번 실린더</text>
+        </g>
+        <text x="660" y="84" class="t-acc" text-anchor="middle">1번 실린더</text><text x="660" y="106" class="t-acc" text-anchor="middle">실화 감지</text>
+      </svg>
+      <figcaption><b>그림 13-5.</b> 고장 코드의 구조. 다섯 자리 가운데 첫 글자가 계통을, 나머지가 세부 내용을 나타낸다. P0420은 촉매 효율 저하, U0100은 엔진 ECU와의 통신 두절이다.</figcaption>
+    </figure>
+
+    <p>배출가스와 관련된 진단은 법으로 표준화되어 있다. 이것이 OBD-II<span class="en">(On-Board Diagnostics)</span>다. 미국은 1996년형부터, 유럽은 2001년(가솔린)부터 의무화했다. 운전석 아래의 16핀 커넥터에 스캐너를 꽂으면 제조사와 관계없이 같은 방식으로 고장 코드와 실시간 데이터를 읽을 수 있다. 6번과 14번 핀이 CAN_H와 CAN_L이다. 스캐너가 ID 0x7DF로 요청을 보내면 엔진 ECU가 0x7E8로 답한다.</p>
+    <div class="callout tip">
+      <strong>계산 예: OBD-II로 엔진 회전수 읽기</strong>
+      <p>스캐너가 데이터 <code>02 01 0C</code>를 보낸다. 2바이트짜리 요청이고, 서비스 01(현재 데이터)의 항목 0C(엔진 회전수)를 달라는 뜻이다. ECU가 <code>04 41 0C 1A F8</code>로 답한다. 41은 서비스 01에 대한 응답, 뒤의 두 바이트 A = 0x1A = 26, B = 0xF8 = 248이 값이다. 규격의 환산식은 \((256A + B)/4\)이므로 \((6656 + 248)/4 = 1{,}726\) rpm이다. 위 프레임 해부 시뮬레이터의 기본 데이터가 바로 이 값이다.</p>
+    </div>
+    <p>OBD-II가 다루지 않는 나머지, 즉 모든 ECU의 고장 코드 읽기, 액추에이터 강제 구동, 설정 값 쓰기, 소프트웨어 다시 쓰기는 UDS<span class="en">(Unified Diagnostic Services, ISO 14229)</span>로 한다. 요청과 응답으로 이루어진 서비스 목록이고, 각 서비스는 1바이트 번호로 구분된다. 0x10은 진단 세션 전환, 0x19는 고장 코드 읽기, 0x22는 식별자로 데이터 읽기, 0x27은 보안 접근(시드와 키 교환), 0x2E는 데이터 쓰기, 0x31은 루틴 실행, 0x34~0x37은 소프트웨어 다운로드다. CAN 프레임의 8바이트를 넘는 긴 메시지는 전송 계층(ISO-TP)이 여러 프레임으로 쪼개 보내고, 이더넷에서는 DoIP가 같은 서비스를 IP 위에서 나른다. 정비소의 진단기와 공장의 최종 검사 장비, 그리고 뒤에 나올 무선 업데이트가 모두 이 서비스를 쓴다.</p>
+  </section>
+
+  <!-- =============================================================== 8 -->
+  <section id="arch">
+    <h2>E/E 아키텍처: 분산에서 존으로</h2>
+    <p>차의 전기·전자 장치를 어떤 제어기에 나눠 담고 어떻게 연결할지를 정한 큰 그림이 E/E 아키텍처<span class="en">(Electrical/Electronic architecture)</span>다. 지난 30년 동안은 기능이 하나 늘 때마다 ECU가 하나 느는 <b>분산</b> 구조였다. 부품 회사가 센서, 액추에이터, ECU, 소프트웨어를 한 상자로 납품하고 완성차 회사는 그것을 CAN에 연결했다. 개발은 편했지만 ECU가 100개에 이르면서 한계가 드러났다. 하네스가 무겁고 비싸졌으며, 수십 개 회사가 만든 소프트웨어가 얽혀 있어 기능 하나를 바꾸려면 여러 ECU를 동시에 고쳐야 했다.</p>
+    <ul>
+      <li><b>도메인 아키텍처</b>: 파워트레인, 섀시, 차체, 인포테인먼트, ADAS처럼 기능 영역별로 강력한 도메인 컨트롤러를 두고 연산을 모은다. 나머지 ECU는 단순한 입출력 장치가 된다. 소프트웨어 통합은 쉬워지지만, 같은 도메인의 부품이 차 전체에 흩어져 있으면 전선을 멀리 끌어와야 한다.</li>
+      <li><b>존 아키텍처</b><span class="en">(zonal architecture)</span>: 기능이 아니라 <b>위치</b>로 묶는다. 차를 서너 구역으로 나눠 구역마다 존 컨트롤러를 두고, 근처의 센서와 액추에이터를 종류에 상관없이 거기에 연결한다. 존 컨트롤러는 전원 분배와 입출력만 맡고, 판단은 이더넷 백본으로 연결된 중앙 컴퓨터<span class="en">(High-Performance Computer, HPC)</span>가 한다. 말단 전선이 짧아지고 하네스가 단순해져 조립 자동화에도 유리하다.</li>
+    </ul>
+
+    <div class="sim" id="sim-arch">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>E/E 아키텍처 비교</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-ar"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>아키텍처</span><div class="seg" id="ar-mode"><button data-value="dist" class="on">분산</button><button data-value="domain">도메인</button><button data-value="zone">존</button></div></div>
+          <label class="check"><input type="checkbox" id="ar-io" checked> 말단 배선 표시</label>
+          <label class="check"><input type="checkbox" id="ar-pw" checked> 전원·통신 간선 표시</label>
+          <div class="legend" style="padding:0">
+            <span><i style="background:var(--text-faint)"></i>말단 입출력</span>
+            <span><i style="background:var(--red)"></i>전원 공급</span>
+            <span><i style="background:var(--accent-2)"></i>CAN / 이더넷</span>
+          </div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">그림 속 제어기 수</span><span class="v" id="o-ar-ecu">—</span></div>
+        <div class="stat"><span class="k">모델 배선 길이</span><span class="v" id="o-ar-len">—</span></div>
+        <div class="stat"><span class="k">분산 구조 대비</span><span class="v" id="o-ar-rel">—</span></div>
+        <div class="stat"><span class="k">실차 환산 길이 (개략)</span><span class="v" id="o-ar-real">—</span></div>
+        <div class="stat"><span class="k">실차 환산 무게 (개략)</span><span class="v" id="o-ar-kg">—</span></div>
+        <div class="stat"><span class="k">실차의 제어기 수</span><span class="v" id="o-ar-net">—</span></div>
+      </div>
+      <div class="sim-note">위에서 본 차(오른쪽이 앞)에 센서·액추에이터 50여 개를 점으로, 제어기를 사각형으로 놓았다. 점의 색은 기능 영역(파워트레인, 섀시, 차체, 인포테인먼트, ADAS)이다. 배선 길이는 각 점에서 담당 제어기까지 직각 경로로 잰 거리에 가닥 수를 곱하고, 제어기마다 필요한 전원선과 통신선을 더한 값이다. 실차 환산은 분산 구조를 전선 3 km, 45 kg으로 놓고 같은 비율로 줄인 개략값이다. 해볼 것: 분산에서 도메인으로 바꾸면 제어기 수와 배선 길이가 각각 어떻게 변하는가? 존으로 바꾸면 말단 배선이 왜 짧아지는가? 간선만 남기고 보면 세 구조의 뼈대가 어떻게 다른가?</div>
+    </div>
+
+    <p id="ar-text">모델에서 확인할 수 있듯이 도메인 구조는 제어기 수를 크게 줄이지만 배선은 줄지 않는다. 기능별로 묶다 보니 뒤 범퍼의 센서 전선이 앞쪽 제어기까지 와야 하기 때문이다. 존 구조는 말단 전선을 가까운 존 컨트롤러에서 끊고, 그 사이를 전원 간선과 이더넷 한 쌍으로 잇는다. 실제 차에서는 스마트 센서와 일부 전용 ECU가 남으므로 변화가 이 모델만큼 깔끔하지는 않지만 방향은 같다.</p>
+
+    <h3>소프트웨어 정의 차량과 OTA</h3>
+    <p>연산이 중앙으로 모이면 하드웨어와 소프트웨어를 따로 개발할 수 있다. 차를 출고한 뒤에도 기능을 추가하고 성능을 바꿀 수 있는 차를 소프트웨어 정의 차량<span class="en">(Software-Defined Vehicle, SDV)</span>이라 부른다. 이를 가능하게 하는 수단이 무선 업데이트<span class="en">(Over-The-Air, OTA)</span>다. 통신 모듈이 서버에서 업데이트 꾸러미를 받아 전자 서명을 검증하고, 대상 ECU에 UDS 다운로드 서비스로 써 넣는다. 쓰는 도중 전원이 끊겨도 차가 먹통이 되지 않도록 메모리를 두 구역(A/B)으로 나눠 새 소프트웨어를 비활성 구역에 쓰고, 검증이 끝난 뒤에 전환한다. 문제가 생기면 이전 구역으로 되돌아간다.</p>
+    <p>소프트웨어를 여러 회사가 나눠 만들려면 공통 구조가 필요하다. AUTOSAR<span class="en">(AUTomotive Open System ARchitecture)</span>는 그 표준이다. <b>클래식 플랫폼</b>은 MCU 기반의 실시간 ECU용으로, 응용 소프트웨어 컴포넌트가 하드웨어를 직접 건드리지 않고 런타임 환경(RTE)을 통해 신호를 주고받는다. CAN 드라이버, 진단, 메모리 관리 같은 기본 소프트웨어는 표준 모듈로 제공된다. <b>어댑티브 플랫폼</b>은 고성능 프로세서와 POSIX 운영체제 위에서 서비스 지향 통신을 하는 중앙 컴퓨터용이다.</p>
+
+    <h3>사이버 보안과 기능 안전</h3>
+    <p>CAN은 닫힌 네트워크를 전제로 설계되어서 송신자를 확인하는 수단이 없다. 버스에 접속한 누구든 어떤 ID로든 프레임을 보낼 수 있고, 수신 노드는 그것을 믿는다. 차가 이동통신과 와이파이에 연결되면서 이 전제가 깨졌다. 2015년에는 연구자들이 인포테인먼트 장치의 취약점을 통해 원격으로 차량 내부 버스에 메시지를 주입해 주행 중인 차의 제동과 변속을 조작할 수 있음을 보였고, 약 140만 대가 리콜되었다.</p>
+    <p>대응은 여러 겹으로 이루어진다. 게이트웨이가 외부와 연결된 영역과 주행 관련 영역을 분리하고, 중요한 메시지에는 암호 키로 계산한 인증 부호와 재전송 방지 카운터를 붙인다(SecOC). 키는 MCU 안의 하드웨어 보안 모듈에 보관한다. 부팅할 때 소프트웨어의 서명을 검증하고(보안 부팅), 버스의 이상 트래픽을 감시한다. 유엔 규정 R155와 R156은 제조사에 사이버 보안과 소프트웨어 업데이트의 관리 체계를 요구한다.</p>
+    <p>보안이 악의적인 공격으로부터 차를 지키는 것이라면, <b>기능 안전</b>은 고장과 설계 결함으로부터 사람을 지키는 것이다. 이 장에서 본 이중 페달 센서, 락스텝 MCU, 워치독, 메시지 감시는 모두 기능 안전 규격 ISO 26262가 요구하는 안전 메커니즘의 예다. 위험도에 따라 등급(ASIL A~D)을 매기고 그에 맞는 개발 절차와 진단 범위를 요구하는 이 체계는 <a href="autonomy.html">21장</a>에서 자율주행 시스템과 함께 다룬다.</p>
+  </section>
+
+  <!-- =============================================================== summary -->
+  <section class="keypoints" id="summary">
+    <h2>핵심 정리</h2>
+    <ol>
+      <li>12 V 계통에서 알터네이터, 배터리, 부하는 병렬이다. 알터네이터의 최대 전류는 회전수에 따라 달라지고, 부하가 이를 넘으면 배터리가 방전하며 전압이 내려간다. 전기차는 DC-DC 컨버터가 알터네이터를 대신한다.</li>
+      <li>시동 순간 수백 암페어가 흐르며 전압이 크게 떨어진다. 주차 중의 암전류는 수십 mA 이하로 관리하고, 그 값과 배터리 용량이 방치 가능 일수를 정한다.</li>
+      <li>ECU는 입력 회로, MCU, 출력 드라이버, 전원부, 워치독, 통신 트랜시버로 이루어진다. 센서는 물리량을 0.5~4.5 V 전압이나 펄스로 바꾸고, 안전에 중요한 센서는 이중화한다.</li>
+      <li>PWM은 스위치를 완전히 켜고 끄는 비율로 평균 전류를 조절한다. 인덕턴스가 전류를 매끄럽게 하고 평균 전류는 듀티에 비례한다. H-브리지는 스위치 네 개로 모터의 방향을 바꾼다.</li>
+      <li>PID 제어에서 P는 현재 오차, I는 누적 오차, D는 오차의 변화율에 반응한다. I가 정상 상태 오차를 없애고, 지연과 긴 샘플링 주기는 안정 여유를 줄인다.</li>
+      <li>CAN은 차동 신호로 우성(0)과 열성(1)을 나타내며 버스는 모든 송신의 AND다. 송신 비트와 버스 값을 비교하는 비트 단위 중재에서 ID가 작은 프레임이 손상 없이 이긴다.</li>
+      <li>CAN 프레임은 SOF, ID, 제어, 데이터, CRC, ACK, EOF로 이루어지고 같은 비트 5개 뒤에 스터프 비트가 들어간다. 버스 부하율과 우선순위가 메시지의 최악 지연을 정한다.</li>
+      <li>E/E 아키텍처는 분산 ECU에서 도메인 컨트롤러를 거쳐 존 컨트롤러와 중앙 컴퓨터로 옮겨 가고 있다. 이더넷 백본, OTA, 보안, 기능 안전이 함께 설계된다.</li>
+    </ol>
+  </section>
+
+  <!-- =============================================================== quiz -->
+  <section class="quiz-sec" id="quiz">
+    <h2>확인 퀴즈</h2>
+    <div class="quiz">
+      <div class="quiz-q"><p>공회전 중 알터네이터가 낼 수 있는 최대 전류가 55 A인데 전기 부하가 70 A다. 어떤 일이 일어나는가?</p><div class="opts">
+        <button class="opt">알터네이터가 정격을 넘겨 70 A를 낸다</button>
+        <button class="opt" data-correct>모자란 15 A 정도를 배터리가 방전하며 메우고 시스템 전압이 내려간다</button>
+        <button class="opt">전압 조정기가 부하를 자동으로 차단한다</button>
+        <button class="opt">퓨즈가 끊어진다</button>
+      </div><div class="quiz-exp">알터네이터, 배터리, 부하는 병렬이므로 전류는 합이 맞아야 한다. 알터네이터가 포화되면 전압 조정기는 더 이상 14 V대를 유지하지 못하고, 전압이 배터리의 개방 전압 아래로 내려가면서 배터리가 나머지를 공급한다. 전압이 내려가면 저항성 부하의 전류도 조금 줄어들므로 실제 방전 전류는 15 A보다 약간 작다. 회전수를 올리면 다시 충전으로 돌아선다.</div></div>
+
+      <div class="quiz-q"><p>가속 페달 위치 센서를 두 개 넣고 두 채널의 출력 기울기를 서로 다르게 만드는 이유는?</p><div class="opts">
+        <button class="opt">분해능을 두 배로 높이기 위해</button>
+        <button class="opt">하나는 가속용, 하나는 감속용이기 때문에</button>
+        <button class="opt" data-correct>두 신호선이 서로 단락되거나 공통 원인으로 틀어져도 불일치로 감지할 수 있게</button>
+        <button class="opt">전력 소비를 줄이기 위해</button>
+      </div><div class="quiz-exp">두 채널이 같은 전압을 내도록 만들면, 두 선이 서로 붙었을 때 값이 일치하므로 고장을 알 수 없다. 기울기를 1:2로 두면 정상일 때만 그 비가 유지된다. 비가 깨지면 ECU는 페달 값을 신뢰하지 않고 출력을 제한한다.</div></div>
+
+      <div class="quiz-q"><p>ID 0x1A4, 0x1A0, 0x2F0인 세 프레임이 동시에 송신을 시작했다. 어느 프레임이 버스를 얻는가?</p><div class="opts">
+        <button class="opt">0x2F0, 값이 가장 크므로</button>
+        <button class="opt">0x1A4, 먼저 다른 비트가 나오므로</button>
+        <button class="opt" data-correct>0x1A0, 값이 가장 작으므로</button>
+        <button class="opt">충돌이 나서 모두 재전송한다</button>
+      </div><div class="quiz-exp">0x2F0(010 1111 0000)은 두 번째 비트에서 1을 내는데 다른 둘이 0을 내므로 먼저 탈락한다. 0x1A4(001 1010 0100)와 0x1A0(001 1010 0000)은 아홉 번째 비트에서 갈리고, 1을 낸 0x1A4가 탈락한다. 우성(0)이 열성(1)을 덮으므로 항상 값이 가장 작은 ID가 이기며, 이긴 프레임은 손상 없이 계속 전송된다.</div></div>
+
+      <div class="quiz-q"><p>CAN에서 비트 스터핑이 필요한 근본 이유는?</p><div class="opts">
+        <button class="opt">데이터를 암호화하기 위해</button>
+        <button class="opt" data-correct>클록 선이 없으므로 수신 노드가 시계를 맞출 에지를 주기적으로 확보하기 위해</button>
+        <button class="opt">프레임 길이를 8의 배수로 맞추기 위해</button>
+        <button class="opt">우선순위를 표시하기 위해</button>
+      </div><div class="quiz-exp">수신 노드는 비트가 바뀌는 순간에 자기 비트 타이밍을 다시 맞춘다. 같은 값이 길게 이어지면 각 노드의 발진기 오차가 누적되어 샘플 위치가 어긋난다. 같은 값 5비트 뒤에 반대 비트를 넣으면 최소한 10비트 안에 에지가 하나는 생긴다. 덤으로, 같은 값 6비트 연속은 정상 프레임에 나올 수 없게 되므로 오류 프레임의 표지로 쓸 수 있다.</div></div>
+
+      <div class="quiz-q"><p>P 제어만으로 공회전 속도를 제어할 때 에어컨을 켜면 회전수가 목표보다 낮은 값에서 머문다. 그 이유는?</p><div class="opts">
+        <button class="opt">샘플링 주기가 너무 짧아서</button>
+        <button class="opt">센서 잡음 때문에</button>
+        <button class="opt" data-correct>부하를 버티는 추가 출력을 내려면 오차가 0이 아니어야 하기 때문에</button>
+        <button class="opt">스로틀이 최대로 열렸기 때문에</button>
+      </div><div class="quiz-exp">P 제어의 출력은 오차에 비례한다. 오차가 0이 되면 추가 출력도 0이 되어 부하를 감당할 수 없다. 그래서 부하와 추가 출력이 균형을 이루는 0이 아닌 오차에서 멈춘다. 게인을 키우면 이 오차가 줄지만 불안정해진다. 적분 항은 오차가 남아 있는 한 출력을 계속 키우므로 오차를 0으로 만든다.</div></div>
+
+      <div class="quiz-q"><p>존 아키텍처에서 존 컨트롤러에 연결할 장치를 정하는 기준은?</p><div class="opts">
+        <button class="opt">같은 부품 회사가 만든 장치끼리</button>
+        <button class="opt">같은 기능 영역(파워트레인, 섀시 등)에 속한 장치끼리</button>
+        <button class="opt" data-correct>차 안에서 물리적으로 가까이 있는 장치끼리</button>
+        <button class="opt">같은 통신 속도를 쓰는 장치끼리</button>
+      </div><div class="quiz-exp">도메인 아키텍처는 기능으로, 존 아키텍처는 위치로 묶는다. 근처의 센서와 액추에이터를 종류에 상관없이 가까운 존 컨트롤러에 연결하므로 말단 배선이 짧아진다. 기능의 판단은 이더넷 백본으로 연결된 중앙 컴퓨터가 맡는다.</div></div>
+    </div>
+  </section>
+</main>
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const cs = getComputedStyle(document.documentElement);
+  const FONT = cs.getPropertyValue("--font").trim() || "sans-serif";
+  const MONO = cs.getPropertyValue("--mono").trim() || "monospace";
+  const clamp = CB.clamp, PI = Math.PI;
+  const rrect = (ctx, x, y, w, h, r) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); };
+  const line = (ctx, x1, y1, x2, y2) => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); };
+  const text = (ctx, s, x, y, color, font, align, base) => { ctx.fillStyle = color; ctx.font = font; ctx.textAlign = align || "center"; ctx.textBaseline = base || "middle"; ctx.fillText(s, x, y); };
+  const hex = (v, n) => v.toString(16).toUpperCase().padStart(n, "0");
+  const parseHex = (s, max, def) => { const v = parseInt(String(s).replace(/[^0-9a-fA-F]/g, ""), 16); return isFinite(v) ? Math.min(max, v) : def; };
+
+  /* ================================================================ 1. 충전 계통 */
+  (function charging() {
+    const loads = [...document.querySelectorAll(".chg-load")];
+    let S = null, cvS = null, cvA = null, cvC = null;
+    const all = () => { calc(); if (cvS) { cvS.redraw(); cvA.redraw(); cvC.redraw(); } };
+    const gRpm = CB.range("chg-rpm", (v) => (v < 500 ? "정지" : v.toLocaleString("en-US") + " rpm"), all);
+    const gSoc = CB.range("chg-soc", (v) => v + " %", all);
+    const gT = CB.range("chg-temp", (v) => v + " °C", all);
+    const gDark = CB.range("chg-dark", (v) => v + " mA", all);
+    loads.forEach((c) => c.addEventListener("change", all));
+    const imaxAt = (r) => (r >= 500 ? Math.max(0, 130 * (1 - Math.exp(-(r * 2.7 - 1000) / 1800))) : 0);
+
+    function calc() {
+      const rpm = gRpm(), soc = gSoc() / 100, T = gT(), dark = gDark();
+      const on = rpm >= 500;
+      let la = on ? 20 : 5;
+      loads.forEach((c) => { if (c.checked) la += Number(c.dataset.a); });
+      const ocv = 11.8 + 0.9 * soc;
+      const rdis = (0.0045 * (1 + 0.025 * Math.max(0, 25 - T))) / (0.35 + 0.65 * soc);
+      const rchg = 0.05;
+      const iload = (V) => (la * V) / 13.5;
+      const ibat = (V) => (V >= ocv ? ((V - ocv) / rchg) * Math.pow(1 - soc, 0.7) + 0.5 * clamp((V - ocv) / 0.5, 0, 1) : (V - ocv) / rdis);
+      const imax = imaxAt(rpm);
+      const need = iload(14.2) + ibat(14.2);
+      let V = 14.2;
+      if (need > imax) {
+        let lo = 5, hi = 14.2;
+        for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (iload(mid) + ibat(mid) > imax) hi = mid; else lo = mid; }
+        V = (lo + hi) / 2;
+      }
+      const il = iload(V), ia = Math.min(imax, il + ibat(V)), ib = ia - il;
+      // 시동 파형
+      const rst = 0.012, vmin = (ocv * rst) / (rdis + rst);
+      const icr = 170 * (1 + 0.015 * Math.max(0, 25 - T)), vcr = ocv - icr * rdis;
+      const ok = vmin >= 6;
+      const crank = [];
+      for (let t = 0; t <= 3.0001; t += 0.01) {
+        let v;
+        if (t < 0.3) v = ocv;
+        else if (ok && t > 1.5) v = 14.2 + (vcr - 14.2) * Math.exp(-(t - 1.5) / 0.25);
+        else { const k = Math.exp(-(t - 0.3) / 0.08); v = vcr + (vmin - vcr) * k + 0.25 * (1 - k) * Math.sin(2 * PI * (ok ? 8 : 4) * (t - 0.3)); }
+        crank.push([t, v]);
+      }
+      const days = (Math.max(0, 60 * (soc - 0.4)) / (dark / 1000)) / 24;
+      S = { rpm, on, V, ia, il, ib, imax, need, vmin, ok, crank, days, la };
+      CB.stat("o-chg-v", V.toFixed(2) + "<small>V</small>");
+      CB.stat("o-chg-ia", ia.toFixed(0) + " / " + imax.toFixed(0) + "<small>A</small>");
+      CB.stat("o-chg-il", il.toFixed(0) + "<small>A</small>");
+      CB.stat("o-chg-ib", (ib >= 0 ? "+" : "−") + Math.abs(ib).toFixed(1) + "<small>A " + (ib >= 0.05 ? "충전" : ib <= -0.05 ? "방전" : "") + "</small>");
+      CB.stat("o-chg-pm", on ? ((V * ia) / 0.6 / 1000).toFixed(2) + "<small>kW</small>" : "0<small>kW</small>");
+      CB.stat("o-chg-vmin", vmin.toFixed(1) + "<small>V " + (ok ? "" : "시동 실패 위험") + "</small>");
+      CB.stat("o-chg-days", days > 0 ? days.toFixed(0) + "<small>일</small>" : "0<small>일 (이미 부족)</small>");
+    }
+    calc();
+
+    cvS = CB.canvas($("cv-chg"), (ctx, w, h) => {
+      const P = CB.palette(), f = w < 420 ? 11 : 13;
+      const busY = h * 0.2, gndY = h * 0.9, cy = h * 0.57;
+      const xa = w * 0.17, xb = w * 0.5, xl = w * 0.83, r = Math.min(w * 0.1, h * 0.15);
+      ctx.strokeStyle = P.red; ctx.lineWidth = 3; line(ctx, xa, busY, xl, busY);
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 2; line(ctx, xa, gndY, xl, gndY);
+      [xa, xb, xl].forEach((x) => { ctx.strokeStyle = P.red; ctx.lineWidth = 1.5; line(ctx, x, busY, x, cy - r); ctx.strokeStyle = P.axis; line(ctx, x, cy + r, x, gndY); });
+      // 알터네이터
+      ctx.fillStyle = CB.color("accent-soft"); ctx.strokeStyle = S.on ? P.accent : P.faint; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(xa, cy, r, 0, PI * 2); ctx.fill(); ctx.stroke();
+      text(ctx, "알터네이터", xa, cy - 7, P.text, "600 " + f + "px " + FONT);
+      text(ctx, S.on ? S.ia.toFixed(0) + " A" : "정지", xa, cy + 10, P.dim, f + "px " + MONO);
+      // 배터리
+      ctx.fillStyle = P.surface; ctx.strokeStyle = P.border; rrect(ctx, xb - r * 1.15, cy - r * 0.8, r * 2.3, r * 1.6, 6); ctx.fill(); ctx.stroke();
+      text(ctx, "배터리", xb, cy - 7, P.text, "600 " + f + "px " + FONT);
+      text(ctx, gSoc() + " %", xb, cy + 10, P.dim, f + "px " + MONO);
+      // 부하
+      ctx.fillStyle = P.surface; rrect(ctx, xl - r * 1.1, cy - r * 0.8, r * 2.2, r * 1.6, 6); ctx.fill(); ctx.stroke();
+      text(ctx, "부하", xl, cy - 7, P.text, "600 " + f + "px " + FONT);
+      text(ctx, S.il.toFixed(0) + " A", xl, cy + 10, P.dim, f + "px " + MONO);
+      // 전류 화살표
+      const y1 = busY + 6, y2 = cy - r - 4, wd = (i) => 1.5 + Math.min(7, Math.abs(i) / 14);
+      if (S.ia > 0.5) CB.arrow(ctx, xa + 10, y2, xa + 10, y1, P.accent, wd(S.ia));
+      if (S.ib > 0.3) CB.arrow(ctx, xb + 10, y1, xb + 10, y2, P.ok, wd(S.ib));
+      else if (S.ib < -0.3) CB.arrow(ctx, xb + 10, y2, xb + 10, y1, P.bad, wd(S.ib));
+      if (S.il > 0.5) CB.arrow(ctx, xl + 10, y1, xl + 10, y2, P.accent2, wd(S.il));
+      text(ctx, S.ib > 0.3 ? "충전 " + S.ib.toFixed(1) + " A" : S.ib < -0.3 ? "방전 " + (-S.ib).toFixed(1) + " A" : "", xb + 22, (y1 + y2) / 2, S.ib > 0 ? P.ok : P.bad, f + "px " + MONO, "left");
+      text(ctx, "B+ " + S.V.toFixed(2) + " V", w / 2, busY - 14, S.V > 13.5 ? P.text : P.bad, "600 " + (f + 2) + "px " + MONO);
+      text(ctx, "GND", xl + 8, gndY, P.dim, (f - 1) + "px " + MONO, "left");
+    }, { aspect: 0.5, minHeight: 210, maxHeight: 330 });
+
+    cvA = CB.canvas($("cv-chg-a"), (ctx) => {
+      const P = CB.palette(), data = [];
+      for (let r = 0; r <= 6000; r += 100) data.push([r, imaxAt(r)]);
+      CB.chart(ctx, null, {
+        x: [0, 6000], y: [0, 160], xLabel: "엔진 회전수 (rpm)", yLabel: "전류 (A)",
+        series: [{ data, color: P.accent }],
+        hlines: [{ y: Math.min(158, S.need), color: P.accent2, label: "필요 전류 " + S.need.toFixed(0) + " A" }],
+        points: [{ x: S.rpm, y: S.ia, color: S.need > S.imax ? P.bad : P.ok, r: 5 }],
+      });
+    }, { aspect: 0.62, maxHeight: 250 });
+
+    cvC = CB.canvas($("cv-chg-c"), (ctx) => {
+      const P = CB.palette();
+      CB.chart(ctx, null, {
+        x: [0, 3], y: [4, 15], xLabel: "시동 후 시간 (s)", yLabel: "전압 (V)",
+        series: [{ data: S.crank, color: S.ok ? P.accent : P.bad }],
+        hlines: [{ y: 6, color: P.bad, label: "ECU 동작 한계 약 6 V" }],
+      });
+    }, { aspect: 0.62, maxHeight: 250 });
+  })();
+
+  /* ================================================================ 2. PWM과 H-브리지 */
+  (function pwm() {
+    const VS = 13.5, R = 4;
+    let cvW = null, cvH = null;
+    const all = () => { stats(); if (cvW) { cvW.redraw(); cvH.redraw(); } };
+    const fOf = (v) => 100 * Math.pow(10, (v / 100) * 2.301);
+    const gD = CB.range("pwm-d", (v) => v + " %", all);
+    const gF = CB.range("pwm-f", (v) => { const f = fOf(v); return f >= 1000 ? (f / 1000).toFixed(1) + " kHz" : Math.round(f) + " Hz"; }, all);
+    const gL = CB.range("pwm-l", (v) => v.toFixed(1) + " mH", all);
+    const gM = CB.seg("hb-mode", all);
+    function model() {
+      const D = gD() / 100, T = 1 / fOf(gF()), tau = gL() / 1000 / R, Iinf = VS / R;
+      const a = Math.exp((-D * T) / tau), b = Math.exp((-(1 - D) * T) / tau), den = 1 - a * b;
+      const Imax = den < 1e-9 ? D * Iinf : (Iinf * (1 - a)) / den, Imin = Imax * b;
+      const Pavg = (VS / T) * (Iinf * D * T + (Imin - Iinf) * tau * (1 - a));
+      return { D, T, tau, Iinf, Imax, Imin, Iavg: D * Iinf, Pavg };
+    }
+    function stats() {
+      const m = model(), mode = gM();
+      CB.stat("o-pwm-v", (m.D * VS).toFixed(2) + "<small>V</small>");
+      CB.stat("o-pwm-i", m.Iavg.toFixed(2) + "<small>A</small>");
+      CB.stat("o-pwm-rip", (m.Imax - m.Imin).toFixed(3) + "<small>A" + (m.Iavg > 0 ? " (" + (((m.Imax - m.Imin) / m.Iavg) * 100).toFixed(0) + " %)" : "") + "</small>");
+      CB.stat("o-pwm-tau", CB.si(m.tau, "s") + " / " + CB.si(m.T, "s"));
+      CB.stat("o-pwm-p", m.Pavg.toFixed(1) + "<small>W</small>");
+      CB.stat("o-hb-v", mode === "fwd" ? "+" + (m.D * VS).toFixed(1) + "<small>V</small>" : mode === "rev" ? "−" + (m.D * VS).toFixed(1) + "<small>V</small>" : mode === "brake" ? "0<small>V (단락)</small>" : "—<small>개방</small>");
+    }
+    stats();
+
+    cvW = CB.canvas($("cv-pwm"), (ctx, w, h) => {
+      const P = CB.palette(), m = model();
+      const vs = [], is = [];
+      for (let k = 0; k < 3; k++) {
+        vs.push([k, m.D > 0 ? VS : 0], [k + m.D, m.D > 0 ? VS : 0], [k + m.D, m.D < 1 ? 0 : VS], [k + 1, m.D < 1 ? 0 : VS]);
+        for (let j = 0; j <= 30; j++) { const t = (j / 30) * m.D * m.T; is.push([k + t / m.T, m.Iinf + (m.Imin - m.Iinf) * Math.exp(-t / m.tau)]); }
+        for (let j = 0; j <= 30; j++) { const t = (j / 30) * (1 - m.D) * m.T; is.push([k + m.D + t / m.T, m.Imax * Math.exp(-t / m.tau)]); }
+      }
+      const bx = 52, bw = w - bx - 14, avail = h - 14 - 46 - 30, h1 = avail * 0.38;
+      CB.chart(ctx, { x: bx, y: 14, w: bw, h: h1 }, { x: [0, 3], y: [0, 15], yLabel: "전압 (V)", yTicks: [0, 5, 10, 15], xTicks: [0, 1, 2, 3], series: [{ data: vs, color: P.accent2, fill: CB.color("accent-2-soft") }] });
+      CB.chart(ctx, { x: bx, y: 14 + h1 + 30, w: bw, h: avail - h1 }, {
+        x: [0, 3], y: [0, 3.6], xLabel: "시간 (PWM 주기 단위)", yLabel: "전류 (A)", xTicks: [0, 1, 2, 3],
+        series: [{ data: is, color: P.accent, width: 2.2 }],
+        hlines: [{ y: m.Iavg, color: P.dim, label: "평균 " + m.Iavg.toFixed(2) + " A" }],
+      });
+    }, { aspect: 0.52, minHeight: 280, maxHeight: 360 });
+
+    cvH = CB.canvas($("cv-hb"), (ctx, w, h) => {
+      const P = CB.palette(), mode = gM(), D = gD(), f = w < 420 ? 10.5 : 12.5;
+      const top = h * 0.14, bot = h * 0.88, mid = (top + bot) / 2, xl = w * 0.3, xr = w * 0.7, mr = Math.min(h * 0.13, 26);
+      ctx.strokeStyle = P.border; ctx.lineWidth = 1; line(ctx, 0, 0.5, w, 0.5);
+      ctx.strokeStyle = P.red; ctx.lineWidth = 3; line(ctx, xl - 30, top, xr + 30, top);
+      ctx.strokeStyle = P.axis; line(ctx, xl - 30, bot, xr + 30, bot);
+      text(ctx, "+13.5 V", w / 2, top - 10, P.dim, f + "px " + MONO);
+      text(ctx, "GND", w / 2, bot + 10, P.dim, f + "px " + MONO);
+      const st = { fwd: ["pwm", "off", "off", "on"], rev: ["off", "on", "pwm", "off"], brake: ["off", "on", "off", "on"], coast: ["off", "off", "off", "off"] }[mode];
+      const sw = (x, ya, yb, s, name, side) => {
+        const yc = (ya + yb) / 2, g = (yb - ya) * 0.22, on = s !== "off";
+        ctx.strokeStyle = on ? P.accent : P.faint; ctx.lineWidth = on ? 3 : 2;
+        line(ctx, x, ya, x, yc - g); line(ctx, x, yc + g, x, yb);
+        if (on) line(ctx, x, yc - g, x, yc + g); else line(ctx, x, yc + g, x + side * g * 1.1, yc - g * 0.8);
+        ctx.fillStyle = on ? P.accent : P.faint;
+        ctx.beginPath(); ctx.arc(x, yc - g, 3, 0, PI * 2); ctx.arc(x, yc + g, 3, 0, PI * 2); ctx.fill();
+        text(ctx, name + " " + (s === "pwm" ? "PWM " + D + "%" : s === "on" ? "ON" : "OFF"), x - side * 12, yc, on ? P.text : P.dim, (on ? "600 " : "") + f + "px " + FONT, side > 0 ? "right" : "left");
+      };
+      sw(xl, top, mid, st[0], "Q1", 1); sw(xl, mid, bot, st[1], "Q2", 1);
+      sw(xr, top, mid, st[2], "Q3", -1); sw(xr, mid, bot, st[3], "Q4", -1);
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 2; line(ctx, xl, mid, w / 2 - mr, mid); line(ctx, w / 2 + mr, mid, xr, mid);
+      ctx.fillStyle = P.surface; ctx.strokeStyle = P.text; ctx.beginPath(); ctx.arc(w / 2, mid, mr, 0, PI * 2); ctx.fill(); ctx.stroke();
+      text(ctx, "M", w / 2, mid, P.text, "700 " + (f + 4) + "px " + FONT);
+      const ay = mid - mr - 8;
+      if (mode === "fwd" && D > 0) CB.arrow(ctx, xl + 10, ay, xr - 10, ay, P.accent, 2.5);
+      if (mode === "rev" && D > 0) CB.arrow(ctx, xr - 10, ay, xl + 10, ay, P.accent, 2.5);
+      if (mode === "brake") { CB.arrow(ctx, xr - 10, bot - 9, xl + 10, bot - 9, P.warn, 2.5); text(ctx, "역기전력이 만든 순환 전류", w / 2, bot - 22, P.dim, f + "px " + FONT); }
+      if (mode === "coast") text(ctx, "전류 경로 없음: 관성으로 돈다", w / 2, ay - 2, P.dim, f + "px " + FONT);
+    }, { aspect: 0.4, minHeight: 190, maxHeight: 250 });
+  })();
+
+  /* ================================================================ 3. PID 공회전 제어 */
+  (function pid() {
+    const DEF = { kp: 0.04, ki: 0.08, kd: 0.003 };
+    const gKp = CB.range("pid-kp", (v) => v.toFixed(3));
+    const gKi = CB.range("pid-ki", (v) => v.toFixed(2));
+    const gKd = CB.range("pid-kd", (v) => v.toFixed(3));
+    const gTs = CB.range("pid-ts", (v) => v + " ms");
+    const gTg = CB.range("pid-tgt", (v) => v + " rpm");
+    let st, hist = [];
+    function reset() {
+      st = { t: 0, N: 800, x: 20, u: 20, I: 0, Np: 800, ac: false, stalled: false, buf: new Array(80).fill(20), bi: 0, ct: 0, ht: 0, dipT: -100, dip: 0, e: 0 };
+      hist = []; $("pid-ac").textContent = "에어컨 켜기";
+    }
+    reset();
+    $("pid-ac").addEventListener("click", () => { st.ac = !st.ac; st.dipT = st.t; st.dip = 0; $("pid-ac").textContent = st.ac ? "에어컨 끄기" : "에어컨 켜기"; });
+    $("pid-open").addEventListener("click", () => { gKp.set(0); gKi.set(0); gKd.set(0); st.I = 0; });
+    $("pid-def").addEventListener("click", () => { gKp.set(DEF.kp); gKi.set(DEF.ki); gKd.set(DEF.kd); });
+    $("pid-reset").addEventListener("click", reset);
+
+    function step(h) {
+      const ud = st.buf[st.bi]; st.buf[st.bi] = st.u; st.bi = (st.bi + 1) % st.buf.length;
+      st.x += ((ud - st.x) / 0.15) * h;
+      if (!st.stalled) {
+        st.N += ((40 * (st.x - 20) - (st.ac ? 250 : 0) - (st.N - 800)) / 0.5) * h;
+        if (st.N < 300) st.stalled = true;
+      } else st.N = Math.max(0, st.N - 1500 * h);
+      st.ct += h;
+      const Ts = gTs() / 1000;
+      if (st.ct >= Ts) {
+        st.ct -= Ts;
+        const Nm = st.N + 4 * CB.randn(), e = gTg() - Nm;
+        const Pt = gKp() * e, Dt = (-gKd() * (Nm - st.Np)) / Ts;
+        st.Np = Nm; st.e = e;
+        const raw = 20 + Pt + st.I + Dt;
+        if (!st.stalled && !((raw > 100 && e > 0) || (raw < 0 && e < 0))) st.I += gKi() * e * Ts;
+        if (gKi() === 0) st.I = 0;
+        st.u = st.stalled ? 20 : clamp(20 + Pt + st.I + Dt, 0, 100);
+      }
+      st.t += h;
+      if (st.t - st.dipT < 6) st.dip = Math.max(st.dip, Math.abs(st.N - gTg()));
+      st.ht += h;
+      if (st.ht >= 0.02) { st.ht = 0; hist.push([st.t, st.N, gTg(), st.u, st.ac]); if (hist.length > 620) hist.shift(); }
+    }
+
+    const cv = CB.canvas($("cv-pid"), (ctx, w, h) => {
+      const P = CB.palette(), t1 = st.t, t0 = t1 - 12;
+      const rel = (i) => hist.map((p) => [p[0] - t1, p[i]]);
+      const bands = [];
+      let s0 = null;
+      hist.forEach((p) => { if (p[4] && s0 == null) s0 = p[0]; if (!p[4] && s0 != null) { bands.push({ x0: Math.max(t0, s0) - t1, x1: p[0] - t1, color: CB.color("accent-soft") }); s0 = null; } });
+      if (s0 != null) bands.push({ x0: Math.max(t0, s0) - t1, x1: 0, color: CB.color("accent-soft") });
+      const bx = 52, bw = w - bx - 14, avail = h - 14 - 46 - 30, h1 = avail * 0.62;
+      CB.chart(ctx, { x: bx, y: 14, w: bw, h: h1 }, {
+        x: [-12, 0], y: [200, 1400], yLabel: "회전수 (rpm)", bands,
+        series: [{ data: rel(2), color: P.dim, dash: [5, 4], width: 1.5 }, { data: rel(1), color: P.accent, width: 2.2 }],
+        hlines: [{ y: 300, color: P.bad, label: "시동 꺼짐" }],
+      });
+      CB.chart(ctx, { x: bx, y: 14 + h1 + 30, w: bw, h: avail - h1 }, {
+        x: [-12, 0], y: [0, 100], xLabel: "시간 (s, 0 = 현재)", yLabel: "스로틀 (%)", yTicks: [0, 50, 100], bands,
+        series: [{ data: rel(3), color: P.accent2, width: 1.8 }],
+      });
+    }, { aspect: 0.6, minHeight: 300, maxHeight: 400 });
+
+    CB.loop($("cv-pid"), (dt) => {
+      const n = Math.max(1, Math.round(dt / 0.001));
+      for (let i = 0; i < n; i++) step(0.001);
+      cv.redraw();
+      CB.stat("o-pid-n", st.N.toFixed(0) + "<small>rpm</small>");
+      CB.stat("o-pid-e", (st.stalled ? gTg() : gTg() - st.N).toFixed(0) + "<small>rpm</small>");
+      CB.stat("o-pid-u", st.u.toFixed(1) + "<small>%</small>");
+      CB.stat("o-pid-i", st.I.toFixed(1) + "<small>%</small>");
+      CB.stat("o-pid-dip", st.dipT < 0 ? "—" : st.dip.toFixed(0) + "<small>rpm</small>");
+      CB.stat("o-pid-st", st.stalled ? "시동 꺼짐" : st.ac ? "에어컨 ON" : "무부하");
+    });
+  })();
+
+  /* ================================================================ 4. CAN 프레임 해부 */
+  (function frameSim() {
+    const F = {
+      sof: { n: "SOF", c: "dim", d: "프레임 시작<span class=\"en\">(Start Of Frame)</span>. 우성 1비트. 버스가 열성으로 쉬고 있다가 이 하강 에지가 나타나면 모든 노드가 비트 타이밍을 맞춘다." },
+      id: { n: "ID", c: "accent", d: "11비트 식별자. 메시지의 내용을 뜻하면서 동시에 우선순위다. 상위 비트부터 전송되고 값이 작을수록 중재에서 이긴다." },
+      rtr: { n: "RTR", c: "warn", d: "원격 전송 요청 비트. 데이터 프레임이면 우성(0), 데이터를 요청하는 원격 프레임이면 열성(1)이다." },
+      ide: { n: "IDE", c: "warn", d: "식별자 확장 비트. 11비트 표준 프레임이면 우성(0), 29비트 확장 프레임이면 열성(1)이다." },
+      r0: { n: "r0", c: "warn", d: "예약 비트. 고전 CAN에서는 우성(0)으로 보낸다. CAN FD는 이 자리를 FD 프레임 표시에 쓴다." },
+      dlc: { n: "DLC", c: "accent2", d: "데이터 길이 코드. 뒤따르는 데이터 바이트 수(0~8)를 4비트로 적는다." },
+      data: { n: "DATA", c: "ok", d: "데이터 필드. 바이트마다 상위 비트부터 보낸다. 어느 비트가 어떤 신호인지는 통신 데이터베이스(DBC)에 정의한다." },
+      crc: { n: "CRC", c: "bad", d: "15비트 순환 중복 검사. SOF부터 데이터까지의 비트열(스터프 비트 제외)을 다항식 0x4599로 나눈 나머지다." },
+      crcd: { n: "DEL", c: "blue", d: "CRC 구분 비트. 항상 열성(1)이다. 여기부터는 스터핑을 하지 않는다." },
+      ack: { n: "ACK", c: "blue", d: "확인 슬롯. 송신기는 열성을 내고, CRC가 맞은 수신 노드가 우성(0)으로 덮어쓴다. 아무도 덮어쓰지 않으면 송신기는 ACK 오류로 판단한다. 그림은 수신 노드가 응답한 상태다." },
+      ackd: { n: "DEL", c: "blue", d: "ACK 구분 비트. 항상 열성(1)이다." },
+      eof: { n: "EOF", c: "faint", d: "프레임 끝. 열성 7비트. 스터프 규칙상 정상 구간에서는 나올 수 없는 길이여서 프레임의 끝임을 알 수 있다." },
+      ifs: { n: "IFS", c: "faint", d: "프레임 간 간격. 열성 3비트가 지나야 다음 프레임의 SOF를 낼 수 있다." },
+    };
+    const DEF_INFO = "<b>프레임 읽기</b>칸을 가리키거나 누르면 그 필드의 설명이 여기에 나온다.";
+    let frame = [], cells = [], hover = -1, cvF = null, info = { id: 0, dlc: 0, bytes: [], crc: 0 };
+    const optF = { height: 220 };
+
+    function build() {
+      const id = parseHex($("fr-id").value, 0x7ff, 0), dlc = gDlc();
+      const hx = $("fr-data").value.replace(/[^0-9a-fA-F]/g, "");
+      const bytes = [];
+      for (let k = 0; k < dlc; k++) bytes.push(parseInt(hx.substr(k * 2, 2) || "0", 16) || 0);
+      const f = [];
+      const push = (b, field, idx) => f.push({ b, field, idx });
+      push(0, "sof");
+      for (let i = 10; i >= 0; i--) push((id >> i) & 1, "id");
+      push(0, "rtr"); push(0, "ide"); push(0, "r0");
+      for (let i = 3; i >= 0; i--) push((dlc >> i) & 1, "dlc");
+      bytes.forEach((v, k) => { for (let i = 7; i >= 0; i--) push((v >> i) & 1, "data", k); });
+      let crc = 0;
+      f.forEach((c) => { const nx = c.b ^ ((crc >> 14) & 1); crc = (crc << 1) & 0x7fff; if (nx) crc ^= 0x4599; });
+      for (let i = 14; i >= 0; i--) push((crc >> i) & 1, "crc");
+      const out = [];
+      let run = 0, last = -1, nStuff = 0;
+      f.forEach((c) => {
+        out.push(c);
+        if (c.b === last) run++; else { last = c.b; run = 1; }
+        if (run === 5) { last = 1 - c.b; run = 1; nStuff++; out.push({ b: last, field: c.field, stuff: true }); }
+      });
+      out.push({ b: 1, field: "crcd" }, { b: 0, field: "ack" }, { b: 1, field: "ackd" });
+      for (let i = 0; i < 7; i++) out.push({ b: 1, field: "eof" });
+      for (let i = 0; i < 3; i++) out.push({ b: 1, field: "ifs" });
+      frame = out; info = { id, dlc, bytes, crc };
+      CB.stat("o-fr-bits", out.length + "<small>비트</small>");
+      CB.stat("o-fr-stuff", nStuff + "<small>개</small>");
+      CB.stat("o-fr-crc", "0x" + hex(crc, 4));
+      CB.stat("o-fr-time", out.length * 2 + "<small>µs</small>");
+      CB.stat("o-fr-eff", ((dlc * 8 * 100) / out.length).toFixed(0) + "<small>%</small>");
+      showInfo();
+      if (cvF) cvF.redraw();
+    }
+    function showInfo() {
+      const c = frame[hover];
+      if (!c) { $("fr-info").innerHTML = DEF_INFO; return; }
+      if (c.stuff) { $("fr-info").innerHTML = "<b>스터프 비트</b>앞의 다섯 비트가 모두 " + (1 - c.b) + "이었으므로 송신기가 반대 값 " + c.b + "을 끼워 넣었다. 수신기는 이 비트를 버린다. 정보는 없고 에지를 만들기 위한 비트다."; return; }
+      const fd = F[c.field];
+      let val = "";
+      if (c.field === "id") val = " <code>0x" + hex(info.id, 3) + " = " + info.id.toString(2).padStart(11, "0") + "</code>";
+      else if (c.field === "dlc") val = " <code>" + info.dlc + " = " + info.dlc.toString(2).padStart(4, "0") + "</code>";
+      else if (c.field === "data") val = " <code>바이트 " + c.idx + " = 0x" + hex(info.bytes[c.idx], 2) + "</code>";
+      else if (c.field === "crc") val = " <code>0x" + hex(info.crc, 4) + "</code>";
+      $("fr-info").innerHTML = "<b>" + fd.n + "</b>" + fd.d + val;
+    }
+    const gDlc = CB.range("fr-dlc", (v) => v + " 바이트", build);
+    $("fr-id").addEventListener("input", build);
+    $("fr-data").addEventListener("input", build);
+    $("fr-rand").addEventListener("click", () => {
+      const rb = () => hex(Math.floor(Math.random() * 256), 2);
+      $("fr-id").value = hex(Math.floor(Math.random() * 0x800), 3);
+      $("fr-data").value = [0, 0, 0, 0, 0, 0, 0, 0].map(rb).join(" ");
+      gDlc.set(Math.floor(Math.random() * 9));
+    });
+    $("fr-stuff").addEventListener("click", () => { $("fr-id").value = "000"; $("fr-data").value = "00 00 00 00 00 00 00 00"; gDlc.set(8); });
+    build();
+
+    cvF = CB.canvas($("cv-fr"), (ctx, w, h) => {
+      const P = CB.palette();
+      const cw = w < 480 ? 11.5 : w < 760 ? 14 : 16, ch = 18, rowH = 64;
+      const per = Math.max(8, Math.floor((w - 16) / cw));
+      const need = Math.ceil(136 / per) * rowH + 10;
+      if (need !== optF.height) { optF.height = need; setTimeout(() => cvF && cvF.resize(), 0); }
+      const x0 = (w - per * cw) / 2, hf = frame[hover] ? frame[hover].field : null;
+      cells = [];
+      ctx.font = "10px " + MONO;
+      frame.forEach((c, i) => {
+        const r = Math.floor(i / per), k = i % per, x = x0 + k * cw, y = 6 + r * rowH + 14, col = P[F[c.field].c];
+        cells.push({ x, y, i });
+        ctx.globalAlpha = c.field === hf ? 0.6 : 0.26; ctx.fillStyle = col; ctx.fillRect(x, y, cw, ch); ctx.globalAlpha = 1;
+        ctx.strokeStyle = P.border; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, cw - 1, ch - 1);
+        if (c.stuff) {
+          ctx.save(); ctx.beginPath(); ctx.rect(x, y, cw, ch); ctx.clip();
+          ctx.strokeStyle = P.text; ctx.globalAlpha = 0.45;
+          for (let d = -ch; d < cw; d += 4) line(ctx, x + d, y + ch, x + d + ch, y);
+          ctx.restore();
+          ctx.strokeStyle = P.text; ctx.lineWidth = 1.5; ctx.strokeRect(x + 1, y + 1, cw - 2, ch - 2);
+        }
+        if (i === hover) { ctx.strokeStyle = P.accent; ctx.lineWidth = 2; ctx.strokeRect(x + 1, y + 1, cw - 2, ch - 2); }
+        text(ctx, String(c.b), x + cw / 2, y + ch / 2 + 0.5, P.text, (c.stuff ? "700 " : "") + "10px " + MONO);
+        const prev = frame[i - 1];
+        if (k === 0 || !prev || prev.field !== c.field) {
+          let n = 1;
+          while (k + n < per && frame[i + n] && frame[i + n].field === c.field) n++;
+          ctx.font = "600 10px " + FONT;
+          if (ctx.measureText(F[c.field].n).width <= n * cw - 2) text(ctx, F[c.field].n, x + 1, y - 3, col, "600 10px " + FONT, "left", "bottom");
+        }
+      });
+      // 차동 파형
+      const amp = 9;
+      [[P.accent, -1], [P.accent2, 1]].forEach(([col, sgn]) => {
+        ctx.strokeStyle = col; ctx.lineWidth = 1.8; ctx.lineJoin = "round";
+        for (let r = 0; r * per < frame.length; r++) {
+          const ym = 6 + r * rowH + 14 + ch + 15;
+          ctx.beginPath();
+          for (let k = 0; k < per && r * per + k < frame.length; k++) {
+            const b = frame[r * per + k].b, y = ym + sgn * (b === 0 ? amp : 1.2), x = x0 + k * cw;
+            if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            ctx.lineTo(x + cw, y);
+          }
+          ctx.stroke();
+        }
+      });
+    }, optF);
+
+    const pick = (e) => {
+      const r = $("cv-fr").getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+      const cw = cells.length > 1 ? cells[1].x - cells[0].x : 12;
+      const c = cells.find((q) => px >= q.x && px < q.x + cw && py >= q.y - 14 && py < q.y + 48);
+      const n = c ? c.i : -1;
+      if (n !== hover) { hover = n; showInfo(); cvF.redraw(); }
+    };
+    $("cv-fr").addEventListener("pointermove", pick);
+    $("cv-fr").addEventListener("pointerdown", pick);
+    $("cv-fr").addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse" && hover !== -1) { hover = -1; showInfo(); cvF.redraw(); } });
+  })();
+
+  /* ================================================================ 5. 버스 중재 */
+  (function arbitration() {
+    const NAMES = ["A", "B", "C"], INP = ["arb-a", "arb-b", "arb-c"], NB = 13;
+    let stp = 0, cv = null, loop = null, acc = 0;
+    const ids = () => INP.map((k) => parseHex($(k).value, 0x7ff, 0));
+    const bitsOf = (id) => { const b = [0]; for (let i = 10; i >= 0; i--) b.push((id >> i) & 1); b.push(0); return b; };
+    function state() {
+      const I = ids(), bits = I.map(bitsOf), part = [true, true, $("arb-con").checked];
+      const lostAt = [null, null, null], bus = [];
+      let active = [0, 1, 2].filter((n) => part[n]);
+      for (let c = 0; c < stp; c++) {
+        const v = active.reduce((a, n) => a & bits[n][c], 1);
+        bus.push(v);
+        active = active.filter((n) => { if (bits[n][c] === 1 && v === 0) { lostAt[n] = c; return false; } return true; });
+      }
+      return { I, bits, part, lostAt, bus, active };
+    }
+    const colName = (c) => (c === 0 ? "SOF" : c === 12 ? "RTR" : "ID 비트 " + (11 - c));
+    function update() {
+      const s = state(), c = stp - 1;
+      let msg;
+      if (stp === 0) msg = "<b>대기</b>버스가 비어 있다(열성). " + s.active.length + "개 노드가 같은 순간에 송신을 시작하려 한다.";
+      else {
+        const lost = [0, 1, 2].filter((n) => s.lostAt[n] === c);
+        if (c === 0) msg = "<b>SOF</b>모두 우성(0)을 낸다. 아직 차이가 없다.";
+        else if (lost.length) msg = "<b>" + colName(c) + "</b>노드 " + lost.map((n) => NAMES[n]).join(", ") + "가 열성(1)을 냈지만 버스에서는 우성(0)이 읽힌다. 더 우선순위가 높은 프레임이 있다는 뜻이므로 즉시 송신을 멈추고 수신으로 돌아선다.";
+        else msg = "<b>" + colName(c) + "</b>송신 중인 노드가 모두 " + s.bus[c] + "을 냈다. 자기가 낸 값과 버스 값이 같으므로 아무도 탈락하지 않는다.";
+        if (stp === NB) msg += s.active.length === 1 ? " 중재 종료: 노드 " + NAMES[s.active[0]] + "(0x" + hex(s.I[s.active[0]], 3) + ")가 버스를 얻어 나머지 필드를 계속 보낸다. 탈락한 노드는 이 프레임이 끝난 뒤 자동으로 다시 시도한다." : " 중재 구간이 끝났는데도 송신 노드가 둘 이상이다. 같은 ID를 쓰면 데이터 구간에서 비트 오류가 난다.";
+      }
+      $("arb-msg").innerHTML = msg;
+      CB.stat("o-arb-bit", stp + " / " + NB + "<small>비트</small>");
+      CB.stat("o-arb-left", s.active.map((n) => NAMES[n]).join(" ") || "—");
+      CB.stat("o-arb-win", s.active.length === 1 ? NAMES[s.active[0]] + "<small>0x" + hex(s.I[s.active[0]], 3) + "</small>" : "—");
+      if (cv) cv.redraw();
+    }
+    const stopAuto = () => { if (loop) loop.stop(); $("arb-auto").textContent = "자동 재생"; };
+    const restart = () => { stp = 0; stopAuto(); update(); };
+    INP.forEach((k) => $(k).addEventListener("input", restart));
+    $("arb-con").addEventListener("change", restart);
+    $("arb-step").addEventListener("click", () => { stopAuto(); stp = stp >= NB ? 0 : stp + 1; update(); });
+    $("arb-reset").addEventListener("click", restart);
+    $("arb-auto").addEventListener("click", () => {
+      if (loop.running) { stopAuto(); return; }
+      if (stp >= NB) stp = 0;
+      acc = 0; update(); loop.start(); $("arb-auto").textContent = "정지";
+    });
+
+    cv = CB.canvas($("cv-arb"), (ctx, w, h) => {
+      const P = CB.palette(), s = state(), small = w < 440;
+      const lw = small ? 30 : 92, cw = (w - lw - 10) / NB, top = 26, waveH = 40;
+      const rowH = Math.min(40, (h - top - waveH - 12) / 4), f = small ? 10 : 12;
+      for (let c = 0; c < NB; c++) text(ctx, c === 0 ? (small ? "S" : "SOF") : c === 12 ? (small ? "R" : "RTR") : String(11 - c), lw + (c + 0.5) * cw, top - 10, P.dim, f + "px " + MONO);
+      const cell = (c, r, b, o) => {
+        const x = lw + c * cw + 1.5, y = top + r * rowH + 2, cwd = cw - 3, chh = rowH - 5;
+        rrect(ctx, x, y, cwd, chh, 4);
+        ctx.globalAlpha = o.a == null ? 1 : o.a; ctx.fillStyle = o.fill || P.surface; ctx.fill(); ctx.globalAlpha = 1;
+        ctx.strokeStyle = o.stroke || P.border; ctx.lineWidth = o.lw || 1; ctx.stroke();
+        text(ctx, b, x + cwd / 2, y + chh / 2 + 0.5, o.color || P.text, (o.bold ? "700 " : "") + (f + 1) + "px " + MONO);
+      };
+      for (let n = 0; n < 3; n++) {
+        const yc = top + n * rowH + rowH / 2, la = s.lostAt[n];
+        text(ctx, small ? NAMES[n] : NAMES[n] + "  0x" + hex(s.I[n], 3), 6, yc, !s.part[n] || la != null ? P.faint : P.text, "600 " + (f + 1) + "px " + MONO, "left");
+        if (!s.part[n]) { text(ctx, "송신할 것 없음", lw + (NB * cw) / 2, yc, P.faint, f + "px " + FONT); continue; }
+        for (let c = 0; c < NB; c++) {
+          const b = s.bits[n][c];
+          if (la != null && c > la) cell(c, n, "·", { color: P.faint, a: 0.4 });
+          else if (c >= stp) cell(c, n, String(b), { color: P.faint, a: 0.4 });
+          else if (la === c) cell(c, n, "1", { fill: P.bad, a: 0.3, stroke: P.bad, lw: 2, bold: true });
+          else cell(c, n, String(b), b === 0 ? { fill: P.accent2, a: 0.3 } : {});
+        }
+      }
+      const yb = top + 3 * rowH + rowH / 2;
+      text(ctx, small ? "버스" : "버스 (AND)", 6, yb, P.accent, "700 " + f + "px " + FONT, "left");
+      for (let c = 0; c < NB; c++) {
+        if (c < stp) cell(c, 3, String(s.bus[c]), s.bus[c] === 0 ? { fill: P.accent, a: 0.35, bold: true } : { bold: true });
+        else cell(c, 3, "", { a: 0.25 });
+      }
+      if (stp > 0) { ctx.strokeStyle = P.accent; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]); rrect(ctx, lw + (stp - 1) * cw, top - 1, cw, 4 * rowH + 1, 5); ctx.stroke(); ctx.setLineDash([]); }
+      const ym = top + 4 * rowH + waveH / 2 + 4, amp = Math.min(12, waveH / 2 - 5);
+      text(ctx, small ? "H/L" : "CAN_H / CAN_L", 6, ym, P.dim, (f - 1) + "px " + MONO, "left");
+      [[P.accent, -1], [P.accent2, 1]].forEach(([col, sg]) => {
+        ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.beginPath();
+        ctx.moveTo(lw, ym + sg * 1.2);
+        for (let c = 0; c < stp; c++) { const y = ym + sg * (s.bus[c] === 0 ? amp : 1.2); ctx.lineTo(lw + c * cw, y); ctx.lineTo(lw + (c + 1) * cw, y); }
+        ctx.stroke();
+      });
+    }, { aspect: 0.5, minHeight: 240, maxHeight: 310 });
+
+    loop = CB.loop($("cv-arb"), (dt) => {
+      acc += dt;
+      if (acc < 0.65) return;
+      acc = 0;
+      if (stp < NB) { stp++; update(); }
+      if (stp >= NB) stopAuto();
+    });
+    loop.stop();
+    update();
+  })();
+
+  /* ================================================================ 6. 버스 부하와 지연 */
+  (function busLoad() {
+    let cv = null, M = null;
+    const all = () => { calc(); if (cv) cv.redraw(); };
+    const gRate = CB.seg("ld-rate", all);
+    const gN10 = CB.range("ld-n10", (v) => v + "개", all);
+    const gN100 = CB.range("ld-n100", (v) => v + "개", all);
+    const gLen = CB.range("ld-len", (v) => v + " 바이트", all);
+    const ms = (v) => (isFinite(v) ? (v < 10 ? v.toFixed(2) : v.toFixed(1)) + "<small>ms</small>" : "∞<small>보낼 수 없음</small>");
+
+    function calc() {
+      const rate = Number(gRate()) * 1000, s = gLen(), n10 = gN10(), n100 = gN100(), n = n10 + n100;
+      const tau = 1000 / rate, bits = 47 + 8 * s + Math.floor((34 + 8 * s - 1) / 4), C = bits * tau;
+      const T = [];
+      for (let i = 0; i < n; i++) T.push(i < n10 ? 10 : 100);
+      const U = T.reduce((a, t) => a + C / t, 0);
+      const R = T.map((_, m) => {
+        const B = m < n - 1 ? C : 0;
+        let wq = B;
+        for (let it = 0; it < 500; it++) {
+          let nx = B;
+          for (let k = 0; k < m; k++) nx += Math.ceil((wq + tau) / T[k]) * C;
+          if (nx > 1000) return Infinity;
+          if (Math.abs(nx - wq) < 1e-9) break;
+          wq = nx;
+        }
+        return wq + C;
+      });
+      // 임계 순간부터 20 ms 타임라인
+      const next = T.map(() => 0), tl = [];
+      let t = 0;
+      for (let g = 0; g < 3000 && t < 20 && n > 0; g++) {
+        let m = -1, soon = Infinity;
+        for (let i = 0; i < n; i++) { if (next[i] <= t + 1e-9) { m = i; break; } soon = Math.min(soon, next[i]); }
+        if (m < 0) { t = soon; continue; }
+        tl.push([t, t + C, m]); t += C; next[m] += T[m];
+      }
+      const miss = R.filter((r, i) => r > T[i]).length;
+      M = { n, n10, n100, C, U, R, T, tl, miss };
+      CB.stat("o-ld-u", (U * 100).toFixed(1) + "<small>%</small>");
+      CB.stat("o-ld-c", C.toFixed(3) + "<small>ms (" + bits + "비트)</small>");
+      CB.stat("o-ld-r1", n ? ms(R[0]) : "—");
+      CB.stat("o-ld-r10", n10 ? ms(R[n10 - 1]) : "—");
+      CB.stat("o-ld-rl", n ? ms(R[n - 1]) : "—");
+      CB.stat("o-ld-ok", !n ? "—" : miss ? "<span style=\"color:var(--bad)\">마감 초과 " + miss + "개</span>" : "<span style=\"color:var(--ok)\">모든 마감 충족</span>");
+    }
+    calc();
+
+    cv = CB.canvas($("cv-ld"), (ctx, w, h) => {
+      const P = CB.palette(), bx = 52, bw = w - bx - 14, rh = 24;
+      [0, 1].forEach((r) => {
+        const y = 22 + r * (rh + 22);
+        text(ctx, r * 10 + "~" + (r * 10 + 10) + " ms", bx, y - 5, P.dim, "11px " + MONO, "left", "bottom");
+        ctx.fillStyle = P.surface; ctx.fillRect(bx, y, bw, rh);
+        M.tl.forEach(([a, b, m]) => {
+          const a2 = Math.max(a, r * 10), b2 = Math.min(b, r * 10 + 10);
+          if (b2 <= a2) return;
+          const x = bx + ((a2 - r * 10) / 10) * bw, ww = ((b2 - a2) / 10) * bw;
+          ctx.fillStyle = m < M.n10 ? P.accent : P.accent2;
+          ctx.fillRect(x, y, Math.max(1, ww - 0.7), rh);
+          if (ww > 15) text(ctx, String(m + 1), x + ww / 2, y + rh / 2 + 0.5, "#fff", "600 9px " + MONO);
+        });
+        ctx.strokeStyle = P.border; ctx.lineWidth = 1; ctx.strokeRect(bx + 0.5, y + 0.5, bw - 1, rh - 1);
+      });
+      text(ctx, "버스", 8, 22 + rh / 2, P.dim, "12px " + FONT, "left");
+      const cy = 22 + 2 * (rh + 22) + 2;
+      if (!M.n) { text(ctx, "메시지가 없다", w / 2, (cy + h) / 2, P.dim, "13px " + FONT); return; }
+      const pts = M.R.map((r, i) => [i + 1, r]);
+      CB.chart(ctx, { x: bx, y: cy, w: bw, h: h - cy - 46 }, {
+        x: [1, Math.max(2, M.n)], y: [0.1, 1000], logY: true, xLabel: "우선순위 순위 (1 = 최우선)", yLabel: "최악 응답 (ms)",
+        series: [{ data: pts.slice(0, M.n10), color: P.accent, width: 2.4 }, { data: pts.slice(Math.max(0, M.n10 - 1)), color: P.accent2, width: 2.4 }],
+        hlines: [{ y: 10, color: P.accent, label: "마감 10 ms" }, { y: 100, color: P.accent2, label: "마감 100 ms" }],
+        points: M.n < 3 ? pts.map(([x, y], i) => ({ x, y: isFinite(y) ? y : 1000, color: i < M.n10 ? P.accent : P.accent2 })) : [],
+      });
+    }, { aspect: 0.72, minHeight: 320, maxHeight: 430 });
+  })();
+
+  /* ================================================================ 7. E/E 아키텍처 */
+  (function arch() {
+    /*ARCH-MODEL-BEGIN*/
+    // 말단 장치 [x, y, 기능(0 PT,1 섀시,2 차체,3 인포,4 ADAS), 가닥 수, 분산 구조에서의 담당 ECU]. 단위 m, +x가 앞.
+    const EP = [
+      [4.1, 0.6, 0, 3, "ENG"], [4.1, 1.2, 0, 3, "ENG"], [4.3, 0.9, 0, 3, "ENG"], [3.9, 0.9, 0, 3, "TCU"], [3.7, 1.3, 0, 3, "TCU"], [2.6, 0.9, 0, 4, "ENG"], [0.9, 0.9, 0, 3, "ENG"],
+      [3.75, 0.12, 1, 2, "ESC"], [3.75, 1.68, 1, 2, "ESC"], [0.95, 0.12, 1, 2, "ESC"], [0.95, 1.68, 1, 2, "ESC"], [4.0, 0.4, 1, 4, "ESC"], [3.6, 0.9, 1, 4, "EPS"], [0.95, 0.35, 1, 2, "ESC"], [0.95, 1.45, 1, 2, "ESC"],
+      [4.4, 0.75, 1, 2, "ACU"], [2.3, 0.08, 1, 2, "ACU"], [2.3, 1.72, 1, 2, "ACU"],
+      [4.45, 0.25, 2, 5, "BCM"], [4.45, 1.55, 2, 5, "BCM"], [0.1, 0.25, 2, 4, "BCM"], [0.1, 1.55, 2, 4, "BCM"], [3.4, 0.9, 2, 3, "BCM"], [0.15, 0.9, 2, 3, "BCM"],
+      [2.9, 0.1, 2, 8, "DFL"], [2.9, 1.7, 2, 8, "DFR"], [1.8, 0.1, 2, 6, "DRL"], [1.8, 1.7, 2, 6, "DRR"], [2.6, 0.5, 2, 6, "STL"], [2.6, 1.3, 2, 6, "STR"], [3.3, 1.15, 2, 6, "HVAC"],
+      [3.15, 0.9, 3, 4, "HU"], [3.2, 0.5, 3, 3, "CLU"], [3.0, 0.22, 3, 2, "AMP"], [3.0, 1.58, 3, 2, "AMP"], [1.6, 0.22, 3, 2, "AMP"], [1.6, 1.58, 3, 2, "AMP"], [0.6, 0.9, 3, 2, "HU"],
+      [3.25, 0.75, 4, 2, "FCAM"], [4.52, 1.05, 4, 4, "FRAD"], [4.4, 0.15, 4, 4, "CR1"], [4.4, 1.65, 4, 4, "CR2"], [0.15, 0.15, 4, 4, "CR3"], [0.15, 1.65, 4, 4, "CR4"],
+      [4.55, 0.9, 4, 2, "AVM"], [0.04, 1.05, 4, 2, "AVM"], [3.15, 0.02, 4, 2, "AVM"], [3.15, 1.78, 4, 2, "AVM"],
+      [4.5, 0.45, 4, 3, "PAS"], [4.5, 1.35, 4, 3, "PAS"], [0.06, 0.45, 4, 3, "PAS"], [0.06, 1.35, 4, 3, "PAS"],
+    ];
+    const PB = [3.55, 0.22], ROUTE = 1.3;
+    const DIST = { ENG: [3.9, 0.72], TCU: [3.75, 1.1], ESC: [4.0, 0.3], EPS: [3.6, 1.0], ACU: [2.4, 0.9], BCM: [3.25, 0.32], DFL: [2.9, 0.16], DFR: [2.9, 1.64], DRL: [1.8, 0.16], DRR: [1.8, 1.64], STL: [2.6, 0.56], STR: [2.6, 1.24], HVAC: [3.3, 1.25], HU: [3.1, 0.98], CLU: [3.2, 0.56], AMP: [0.5, 1.4], FCAM: [3.25, 0.75], FRAD: [4.52, 1.05], CR1: [4.4, 0.15], CR2: [4.4, 1.65], CR3: [0.15, 0.15], CR4: [0.15, 1.65], AVM: [0.7, 1.0], PAS: [0.5, 0.5], GW: [3.0, 0.62] };
+    const DOM = [[3.9, 0.8, "PT"], [3.7, 0.5, "CH"], [3.2, 0.35, "BODY"], [3.1, 1.0, "INFO"], [2.9, 1.3, "ADAS"]];
+    const DGW = [3.0, 0.65];
+    const ZONE = [[3.6, 0.3, "Z1"], [3.6, 1.5, "Z2"], [0.9, 0.3, "Z3"], [0.9, 1.5, "Z4"]];
+    const HPC = [2.9, 0.9];
+    const TRUNK = [0.4, 4.2, 0.9];
+    const man = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
+    const nearest = (p, list) => list.reduce((best, q) => (man(p, q) < man(p, best) ? q : best), list[0]);
+    // 반환: { io:[[from,to,n]], pw:[[from,to]], net:[[from,to]], ecus:[[x,y,label]], len }
+    function archModel(mode) {
+      const io = [], pw = [], net = [], ecus = [];
+      if (mode === "dist") {
+        Object.keys(DIST).forEach((k) => {
+          const e = DIST[k];
+          ecus.push([e[0], e[1], ""]); pw.push([e, PB]);
+          net.push([e, [clampX(e[0]), TRUNK[2]]]);
+        });
+        net.push([[TRUNK[0], TRUNK[2]], [TRUNK[1], TRUNK[2]]]);
+        EP.forEach((p) => io.push([p, DIST[p[4]], p[3]]));
+      } else if (mode === "domain") {
+        DOM.forEach((d) => { ecus.push(d); pw.push([d, PB]); net.push([d, DGW]); });
+        ecus.push([DGW[0], DGW[1], "GW"]); pw.push([DGW, PB]);
+        EP.forEach((p) => io.push([p, DOM[p[2]], p[3]]));
+      } else {
+        ZONE.forEach((z) => { ecus.push(z); pw.push([z, PB]); net.push([z, HPC]); });
+        ecus.push([HPC[0], HPC[1], "HPC"]); pw.push([HPC, PB]);
+        EP.forEach((p) => io.push([p, nearest(p, ZONE), p[3]]));
+      }
+      let len = 0;
+      io.forEach(([a, b, n]) => (len += n * man(a, b) * ROUTE));
+      pw.forEach(([a, b]) => (len += 2 * man(a, b) * ROUTE));
+      net.forEach(([a, b]) => (len += 2 * man(a, b) * ROUTE));
+      return { io, pw, net, ecus, len };
+    }
+    function clampX(x) { return Math.min(TRUNK[1], Math.max(TRUNK[0], x)); }
+    /*ARCH-MODEL-END*/
+
+    const MODES = ["dist", "domain", "zone"], LABEL = { dist: "분산", domain: "도메인", zone: "존" };
+    const REAL = { dist: "70~100<small>개 이상</small>", domain: "30~50<small>개 수준</small>", zone: "<small>중앙 1~3 + 존 3~6 + 스마트 말단</small>" };
+    const A = {};
+    MODES.forEach((m) => (A[m] = archModel(m)));
+    let cv = null;
+    const upd = () => {
+      const m = gMode(), a = A[m], rel = a.len / A.dist.len;
+      CB.stat("o-ar-ecu", a.ecus.length + "<small>개</small>");
+      CB.stat("o-ar-len", a.len.toFixed(0) + "<small>m</small>");
+      CB.stat("o-ar-rel", (rel * 100).toFixed(0) + "<small>%</small>");
+      CB.stat("o-ar-real", "약 " + (3 * rel).toFixed(1) + "<small>km</small>");
+      CB.stat("o-ar-kg", "약 " + (45 * rel).toFixed(0) + "<small>kg</small>");
+      CB.stat("o-ar-net", REAL[m]);
+      if (cv) cv.redraw();
+    };
+    const gMode = CB.seg("ar-mode", upd);
+    $("ar-io").addEventListener("change", upd);
+    $("ar-pw").addEventListener("change", upd);
+    upd();
+
+    cv = CB.canvas($("cv-ar"), (ctx, w, h) => {
+      const P = CB.palette(), m = gMode(), a = A[m], barH = 66, hc = h - barH;
+      const s = Math.min((w - 24) / 4.7, (hc - 20) / 1.95), ox = (w - 4.6 * s) / 2, oy = 10 + (hc - 10 - 1.8 * s) / 2;
+      const X = (x) => ox + x * s, Y = (y) => oy + y * s;
+      // 차체
+      ctx.fillStyle = "#1c2028";
+      [[0.95, -0.04], [3.75, -0.04], [0.95, 1.66], [3.75, 1.66]].forEach(([x, y]) => { rrect(ctx, X(x - 0.32), Y(y), 0.64 * s, 0.18 * s, 3); ctx.fill(); });
+      ctx.fillStyle = P.surface; ctx.strokeStyle = P.border; ctx.lineWidth = 1.5;
+      rrect(ctx, X(0), Y(0), 4.6 * s, 1.8 * s, [0.25 * s, 0.45 * s, 0.45 * s, 0.25 * s]); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = P.grid; ctx.lineWidth = 1;
+      rrect(ctx, X(1.1), Y(0.2), 2.2 * s, 1.4 * s, 0.2 * s); ctx.stroke();
+      text(ctx, "앞 →", X(4.6) - 4, Y(1.8) + 9, P.faint, "11px " + FONT, "right");
+      const route = (p, q) => { ctx.beginPath(); ctx.moveTo(X(p[0]), Y(p[1])); ctx.lineTo(X(q[0]), Y(p[1])); ctx.lineTo(X(q[0]), Y(q[1])); ctx.stroke(); };
+      ctx.lineJoin = "round";
+      if ($("ar-io").checked) { ctx.strokeStyle = P.faint; ctx.globalAlpha = 0.75; a.io.forEach(([p, q, n]) => { ctx.lineWidth = 0.5 + n * 0.18; route(p, q); }); ctx.globalAlpha = 1; }
+      if ($("ar-pw").checked) {
+        ctx.strokeStyle = P.red; ctx.lineWidth = 1.3; ctx.globalAlpha = 0.7; a.pw.forEach(([p, q]) => route(p, q)); ctx.globalAlpha = 1;
+        ctx.strokeStyle = P.accent2; ctx.lineWidth = m === "dist" ? 1.6 : 2.6; a.net.forEach(([p, q]) => route(p, q));
+        ctx.fillStyle = P.red; rrect(ctx, X(PB[0]) - 5, Y(PB[1]) - 5, 10, 10, 2); ctx.fill();
+      }
+      EP.forEach((p) => { ctx.fillStyle = P.series[p[2]]; ctx.beginPath(); ctx.arc(X(p[0]), Y(p[1]), Math.max(2.4, s * 0.028), 0, PI * 2); ctx.fill(); });
+      const big = m !== "dist", sz = big ? Math.max(15, s * 0.2) : Math.max(7, s * 0.085);
+      a.ecus.forEach((e) => {
+        ctx.fillStyle = P.bg; ctx.strokeStyle = P.text; ctx.lineWidth = big ? 2 : 1.4;
+        rrect(ctx, X(e[0]) - sz / 2, Y(e[1]) - sz / 2, sz, sz, 3); ctx.fill(); ctx.stroke();
+        if (big && e[2]) text(ctx, e[2], X(e[0]), Y(e[1]) - sz / 2 - 2, P.text, "700 " + (w < 420 ? 9 : 11) + "px " + MONO, "center", "bottom");
+      });
+      // 길이 비교 막대
+      const maxL = Math.max(...MODES.map((k) => A[k].len)), bx = 60, bw = w - bx - 70;
+      MODES.forEach((k, i) => {
+        const y = hc + 6 + i * 19;
+        text(ctx, LABEL[k], bx - 8, y + 7, k === m ? P.text : P.dim, (k === m ? "700 " : "") + "12px " + FONT, "right");
+        ctx.fillStyle = k === m ? P.accent : P.faint; ctx.globalAlpha = k === m ? 1 : 0.5;
+        rrect(ctx, bx, y, (A[k].len / maxL) * bw, 14, 3); ctx.fill(); ctx.globalAlpha = 1;
+        text(ctx, A[k].len.toFixed(0) + " m", bx + (A[k].len / maxL) * bw + 6, y + 7, k === m ? P.text : P.dim, "11px " + MONO, "left");
+      });
+    }, { aspect: 0.62, minHeight: 280, maxHeight: 460 });
+  })();
+})();
+</script>
+</body>
+</html>

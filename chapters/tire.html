@@ -1,0 +1,1152 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>타이어와 접지 · CarBook</title>
+<meta name="description" content="타이어 구조와 규격, 공기압과 접지면, 슬립률과 슬립각, 브러시 모델과 매직 포뮬러, 하중 민감도, 마찰원, 수막 현상을 시뮬레이터로 배운다.">
+<link rel="canonical" href="https://carbook.euiyun.com/chapters/tire.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="CarBook">
+<meta property="og:title" content="타이어와 접지 · CarBook">
+<meta property="og:description" content="타이어 구조와 규격, 공기압과 접지면, 슬립률과 슬립각, 브러시 모델과 매직 포뮬러, 하중 민감도, 마찰원, 수막 현상을 시뮬레이터로 배운다.">
+<meta property="og:url" content="https://carbook.euiyun.com/chapters/tire.html">
+<meta property="og:image" content="https://carbook.euiyun.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TechArticle","headline":"타이어와 접지","name":"타이어와 접지 · CarBook","url":"https://carbook.euiyun.com/chapters/tire.html","mainEntityOfPage":"https://carbook.euiyun.com/chapters/tire.html","inLanguage":"ko","isAccessibleForFree":true,"learningResourceType":"interactive textbook chapter","position":7,"image":"https://carbook.euiyun.com/og.png","dateModified":"2026-10-02","isPartOf":{"@type":"Book","@id":"https://carbook.euiyun.com/#book","name":"CarBook — 인터랙티브 자동차 교과서","url":"https://carbook.euiyun.com/"},"publisher":{"@type":"Organization","name":"CarBook","url":"https://carbook.euiyun.com/"},"description":"타이어 구조와 규격, 공기압과 접지면, 슬립률과 슬립각, 브러시 모델과 매직 포뮬러, 하중 민감도, 마찰원, 수막 현상을 시뮬레이터로 배운다."},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"CarBook","item":"https://carbook.euiyun.com/"},{"@type":"ListItem","position":2,"name":"07 타이어와 접지","item":"https://carbook.euiyun.com/chapters/tire.html"}]}]}</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="../css/style.css">
+<script src="../js/common.js"></script>
+<style>
+  .sim-view.duo { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .sim-view.duo > div { min-width: 0; position: relative; }
+  @media (min-width: 700px) {
+    .sim-view.duo { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .sim-view.duo > div + div { border-left: 1px solid var(--border); }
+  }
+  .sim-view canvas.grab { cursor: grab; touch-action: none; }
+  .sim-view canvas.grab:active { cursor: grabbing; }
+  .fig-lg svg .t, .fig-lg svg .t-acc { font-size: 16px; }
+  .fig-lg svg .t-dim { font-size: 14px; }
+  .fig-lg svg .t-mono { font-size: 13px; }
+  .spec-big { font-family: var(--mono); font-size: 44px; font-weight: 600; fill: var(--text); }
+</style>
+</head>
+<body data-chapter="tire">
+<main class="chapter">
+  <header class="chapter-hero">
+    <div class="eyebrow">Chapter 07</div>
+    <h1>타이어와 접지</h1>
+    <p class="lead">엔진이 아무리 강하고 브레이크가 아무리 좋아도, 차가 실제로 낼 수 있는 가속·제동·선회는 타이어와 노면이 맞닿은 엽서 네 장 크기의 면에서 정해진다. 이 장에서는 타이어의 구조와 규격에서 출발해, 고무가 노면을 붙잡는 원리, 슬립률과 슬립각이 만드는 힘, 그 힘의 한계를 그리는 마찰원, 그리고 물 위에 떠 버리는 수막 현상까지 살펴본다.</p>
+    <ul class="objectives">
+      <li>타이어의 구조를 설명하고 205/55R16 91V 같은 규격에서 외경과 회전수를 계산한다.</li>
+      <li>공기압·하중과 접지면의 관계, 구름 저항이 생기는 이유를 이해한다.</li>
+      <li>슬립률과 슬립각의 정의를 알고, 힘 곡선의 피크와 미끄럼 영역을 읽는다.</li>
+      <li>브러시 모델로 점착 영역과 미끄럼 영역, 셀프 얼라이닝 토크를 설명한다.</li>
+      <li>하중 민감도와 마찰원으로 하중 이동과 조합 슬립이 그립을 줄이는 과정을 계산한다.</li>
+      <li>수막 현상의 발생 속도를 추정하고 트레드 깊이·공기압 관리의 의미를 안다.</li>
+    </ul>
+  </header>
+
+  <!-- =============================================================== 1 -->
+  <section id="structure">
+    <h2>엽서 네 장: 타이어의 구조와 규격</h2>
+    <p>1,500 kg 승용차의 무게는 바퀴 하나에 약 3.7 kN씩 실린다. 타이어 공기압이 230 kPa라면 그 하중을 받치는 데 필요한 면적은 대략 \(3700/230{,}000 \approx 0.016\ \text{m}^2\), 즉 160 cm² 정도다. 엽서 한 장(약 10 × 15 cm)과 비슷하다. <a href="dynamics.html">2장</a>에서 본 구동력과 주행 저항, <a href="brake.html">8장</a>의 제동력, <a href="steering.html">10장</a>의 선회력은 모두 이 네 장의 <span class="term">접지면</span><span class="en">(Contact Patch)</span>을 통해서만 노면에 전달된다.</p>
+    <p>타이어는 속이 빈 고무 튜브가 아니라, 여러 재료를 겹쳐 만든 복합 구조물이다. 현재 승용차용은 거의 모두 <span class="term">래디얼 타이어</span><span class="en">(Radial Tire)</span>로, 뼈대가 되는 코드가 회전 방향과 직각(반지름 방향)으로 놓인다.</p>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 720 320" role="img" aria-label="래디얼 타이어 단면 구조">
+        <path d="M175 270 C120 230 115 120 150 75 L160 60 L360 60 L370 75 C405 120 400 230 345 270 L325 262 C370 225 372 135 348 100 L172 100 C148 135 150 225 195 262 Z" fill="var(--surface-2)" stroke="var(--text-dim)" stroke-width="1.5"/>
+        <g fill="var(--bg-elev)"><rect x="196" y="59" width="10" height="15"/><rect x="238" y="59" width="12" height="15"/><rect x="272" y="59" width="12" height="15"/><rect x="314" y="59" width="10" height="15"/></g>
+        <line x1="170" y1="82" x2="350" y2="82" stroke="var(--accent)" stroke-width="3.5"/>
+        <line x1="166" y1="89" x2="354" y2="89" stroke="var(--accent)" stroke-width="3.5"/>
+        <path d="M186 265 C138 228 135 132 163 95 L357 95 C385 132 382 228 334 265" fill="none" stroke="var(--accent-2)" stroke-width="2.5" stroke-dasharray="7 4"/>
+        <path d="M195 262 C150 225 148 135 172 100 L348 100 C372 135 370 225 325 262" fill="none" stroke="var(--warn)" stroke-width="2"/>
+        <circle cx="185" cy="265" r="7" fill="var(--text-dim)"/><circle cx="335" cy="265" r="7" fill="var(--text-dim)"/>
+        <polyline points="140,258 162,258 172,284 348,284 358,258 380,258" fill="none" stroke="var(--text-dim)" stroke-width="4" stroke-linejoin="round"/>
+        <text x="260" y="190" class="t-dim" text-anchor="middle">압축 공기</text>
+        <text x="260" y="210" class="t-mono" text-anchor="middle">200~250 kPa</text>
+        <g class="s-line">
+          <line x1="300" y1="66" x2="450" y2="40"/><line x1="340" y1="85" x2="450" y2="80"/><line x1="382" y1="150" x2="450" y2="120"/>
+          <line x1="398" y1="180" x2="450" y2="160"/><line x1="366" y1="200" x2="450" y2="200"/><line x1="340" y1="265" x2="450" y2="240"/><line x1="370" y1="262" x2="450" y2="280"/>
+        </g>
+        <text x="458" y="45" class="t"><tspan class="t-acc">트레드</tspan> — 노면과 닿는 고무, 배수 홈</text>
+        <text x="458" y="85" class="t"><tspan class="t-acc">벨트</tspan> — 강철 코드 2겹, 트레드를 평평하게</text>
+        <text x="458" y="125" class="t"><tspan class="t-acc">카커스</tspan> — 반지름 방향 섬유 코드(뼈대)</text>
+        <text x="458" y="165" class="t"><tspan class="t-acc">사이드월</tspan> — 휘면서 충격을 흡수</text>
+        <text x="458" y="205" class="t"><tspan class="t-acc">이너 라이너</tspan> — 공기를 가두는 막</text>
+        <text x="458" y="245" class="t"><tspan class="t-acc">비드</tspan> — 강선 다발, 림에 고정</text>
+        <text x="458" y="285" class="t"><tspan class="t-acc">림</tspan> — 휠의 테두리</text>
+      </svg>
+      <figcaption><b>그림 7-1.</b> 래디얼 타이어의 단면. 하중을 받치는 것은 고무가 아니라 카커스 코드에 걸리는 공기압의 장력이다. 벨트는 트레드를 띠처럼 조여 접지면이 고르게 눌리도록 한다.</figcaption>
+    </figure>
+
+    <ul>
+      <li><b>트레드</b><span class="en">(Tread)</span>: 노면과 직접 닿는 두꺼운 고무층. 세로 홈(그루브)과 가는 칼집(사이프)이 물을 빼내고 모서리 효과를 만든다.</li>
+      <li><b>벨트</b><span class="en">(Belt)</span>: 트레드 바로 아래에 비스듬히 엇갈려 놓은 강철 코드층. 원주 방향으로 거의 늘어나지 않아 고속에서도 지름이 유지되고 접지면이 평평해진다.</li>
+      <li><b>카커스</b><span class="en">(Carcass)</span>: 한쪽 비드에서 반대쪽 비드까지 이어지는 폴리에스터·레이온 코드층. 공기압을 견디는 압력 용기의 벽이다.</li>
+      <li><b>사이드월</b><span class="en">(Sidewall)</span>: 옆면의 얇고 유연한 부분. 여기가 휘면서 승차감을 만들고, 횡력이 걸리면 옆으로 변형된다.</li>
+      <li><b>비드</b><span class="en">(Bead)</span>: 강선을 고리 모양으로 감은 부분으로, 공기압에 의해 림에 밀착되어 타이어가 휠에서 헛돌거나 빠지지 않게 한다.</li>
+    </ul>
+
+    <h3>규격 읽기</h3>
+    <p>사이드월에 찍힌 <code>205/55R16 91V</code> 같은 표기에는 치수와 성능 한계가 모두 들어 있다.</p>
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 720 230" role="img" aria-label="타이어 규격 표기 읽는 법">
+        <text x="70" y="70" class="spec-big">205</text><text x="162" y="70" class="spec-big">/</text><text x="196" y="70" class="spec-big">55</text>
+        <text x="266" y="70" class="spec-big">R</text><text x="306" y="70" class="spec-big">16</text><text x="420" y="70" class="spec-big">91</text><text x="490" y="70" class="spec-big">V</text>
+        <g class="s-acc">
+          <line x1="70" y1="82" x2="150" y2="82"/><line x1="196" y1="82" x2="250" y2="82"/><line x1="266" y1="82" x2="292" y2="82"/>
+          <line x1="306" y1="82" x2="360" y2="82"/><line x1="420" y1="82" x2="474" y2="82"/><line x1="490" y1="82" x2="518" y2="82"/>
+        </g>
+        <g class="s-line">
+          <line x1="110" y1="82" x2="110" y2="120"/><line x1="223" y1="82" x2="223" y2="160"/><line x1="279" y1="82" x2="279" y2="200"/>
+          <line x1="333" y1="82" x2="333" y2="120"/><line x1="447" y1="82" x2="447" y2="160"/><line x1="504" y1="82" x2="504" y2="200"/>
+        </g>
+        <text x="110" y="138" class="t" text-anchor="middle">단면 폭 205 mm</text>
+        <text x="223" y="178" class="t" text-anchor="middle">편평비 55 %</text>
+        <text x="279" y="218" class="t" text-anchor="middle">래디얼 구조</text>
+        <text x="345" y="138" class="t" text-anchor="middle">림 지름 16 in</text>
+        <text x="460" y="178" class="t" text-anchor="middle">하중 지수 91 = 615 kg</text>
+        <text x="560" y="218" class="t" text-anchor="middle">속도 기호 V = 240 km/h</text>
+      </svg>
+      <figcaption><b>그림 7-2.</b> 규격 표기. 편평비는 사이드월 높이를 단면 폭으로 나눈 백분율이다. 폭과 사이드월은 mm, 림만 인치로 적는 것이 관례다.</figcaption>
+    </figure>
+    <div class="formula">$$H = W\cdot\frac{AR}{100},\qquad D = 25.4\,d_{rim} + 2H,\qquad n = \frac{v}{\pi D}$$
+      <div class="where">\(W\): 단면 폭(mm), \(AR\): 편평비(%), \(H\): 사이드월 높이, \(d_{rim}\): 림 지름(인치), \(D\): 외경, \(n\): 회전수.</div>
+    </div>
+    <div class="callout tip">
+      <strong>계산 예: 205/55R16</strong>
+      <p>사이드월 높이 \(H = 205 \times 0.55 = 112.75\) mm, 외경 \(D = 16 \times 25.4 + 2 \times 112.75 = 631.9\) mm, 둘레 \(\pi D = 1.985\) m. 1 km를 가려면 약 504바퀴를 돌고, 100 km/h(27.8 m/s)에서는 초당 14바퀴, 즉 약 840 rpm이다. 실제로는 하중에 눌려 유효 구름 반지름이 2~3% 작아지므로 회전수는 그만큼 더 높다.</p>
+    </div>
+
+    <div class="sim" id="sim-size">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>타이어 규격 해독기</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-size"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>단면 폭 <output id="sz-w-out"></output></span><input type="range" id="sz-w" min="155" max="325" step="10" value="205"></label>
+          <label class="ctrl"><span>편평비 <output id="sz-ar-out"></output></span><input type="range" id="sz-ar" min="25" max="80" step="5" value="55"></label>
+          <label class="ctrl"><span>림 지름 <output id="sz-rim-out"></output></span><input type="range" id="sz-rim" min="13" max="22" step="1" value="16"></label>
+          <div class="ctrl-row"><button class="btn primary" id="sz-up">인치업 (+1 in)</button><button class="btn" id="sz-reset">205/55R16</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">규격</span><span class="v" id="o-sz-name">—</span></div>
+        <div class="stat"><span class="k">사이드월 높이</span><span class="v" id="o-sz-sw">—</span></div>
+        <div class="stat"><span class="k">외경</span><span class="v" id="o-sz-d">—</span></div>
+        <div class="stat"><span class="k">둘레</span><span class="v" id="o-sz-c">—</span></div>
+        <div class="stat"><span class="k">100 km/h 회전수</span><span class="v" id="o-sz-rpm">—</span></div>
+        <div class="stat"><span class="k">기준 대비 외경 / 계기 100일 때 실속도</span><span class="v" id="o-sz-diff">—</span></div>
+      </div>
+      <div class="sim-note">왼쪽은 옆모습, 오른쪽은 진행 방향에서 본 단면이며 둘 다 같은 축척이다. 파란 점선은 기준 규격 205/55R16의 외경. 해볼 것: '인치업'을 누르면 림을 1인치 키우고 폭을 10 mm 넓히면서 외경이 가장 덜 변하는 편평비를 고른다(205/55R16 → 215/45R17 → …). 외경이 달라지면 속도계와 기어비가 함께 어긋난다. 사이드월이 얇아질수록 횡강성은 커지지만 승차감과 림 보호 능력은 줄어든다.</div>
+    </div>
+
+    <div class="table-wrap"><table>
+      <thead><tr><th>속도 기호</th><th class="num">최고 속도</th><th>하중 지수</th><th class="num">최대 하중</th></tr></thead>
+      <tbody>
+        <tr><td>Q</td><td class="num">160 km/h</td><td>87</td><td class="num">545 kg</td></tr>
+        <tr><td>T</td><td class="num">190 km/h</td><td>91</td><td class="num">615 kg</td></tr>
+        <tr><td>H</td><td class="num">210 km/h</td><td>95</td><td class="num">690 kg</td></tr>
+        <tr><td>V</td><td class="num">240 km/h</td><td>100</td><td class="num">800 kg</td></tr>
+        <tr><td>W / Y</td><td class="num">270 / 300 km/h</td><td>104</td><td class="num">900 kg</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- =============================================================== 2 -->
+  <section id="pressure">
+    <h2>공기압과 접지면, 그리고 구름 저항</h2>
+    <p>타이어는 공기 스프링이다. 하중이 걸리면 아래쪽이 납작하게 눌려 접지면이 생기고, 접지면에 작용하는 노면 압력의 합이 하중과 평형을 이룬다. 얇은 막으로 된 풍선이라면 접지 압력은 내부 공기압과 같으므로</p>
+    <div class="formula">$$A \approx \frac{F_z}{p}$$
+      <div class="where">\(A\): 접지 면적, \(F_z\): 수직 하중, \(p\): 공기압(게이지). 실제 타이어는 카커스와 사이드월의 강성이 하중 일부를 받쳐 면적이 이 값보다 10~20% 작고, 평균 접지압은 공기압보다 조금 높다.</div>
+    </div>
+    <p>이 식이 말해 주는 것은 단순하지만 중요하다. <b>접지 면적은 타이어 폭이 아니라 하중과 공기압이 정한다.</b> 폭이 넓은 타이어는 면적이 커지는 것이 아니라 접지면이 '짧고 넓은' 모양이 되는 것이다. 공기압이 낮으면 접지면이 길어지고 사이드월이 많이 휘며, 벨트 중앙이 들떠 양쪽 숄더에 압력이 몰린다. 공기압이 너무 높으면 트레드가 볼록해져 중앙만 닿는다.</p>
+
+    <h3>구름 저항</h3>
+    <p>타이어가 구르면 접지면에 들어가는 고무는 눌리고, 빠져나오는 고무는 다시 펴진다. 고무는 점탄성 재료여서 눌릴 때 들어간 에너지를 전부 돌려주지 않고 일부를 열로 잃는다(<span class="term">히스테리시스</span><span class="en">(Hysteresis)</span>). 이 손실이 <span class="term">구름 저항</span><span class="en">(Rolling Resistance)</span>의 대부분이다.</p>
+    <div class="formula">$$F_{rr} = C_{rr}\,F_z,\qquad C_{rr}\ \propto\ p^{-0.4}\ \text{(approx.)}$$
+      <div class="where">\(C_{rr}\): 구름 저항 계수, 승용차 타이어에서 대표적으로 0.008~0.015. 공기압이 낮을수록 변형이 커져 계수가 올라간다.</div>
+    </div>
+    <p>구름 저항이 전체 주행 저항에서 차지하는 비중과 연비에 미치는 영향은 <a href="dynamics.html">2장</a>에서 계산했다. 여기서는 공기압과 하중이 접지면 모양과 구름 저항을 어떻게 바꾸는지 직접 확인해 보자.</p>
+
+    <div class="sim" id="sim-pres">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>공기압과 접지면</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-pres"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>공기압 <output id="pr-p-out"></output></span><input type="range" id="pr-p" min="120" max="340" step="5" value="230"></label>
+          <label class="ctrl"><span>수직 하중 <output id="pr-fz-out"></output></span><input type="range" id="pr-fz" min="2" max="7" step="0.1" value="4.5"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">접지 면적</span><span class="v" id="o-pr-a">—</span></div>
+        <div class="stat"><span class="k">접지 길이</span><span class="v" id="o-pr-l">—</span></div>
+        <div class="stat"><span class="k">평균 접지압</span><span class="v" id="o-pr-pm">—</span></div>
+        <div class="stat"><span class="k">구름 저항 계수</span><span class="v" id="o-pr-crr">—</span></div>
+        <div class="stat"><span class="k">구름 저항</span><span class="v" id="o-pr-frr">—</span></div>
+        <div class="stat"><span class="k">상태</span><span class="v" id="o-pr-st">—</span></div>
+      </div>
+      <div class="sim-note">왼쪽: 옆에서 본 타이어의 눌림. 오른쪽: 위에서 내려다본 접지면(색이 진할수록 압력이 높다)과 폭 방향 압력 분포. 폭 205 mm급 타이어(트레드 폭 17 cm)를 가정하고, 하중에 맞는 적정 공기압을 기준으로 과소·과다를 판정하는 교육용 모델이다. 해볼 것: 공기압을 150 kPa로 낮추면 접지면이 길어지고 숄더 압력이 올라가며 구름 저항이 커진다. 320 kPa로 올리면 중앙만 닿는다. 숄더 편마모·중앙 편마모가 여기서 나온다.</div>
+    </div>
+
+    <div class="callout tip">
+      <strong>계산 예: 공기압 20% 부족의 대가</strong>
+      <p>적정 230 kPa에서 \(C_{rr} = 0.010\)인 타이어를 184 kPa로 달리면 \(C_{rr} \approx 0.010 \times (184/230)^{-0.4} = 0.0109\), 약 9% 증가한다. 1,500 kg 차라면 구름 저항이 147 N에서 161 N으로 늘어난다. 일반적으로 구름 저항이 10% 늘면 연비는 1~2% 나빠진다. 손실은 열이 되므로, 심한 저압으로 고속 주행을 계속하면 사이드월이 과열되어 파열로 이어질 수 있다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 3 -->
+  <section id="rubber">
+    <h2>고무는 어떻게 노면을 붙잡는가</h2>
+    <p>고등학교 물리의 마찰 법칙 \(F = \mu N\)에서 \(\mu\)는 면적과 하중에 무관한 상수다. 고무는 이 법칙을 따르지 않는다. 고무 마찰에는 성격이 다른 두 가지 원리가 겹쳐 있기 때문이다.</p>
+    <ul>
+      <li><span class="term">점착</span><span class="en">(Adhesion)</span>: 고무 분자 사슬이 노면 표면과 분자 수준에서 달라붙었다가, 미끄러지면서 늘어나고 끊어지기를 반복한다. 깨끗하고 마른 노면에서 지배적이며, 얇은 물막만 있어도 급격히 약해진다.</li>
+      <li><span class="term">히스테리시스 마찰</span><span class="en">(Hysteretic Friction)</span>: 고무가 노면의 거친 돌기를 타고 넘을 때, 눌리는 쪽 압력이 되돌아오는 쪽 압력보다 크다. 이 압력 비대칭의 수평 성분이 저항력이 된다. 노면이 젖어도 유지되므로 젖은 노면 그립의 주역이다.</li>
+    </ul>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 720 280" role="img" aria-label="고무 마찰의 두 원리: 점착과 히스테리시스">
+        <g>
+          <text x="180" y="24" class="t-acc" text-anchor="middle">점착 (분자 결합)</text>
+          <rect x="50" y="50" width="260" height="90" rx="6" fill="var(--surface-2)" stroke="var(--text-dim)"/>
+          <text x="180" y="100" class="t" text-anchor="middle">고무</text>
+          <rect x="30" y="170" width="300" height="34" class="f-surface"/>
+          <text x="180" y="192" class="t-dim" text-anchor="middle">매끈하고 마른 노면</text>
+          <g stroke="var(--accent)" stroke-width="2.2">
+            <line x1="80" y1="140" x2="70" y2="170"/><line x1="115" y1="140" x2="100" y2="170"/><line x1="150" y1="140" x2="128" y2="170"/>
+            <line x1="185" y1="140" x2="156" y2="170"/><line x1="220" y1="140" x2="184" y2="170"/>
+          </g>
+          <g stroke="var(--accent)" stroke-width="2" stroke-dasharray="3 4"><line x1="255" y1="140" x2="232" y2="156"/><line x1="285" y1="140" x2="272" y2="150"/></g>
+          <line x1="230" y1="36" x2="300" y2="36" class="s-line"/><path d="M300 36 l-9 -5 v10 z" fill="var(--text-dim)"/>
+          <text x="222" y="40" class="t-dim" text-anchor="end">미끄럼 방향</text>
+          <text x="180" y="232" class="t-dim" text-anchor="middle">결합 → 늘어남 → 끊어짐의 반복</text>
+          <text x="180" y="254" class="t-dim" text-anchor="middle">물막이 있으면 거의 사라진다</text>
+        </g>
+        <g transform="translate(370,0)">
+          <text x="170" y="24" class="t-acc" text-anchor="middle">히스테리시스 (변형 손실)</text>
+          <path d="M20 50 H320 V150 H232 C222 150 214 138 202 126 C190 112 178 104 168 104 C150 104 136 128 122 150 H20 Z" fill="var(--surface-2)" stroke="var(--text-dim)"/>
+          <path d="M10 204 V170 H110 C132 170 146 106 168 106 C190 106 204 170 226 170 H330 V204 Z" class="f-surface"/>
+          <text x="80" y="100" class="t" text-anchor="middle">고무</text>
+          <text x="270" y="192" class="t-dim" text-anchor="middle">거친 노면 돌기</text>
+          <g stroke="var(--accent)" stroke-width="2.4" fill="var(--accent)">
+            <line x1="120" y1="118" x2="142" y2="132"/><path d="M146 135 l-10 -1 l5 -8 z"/>
+            <line x1="108" y1="140" x2="130" y2="152"/><path d="M134 155 l-10 -1 l5 -8 z"/>
+          </g>
+          <g stroke="var(--accent-2)" stroke-width="1.6" fill="var(--accent-2)">
+            <line x1="212" y1="124" x2="200" y2="131"/><path d="M196 134 l8 -1 l-4 -6 z"/>
+          </g>
+          <text x="96" y="130" class="t-mono" text-anchor="end">큰 압력</text>
+          <text x="222" y="118" class="t-mono">작은 압력</text>
+          <line x1="230" y1="36" x2="300" y2="36" class="s-line"/><path d="M300 36 l-9 -5 v10 z" fill="var(--text-dim)"/>
+          <text x="222" y="40" class="t-dim" text-anchor="end">미끄럼 방향</text>
+          <text x="170" y="232" class="t-dim" text-anchor="middle">되돌아오는 쪽이 늦게 따라붙어 압력이 비대칭</text>
+          <text x="170" y="254" class="t-dim" text-anchor="middle">젖은 노면에서도 유지된다</text>
+        </g>
+      </svg>
+      <figcaption><b>그림 7-3.</b> 고무 마찰의 두 원리. 구름 저항을 만드는 것과 같은 점탄성 손실이 접지면의 미세한 크기에서는 그립을 만든다. 그래서 '그립이 좋으면서 구름 저항이 낮은' 컴파운드를 만들기가 어렵다.</figcaption>
+    </figure>
+
+    <p>두 원리 모두 고무의 점탄성에서 나오므로 <b>온도</b>와 <b>미끄럼 속도</b>에 민감하다. 고무는 온도가 내려가면 딱딱한 유리 상태에 가까워져 돌기를 감싸지 못하고, 너무 뜨거우면 물러져 강성과 내마모성을 잃는다. 타이어 종류는 결국 '어느 온도 범위에서 고무가 알맞게 말랑한가'의 차이다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>종류</th><th>컴파운드</th><th>트레드</th><th>알맞은 조건</th></tr></thead>
+      <tbody>
+        <tr><td>여름용</td><td>단단함. 대략 7 °C 아래에서 급격히 굳는다</td><td>블록이 크고 홈이 적다</td><td>따뜻한 마른·젖은 노면</td></tr>
+        <tr><td>겨울용</td><td>저온에서도 유연. 실리카 배합 비중이 크다</td><td>깊은 홈과 촘촘한 사이프가 눈을 물고 모서리로 긁는다</td><td>저온, 눈길, 빙판</td></tr>
+        <tr><td>사계절용</td><td>둘의 중간</td><td>중간 밀도의 사이프</td><td>온화한 기후에서 연중 사용. 양 끝 성능은 타협</td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout">
+      <strong>마찰 계수는 상수가 아니다</strong>
+      <p>고무는 접지압이 높을수록 실제 접촉 면적이 하중만큼 늘지 못해 \(\mu\)가 낮아진다. 넓은 타이어가 그립이 좋은 이유, 하중이 한쪽 바퀴로 쏠리면 차 전체의 그립이 줄어드는 이유가 모두 여기에 있다. 뒤의 <a href="#load">하중 민감도</a> 절에서 다시 다룬다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 4 -->
+  <section id="slip">
+    <h2>슬립률: 구동력과 제동력</h2>
+    <p>뜻밖의 사실 하나. 타이어는 <b>조금 미끄러져야</b> 힘을 낸다. 구동 토크가 걸리면 접지면에 들어온 트레드 고무가 앞뒤로 변형되고, 그만큼 바퀴는 차가 나아간 거리보다 조금 더 돈다. 제동 때는 반대로 덜 돈다. 이 차이를 차속으로 나눈 것이 <span class="term">슬립률</span><span class="en">(Slip Ratio)</span>이다.</p>
+    <div class="formula">$$\kappa = \frac{\omega\,r_e - v}{v}$$
+      <div class="where">\(\omega\): 바퀴 각속도, \(r_e\): 유효 구름 반지름, \(v\): 차속. \(\kappa = 0\)은 자유 구름, \(\kappa = -1\)(−100%)은 바퀴 잠김, \(\kappa \gt 0\)은 구동(크면 휠스핀).</div>
+    </div>
+    <p>슬립률에 따른 힘의 변화는 세 구간으로 나뉜다. 작은 슬립에서는 힘이 슬립에 비례한다(트레드의 탄성 변형). 마른 노면에서 대략 10~20% 슬립에서 <span class="term">피크 \(\mu\)</span>에 이르고, 그보다 커지면 접지면 전체가 미끄러지면서 힘이 <span class="term">슬라이딩 \(\mu\)</span>로 떨어진다. 바퀴가 잠기면 제동력이 줄 뿐 아니라 횡력을 거의 낼 수 없어 조향이 듣지 않는다. <a href="brake.html">8장</a>의 ABS는 슬립률을 피크 부근에 붙잡아 두는 장치다.</p>
+
+    <h3>매직 포뮬러</h3>
+    <p>이 곡선을 수식으로 나타내는 데 가장 널리 쓰이는 것이 Pacejka의 <span class="term">매직 포뮬러</span><span class="en">(Magic Formula)</span>다. 물리 법칙에서 유도한 식이 아니라 측정 곡선에 잘 맞도록 고른 경험식인데, 계수 네 개로 종력·횡력·얼라이닝 토크를 모두 묘사할 수 있어 '마법'이라는 이름이 붙었다.</p>
+    <div class="formula">$$\mu(\kappa) = D\,\sin\!\Big(C\,\arctan\big(B\kappa - E\,(B\kappa - \arctan B\kappa)\big)\Big)$$
+      <div class="where">\(D\): 피크 값, \(C\): 형상 계수(곡선의 전체 모양), \(B\): 강성 계수, \(E\): 곡률 계수(피크 부근의 뾰족한 정도). 원점 기울기는 \(BCD\). 힘은 \(F_x = \mu\,F_z\).</div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>노면</th><th class="num">B</th><th class="num">C</th><th class="num">D (피크 μ)</th><th class="num">E</th></tr></thead>
+      <tbody>
+        <tr><td>마른 아스팔트</td><td class="num">10</td><td class="num">1.9</td><td class="num">1.0</td><td class="num">0.97</td></tr>
+        <tr><td>젖은 아스팔트</td><td class="num">12</td><td class="num">2.3</td><td class="num">0.82</td><td class="num">1.0</td></tr>
+        <tr><td>눈</td><td class="num">5</td><td class="num">2.0</td><td class="num">0.3</td><td class="num">1.0</td></tr>
+        <tr><td>얼음</td><td class="num">4</td><td class="num">2.0</td><td class="num">0.1</td><td class="num">1.0</td></tr>
+      </tbody>
+    </table></div>
+    <p>표는 교재에서 자주 쓰는 대표 계수다. 실제 타이어 모델은 계수 자체가 하중·캠버·속도의 함수여서 수십 개의 파라미터를 가진다.</p>
+
+    <div class="sim" id="sim-slip">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>슬립률과 μ–κ 곡선</h3></div>
+      <div class="sim-body">
+        <div class="sim-view duo"><div><canvas id="cv-slipw"></canvas></div><div><canvas id="cv-slip"></canvas></div></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>노면</span><div class="seg" id="sl-surf"><button data-value="dry" class="on">마른 아스팔트</button><button data-value="wet">젖은</button><button data-value="snow">눈</button><button data-value="ice">얼음</button></div></div>
+          <label class="ctrl"><span>슬립률 κ <output id="sl-k-out"></output></span><input type="range" id="sl-k" min="-100" max="100" step="1" value="-12"></label>
+          <label class="ctrl"><span>수직 하중 <output id="sl-fz-out"></output></span><input type="range" id="sl-fz" min="2" max="8" step="0.1" value="4"></label>
+          <div class="ctrl-row"><button class="btn primary" id="sl-abs">제동 피크로</button><button class="btn" id="sl-lock">바퀴 잠김</button><button class="btn" id="sl-spin">휠스핀</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">현재 μ</span><span class="v" id="o-sl-mu">—</span></div>
+        <div class="stat"><span class="k">종력 Fx</span><span class="v" id="o-sl-fx">—</span></div>
+        <div class="stat"><span class="k">피크 μ (그때의 슬립)</span><span class="v" id="o-sl-pk">—</span></div>
+        <div class="stat"><span class="k">슬라이딩 μ (100%)</span><span class="v" id="o-sl-sl">—</span></div>
+        <div class="stat"><span class="k">차속 100 km/h일 때 원주 속도</span><span class="v" id="o-sl-wr">—</span></div>
+      </div>
+      <div class="sim-note">왼쪽: 일정한 차속으로 가는 바퀴. 노면 눈금은 차속으로, 바퀴는 원주 속도 ωr로 움직인다. 두 화살표의 길이 차가 슬립이다. 오른쪽: 네 노면의 μ–κ 곡선과 현재 점. 해볼 것: 슬립률을 0에서 −100%까지 천천히 내려 보자. 피크를 지나면 바퀴가 눈에 띄게 느려지면서 힘이 오히려 줄어든다. 얼음에서는 피크가 낮고 평평해서 한계를 느끼기 어렵다. 하중을 올리면 Fx는 커지지만 μ는 조금 떨어진다.</div>
+    </div>
+
+    <div class="callout tip">
+      <strong>계산 예: 잠긴 바퀴와 ABS의 제동 거리</strong>
+      <p>마른 노면에서 피크 \(\mu = 1.0\), 잠긴 바퀴의 슬라이딩 \(\mu\)를 대표적으로 0.75라 하자(위 대표 계수의 곡선은 이보다 완만하게 떨어진다). 100 km/h(27.8 m/s)에서 정지까지의 거리 \(s = v^2/(2\mu g)\)는 피크를 유지하면 \(27.8^2/(2 \times 1.0 \times 9.81) = 39\) m, 네 바퀴가 모두 잠기면 \(52\) m다. 13 m 차이는 차 세 대 길이다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 5 -->
+  <section id="slipangle">
+    <h2>슬립각: 횡력과 브러시 모델</h2>
+    <p>차가 방향을 바꾸는 힘도 같은 방식으로 생긴다. 타이어가 <b>향하는 방향</b>과 실제로 <b>나아가는 방향</b>이 어긋날 때, 그 사이의 각을 <span class="term">슬립각</span><span class="en">(Slip Angle)</span> \(\alpha\)라 한다. 슬립각이 있다고 타이어가 옆으로 죽 미끄러지는 것은 아니다. 접지면에 들어온 고무는 노면에 붙은 채로 뒤로 가면서 점점 옆으로 끌려가 변형되고, 이 변형의 복원력이 <span class="term">횡력</span><span class="en">(Lateral Force / Cornering Force)</span>이다.</p>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 720 300" role="img" aria-label="슬립각, 횡력, 뉴매틱 트레일의 정의">
+        <g transform="translate(200,150) rotate(-14)">
+          <rect x="-110" y="-34" width="220" height="68" rx="20" fill="var(--surface-2)" stroke="var(--text-dim)" stroke-width="1.5"/>
+          <ellipse cx="0" cy="0" rx="52" ry="26" class="f-acc-soft"/>
+          <line x1="-150" y1="0" x2="170" y2="0" stroke="var(--text-dim)" stroke-dasharray="6 4"/>
+          <circle cx="0" cy="0" r="3.5" fill="var(--text)"/>
+          <line x1="-22" y1="0" x2="-22" y2="78" stroke="var(--accent)" stroke-width="3"/><path d="M-22 86 l-7 -13 h14 z" fill="var(--accent)"/>
+          <line x1="-22" y1="-46" x2="0" y2="-46" class="s-line"/><line x1="-22" y1="-52" x2="-22" y2="-40" class="s-line"/><line x1="0" y1="-52" x2="0" y2="-40" class="s-line"/>
+        </g>
+        <line x1="200" y1="150" x2="380" y2="150" stroke="var(--accent-2)" stroke-width="3"/><path d="M390 150 l-14 -7 v14 z" fill="var(--accent-2)"/>
+        <path d="M300 150 A100 100 0 0 0 297 126" fill="none" stroke="var(--text)" stroke-width="1.5"/>
+        <text x="312" y="142" class="t">α</text>
+        <text x="372" y="96" class="t-dim">바퀴가 향하는 방향</text>
+        <text x="398" y="155" class="t" style="fill:var(--accent-2);font-weight:700">실제 진행 방향 v</text>
+        <text x="206" y="258" class="t-acc">횡력 Fy</text>
+        <text x="176" y="84" class="t-dim" text-anchor="middle">뉴매틱 트레일 t</text>
+        <g transform="translate(470,190)">
+          <text x="0" y="0" class="t">횡력의 작용점이 접지면 중심보다</text>
+          <text x="0" y="22" class="t">뒤에 있으므로, 바퀴를 진행 방향으로</text>
+          <text x="0" y="44" class="t">되돌리려는 토크가 생긴다.</text>
+          <text x="0" y="74" class="t-acc">Mz = Fy × t  (셀프 얼라이닝 토크)</text>
+        </g>
+      </svg>
+      <figcaption><b>그림 7-4.</b> 위에서 본 타이어. 접지면 뒤쪽으로 갈수록 고무의 횡변형이 커지므로 횡력의 합력은 중심보다 \(t\)만큼 뒤에 걸린다.</figcaption>
+    </figure>
+
+    <p>슬립각이 작을 때 횡력은 슬립각에 비례하며, 그 기울기가 <span class="term">코너링 강성</span><span class="en">(Cornering Stiffness)</span> \(C_\alpha\)다.</p>
+    <div class="formula">$$F_y \approx C_\alpha\,\alpha\qquad(\alpha\ \text{small})$$
+      <div class="where">승용차 타이어에서 대표적으로 \(C_\alpha \approx\) 800~1,500 N/deg(약 45~85 kN/rad). 편평비가 낮고 공기압이 높고 폭이 넓을수록 크다.</div>
+    </div>
+
+    <h3>브러시 모델</h3>
+    <p>접지면 안에서 무슨 일이 벌어지는지는 <span class="term">브러시 모델</span><span class="en">(Brush Model)</span>로 볼 수 있다. 트레드를 벨트에 심긴 수많은 강모(솔의 털)로 생각한다. 강모의 끝은 접지면 앞쪽에서 노면에 닿아 달라붙고, 뿌리는 바퀴와 함께 비스듬히 움직인다. 앞쪽 끝에서 거리 \(s\)만큼 뒤로 간 강모의 횡변형은 \(s\tan\alpha\)로, 뒤로 갈수록 직선으로 늘어난다.</p>
+    <p>그런데 강모가 버틸 수 있는 힘에는 한계가 있다. 그 자리의 접지압 \(p(x)\)에 마찰 계수를 곱한 값이다. 접지압은 앞뒤 끝에서 0이고 가운데에서 가장 큰 포물선에 가깝다. 따라서 변형이 계속 커지는 뒤쪽에서 먼저 한계를 넘어 미끄러지기 시작한다. 슬립각이 커질수록 이 <b>미끄럼 영역</b>이 뒤에서 앞으로 번져 오고, 접지면 전체가 미끄러지면 횡력은 \(\mu F_z\)에서 더 늘지 않는다.</p>
+    <div class="formula">$$F_y = \mu F_z\,(3z - 3z^2 + z^3),\qquad M_z = \mu F_z\,a\,z\,(1-z)^3,\qquad z = \frac{C_\alpha\tan\alpha}{3\mu F_z}\ \le 1$$
+      <div class="where">\(a\): 접지 길이의 절반. 점착 영역은 접지면 앞쪽의 \((1-z)\) 비율이다. \(z = 1\)에서 전체가 미끄러진다. 뉴매틱 트레일은 \(t = M_z/F_y\)로, 작은 슬립각에서 \(a/3\)이고 한계에 가까워지면 0으로 줄어든다.</div>
+    </div>
+
+    <div class="sim" id="sim-brush">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>슬립각과 브러시 모델</h3></div>
+      <div class="sim-body">
+        <div class="sim-view duo"><div><canvas id="cv-brush" class="grab"></canvas><span class="hint">진행 방향 화살표를 끌어 보자</span></div><div><canvas id="cv-brushc"></canvas></div></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>슬립각 α <output id="br-al-out"></output></span><input type="range" id="br-al" min="-15" max="15" step="0.1" value="3"></label>
+          <label class="ctrl"><span>노면 마찰 계수 μ <output id="br-mu-out"></output></span><input type="range" id="br-mu" min="0.2" max="1.2" step="0.05" value="1"></label>
+          <label class="ctrl"><span>코너링 강성 Cα <output id="br-ca-out"></output></span><input type="range" id="br-ca" min="500" max="1600" step="50" value="1050"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">횡력 Fy</span><span class="v" id="o-br-fy">—</span></div>
+        <div class="stat"><span class="k">선형 근사 Cα·α</span><span class="v" id="o-br-lin">—</span></div>
+        <div class="stat"><span class="k">셀프 얼라이닝 토크</span><span class="v" id="o-br-mz">—</span></div>
+        <div class="stat"><span class="k">뉴매틱 트레일</span><span class="v" id="o-br-tp">—</span></div>
+        <div class="stat"><span class="k">점착 영역 비율</span><span class="v" id="o-br-ad">—</span></div>
+      </div>
+      <div class="sim-note">왼쪽: 위에서 본 접지면을 확대한 그림(바퀴는 위쪽을 향하고, 강모 변형은 과장했다). 파란 강모는 노면에 붙어 있고 빨간 강모는 미끄러지는 중이다. 점선은 그 자리의 강모가 버틸 수 있는 한계(μ × 접지압). 하중 4 kN, 접지 길이 14 cm 가정. 오른쪽: 횡력과 얼라이닝 토크 곡선. 해볼 것: 슬립각을 키우면 횡력은 계속 늘지만 얼라이닝 토크는 4° 부근에서 먼저 꺾여 줄어든다. μ를 0.3으로 낮추면 2~3°에서 벌써 전부 미끄러진다.</div>
+    </div>
+
+    <div class="callout tip">
+      <strong>계산 예: 일상 주행의 슬립각</strong>
+      <p>1,500 kg 차가 횡가속도 0.3 g로 선회하면 필요한 횡력은 \(1500 \times 0.3 \times 9.81 = 4{,}415\) N, 타이어 하나당 약 1,100 N이다. \(C_\alpha = 1{,}050\) N/deg라면 슬립각은 약 1°에 불과하다. 일상 주행에서 타이어는 거의 선형 구간에서만 일하며, 접지면 대부분이 노면에 붙어 있다.</p>
+    </div>
+
+    <h3>셀프 얼라이닝 토크와 조향감</h3>
+    <p><span class="term">셀프 얼라이닝 토크</span><span class="en">(Self-Aligning Torque)</span> \(M_z\)는 조향 장치를 거쳐 운전대에 전해지는 반력의 주요 성분이다. 중요한 것은 이 토크가 횡력보다 <b>먼저</b> 정점을 찍고 줄어든다는 점이다. 미끄럼 영역이 뒤에서 번져 오면서 합력의 작용점이 앞으로 옮겨 가 <span class="term">뉴매틱 트레일</span><span class="en">(Pneumatic Trail)</span>이 짧아지기 때문이다. 그립 한계 직전에 운전대가 가벼워지는 느낌은 타이어가 보내는 사전 경고다. 조향 지오메트리가 만드는 기계적 트레일과 합쳐지는 과정은 <a href="steering.html">10장</a>에서 다룬다.</p>
+
+    <h3>캠버 스러스트</h3>
+    <p>바퀴를 옆으로 기울이면(<span class="term">캠버각</span><span class="en">(Camber Angle)</span> \(\gamma\)) 슬립각이 0이어도 기울어진 쪽으로 횡력이 생긴다. 기울어진 바퀴는 원뿔처럼 원을 그리며 구르려 하는데, 차축이 이를 직진시키므로 접지면 고무가 옆으로 변형되는 것이다. 이를 <span class="term">캠버 스러스트</span><span class="en">(Camber Thrust)</span>라 한다.</p>
+    <div class="formula">$$F_y \approx C_\alpha\,\alpha + C_\gamma\,\gamma$$
+      <div class="where">승용차 래디얼 타이어에서 \(C_\gamma\)는 대표적으로 \(C_\alpha\)의 5~10% 수준이다. 차체를 깊이 기울이는 이륜차는 선회력의 대부분을 캠버 스러스트로 얻는다.</div>
+    </div>
+    <p>승용차에서 캠버의 더 큰 역할은 선회 중 바깥쪽 타이어의 접지면을 평평하게 유지하는 것이다. 차체가 롤하면 바깥 바퀴가 바깥으로 눕기 쉬운데, 서스펜션이 이를 보상하도록 약간의 네거티브 캠버를 준다(<a href="suspension.html">9장</a>).</p>
+  </section>
+
+  <!-- =============================================================== 6 -->
+  <section id="load">
+    <h2>하중 민감도와 하중 이동</h2>
+    <p>타이어를 세게 누를수록 낼 수 있는 힘은 커진다. 하지만 정비례하지는 않는다. 하중이 두 배가 되어도 최대 횡력은 두 배에 못 미친다. 이 성질을 <span class="term">하중 민감도</span><span class="en">(Load Sensitivity)</span>라 한다. 1차 근사로 마찰 계수가 하중에 따라 직선으로 줄어든다고 쓰면</p>
+    <div class="formula">$$\mu(F_z) = \mu_0\left[1 - k\,\frac{F_z - F_{z0}}{F_{z0}}\right],\qquad F_{y,max} = \mu(F_z)\,F_z$$
+      <div class="where">\(F_{z0}\): 기준 하중, \(\mu_0\): 기준 하중에서의 마찰 계수, \(k\): 하중 민감도 계수(승용차 타이어에서 대표적으로 0.1~0.25).</div>
+    </div>
+    <p>\(F_{y,max}\)가 하중에 대해 <b>위로 볼록한 곡선</b>이라는 사실이 차량 거동에 큰 영향을 준다. 선회하면 원심력 때문에 하중이 안쪽 바퀴에서 바깥쪽 바퀴로 옮겨 간다. 좌우 하중의 합은 그대로지만, 바깥쪽이 얻는 것보다 안쪽이 잃는 것이 더 크다. 좌우 하중 이동량을 \(\Delta F_z\)라 하면 한 축의 최대 횡력 합은</p>
+    <div class="formula">$$F_{y,in} + F_{y,out} = 2\mu_0 F_{z0}\left[1 - k\left(\frac{\Delta F_z}{F_{z0}}\right)^{2}\right]$$
+      <div class="where">손실은 하중 이동량의 제곱에 비례한다.</div>
+    </div>
+
+    <div class="sim" id="sim-load">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>하중 이동이 한 축의 그립을 줄인다</h3></div>
+      <div class="sim-body">
+        <div class="sim-view duo"><div><canvas id="cv-load"></canvas></div><div><canvas id="cv-loadc"></canvas></div></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>좌우 하중 이동 ΔFz <output id="ld-d-out"></output></span><input type="range" id="ld-d" min="0" max="3.6" step="0.05" value="1.6"></label>
+          <label class="ctrl"><span>하중 민감도 k <output id="ld-k-out"></output></span><input type="range" id="ld-k" min="0" max="0.3" step="0.01" value="0.2"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">안쪽 최대 횡력</span><span class="v" id="o-ld-in">—</span></div>
+        <div class="stat"><span class="k">바깥쪽 최대 횡력</span><span class="v" id="o-ld-out">—</span></div>
+        <div class="stat"><span class="k">한 축 합계</span><span class="v" id="o-ld-sum">—</span></div>
+        <div class="stat"><span class="k">하중 이동에 의한 손실</span><span class="v" id="o-ld-loss">—</span></div>
+      </div>
+      <div class="sim-note">왼쪽: 뒤에서 본 한 축. 좌회전 중이라 오른쪽(바깥) 타이어로 하중이 옮겨 간다. 파란 화살표는 수직 하중, 주황 화살표는 각 타이어가 낼 수 있는 최대 횡력. 오른쪽: 하중–최대 횡력 곡선 위의 두 점. 두 점을 잇는 현의 중점이 실제 평균이고, 곡선 위의 정지 하중 점과의 차이가 손실이다. 기준 하중 4 kN, μ₀ = 1.05. 해볼 것: k를 0으로 두면 곡선이 직선이 되어 손실이 사라진다. 하중 이동을 두 배로 늘리면 손실은 네 배가 된다.</div>
+    </div>
+
+    <div class="callout tip">
+      <strong>계산 예</strong>
+      <p>바퀴당 정지 하중 4 kN, \(\mu_0 = 1.05\), \(k = 0.2\)인 축에서 2.4 kN이 바깥쪽으로 옮겨 가면(안쪽 1.6 kN, 바깥쪽 6.4 kN) 손실은 \(k(\Delta F_z/F_{z0})^2 = 0.2 \times 0.6^2 = 7.2\%\). 합계 최대 횡력이 8.40 kN에서 7.80 kN으로 줄어든다.</p>
+    </div>
+    <p>이 원리에서 섀시 설계의 여러 규칙이 나온다. 무게 중심이 낮고 좌우 바퀴 간격(윤거)이 넓을수록 하중 이동이 작아 총 그립이 크다. 또 앞뒤 축 가운데 하중 이동을 <b>더 많이 부담하는 축이 먼저</b> 그립을 잃는다. 스태빌라이저 바를 굵게 하면 그 축의 롤 강성 분담이 커져 그 축의 그립이 줄어드는데, 엔지니어는 이것으로 언더스티어·오버스티어 성향을 조율한다(<a href="suspension.html">9장</a>, <a href="steering.html">10장</a>). 가속·제동 때의 앞뒤 하중 이동도 같은 이유로 네 바퀴 그립의 합을 줄인다.</p>
+  </section>
+
+  <!-- =============================================================== 7 -->
+  <section id="circle">
+    <h2>마찰원: 종력과 횡력은 한 예산을 나눠 쓴다</h2>
+    <p>지금까지 종력과 횡력을 따로 보았지만, 접지면의 고무는 방향을 가리지 않는다. 강모 하나가 버틸 수 있는 힘의 크기는 정해져 있고, 그 힘을 앞뒤로 쓰든 옆으로 쓰든 합쳐서 한계를 넘을 수 없다. 이를 그림으로 나타낸 것이 <span class="term">마찰원</span><span class="en">(Friction Circle)</span>이다.</p>
+    <div class="formula">$$\sqrt{F_x^{\,2} + F_y^{\,2}}\ \le\ \mu F_z$$
+      <div class="where">실제 타이어는 종방향과 횡방향의 최대치가 조금 달라 타원에 가깝다(마찰 타원).</div>
+    </div>
+    <p>제동력을 한계의 80%까지 쓰고 있다면 남은 횡력은 \(\sqrt{1 - 0.8^2} = 60\%\)다. 한계까지 제동하면서 동시에 방향을 바꿀 수는 없다. 숙련된 운전자는 코너 진입에서 브레이크를 서서히 풀면서 그만큼 조향을 더해, 힘 벡터가 원의 가장자리를 따라 돌게 한다. 이것이 <span class="term">트레일 브레이킹</span><span class="en">(Trail Braking)</span>이다. 제동을 완전히 끝낸 뒤에 조향을 시작하면 힘 벡터가 원의 중심을 지나가므로 그 시간 동안 타이어의 능력을 쓰지 못한다.</p>
+
+    <h3>조합 슬립</h3>
+    <p>슬립의 관점에서 보면, 슬립각이 있는 타이어에 슬립률까지 주어지면 강모는 비스듬한 방향으로 변형되고 힘도 그 방향으로 생긴다. 합성 슬립 \(\sigma = \sqrt{\kappa^2 + \tan^2\alpha}\)의 크기가 힘의 크기를, 두 성분의 비가 힘의 방향을 정한다고 근사하면</p>
+    <div class="formula">$$F_x = -\mu(\sigma)\,F_z\,\frac{\kappa}{\sigma},\qquad F_y = \mu(\sigma)\,F_z\,\frac{\tan\alpha}{\sigma}$$
+      <div class="where">\(\mu(\sigma)\)는 앞 절의 매직 포뮬러. 제동 슬립 \(\kappa\)가 커지면 \(\tan\alpha/\sigma\)가 줄어 같은 슬립각에서도 횡력이 빠르게 떨어진다. 부호는 제동 슬립의 크기를 \(\kappa\)로 썼을 때.</div>
+    </div>
+
+    <div class="sim" id="sim-fc">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>마찰원과 조합 슬립</h3></div>
+      <div class="sim-body">
+        <div class="sim-view duo"><div><canvas id="cv-fc" class="grab"></canvas><span class="hint">점을 끌어 힘을 정한다</span></div><div><canvas id="cv-fcc"></canvas></div></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>노면</span><div class="seg" id="fc-surf"><button data-value="dry" class="on">마른</button><button data-value="wet">젖은</button><button data-value="snow">눈</button></div></div>
+          <label class="ctrl"><span>슬립각 α (오른쪽 곡선) <output id="fc-al-out"></output></span><input type="range" id="fc-al" min="1" max="12" step="0.5" value="5"></label>
+          <label class="ctrl"><span>제동 슬립률 |κ| <output id="fc-k-out"></output></span><input type="range" id="fc-k" min="0" max="60" step="1" value="5"></label>
+          <div class="ctrl-row"><button class="btn primary" id="fc-demo">트레일 브레이킹 재생</button><button class="btn" id="fc-reset">초기화</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">종력 Fx</span><span class="v" id="o-fc-fx">—</span></div>
+        <div class="stat"><span class="k">횡력 Fy</span><span class="v" id="o-fc-fy">—</span></div>
+        <div class="stat"><span class="k">마찰원 사용률</span><span class="v" id="o-fc-use">—</span></div>
+        <div class="stat"><span class="k">이 종력에서 남은 횡력</span><span class="v" id="o-fc-rem">—</span></div>
+        <div class="stat"><span class="k">조합 슬립의 횡력 손실</span><span class="v" id="o-fc-loss">—</span></div>
+      </div>
+      <div class="sim-note">왼쪽: 타이어 하나의 마찰원(하중 4 kN). 위는 구동, 아래는 제동, 좌우는 횡력. 주황 점을 원 밖으로 끌면 요구한 힘을 낼 수 없어 원 위로 잘린다. 파란 곡선은 오른쪽 그래프의 조합 슬립 궤적으로, 슬립각을 고정하고 제동 슬립을 0에서 100%까지 늘릴 때 힘 벡터가 지나는 길이다. 오른쪽: 같은 조건에서 제동력과 횡력의 변화. 해볼 것: '트레일 브레이킹 재생'으로 실선(가장자리를 따라가는 궤적)과 점선(제동 후 조향) 궤적을 비교한다. 제동 슬립을 60%까지 올려 횡력이 얼마나 사라지는지 본다. 잠긴 바퀴로 조향이 안 되는 이유다.</div>
+    </div>
+    <p>마찰원은 차 전체에도 그대로 확장된다. 네 바퀴의 마찰원을 합치면 차가 낼 수 있는 종·횡 가속도의 한계가 되고, 이를 가속도 평면에 그린 것이 g-g 선도다. 전자식 주행 안정 장치(ESC)와 자율주행의 궤적 계획(<a href="planning.html">20장</a>)은 이 한계 안에서만 움직임을 설계한다.</p>
+  </section>
+
+  <!-- =============================================================== 8 -->
+  <section id="wet">
+    <h2>수막 현상, 마모, 공기압 관리</h2>
+    <p>젖은 노면에서 타이어는 접지면 앞의 물을 밀어내고 고무를 노면에 닿게 해야 한다. 물 깊이 3 mm인 길을 폭 20 cm 타이어가 90 km/h로 달리면 매초 \(0.2 \times 0.003 \times 25 = 0.015\ \text{m}^3\), 즉 15리터의 물을 치워야 한다. 트레드의 세로 홈이 이 물의 통로다. 접지면은 세 영역으로 나뉜다.</p>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 720 260" role="img" aria-label="젖은 노면 접지면의 세 영역">
+        <path d="M120 40 C200 150 240 178 300 180 L560 180 C610 176 640 130 680 40 Z" fill="var(--surface-2)" stroke="var(--text-dim)" stroke-width="1.5"/>
+        <path d="M720 150 H640 C600 152 560 180 500 180 L720 180 Z" fill="#3b8fe0" opacity="0.55"/>
+        <path d="M620 156 C580 162 540 176 500 180 H620 Z" fill="#3b8fe0" opacity="0.55"/>
+        <rect x="400" y="176" width="100" height="4" fill="#3b8fe0" opacity="0.55"/>
+        <line x1="0" y1="180" x2="720" y2="180" stroke="var(--text-dim)" stroke-width="2"/>
+        <rect x="0" y="180" width="720" height="18" class="f-surface" stroke="none"/>
+        <g class="s-line" stroke-dasharray="4 4"><line x1="500" y1="110" x2="500" y2="225"/><line x1="400" y1="110" x2="400" y2="225"/><line x1="300" y1="110" x2="300" y2="225"/><line x1="610" y1="110" x2="610" y2="225"/></g>
+        <text x="555" y="222" class="t-acc" text-anchor="middle">A 물 쐐기</text>
+        <text x="450" y="222" class="t-acc" text-anchor="middle">B 얇은 물막</text>
+        <text x="350" y="222" class="t-acc" text-anchor="middle">C 마른 접촉</text>
+        <text x="555" y="244" class="t-dim" text-anchor="middle">동압이 타이어를 든다</text>
+        <text x="450" y="244" class="t-dim" text-anchor="middle">사이프가 막을 끊는다</text>
+        <text x="350" y="244" class="t-dim" text-anchor="middle">그립은 여기서만</text>
+        <line x1="330" y1="80" x2="470" y2="80" class="s-line"/><path d="M478 80 l-12 -6 v12 z" fill="var(--text-dim)"/>
+        <text x="400" y="70" class="t-dim" text-anchor="middle">진행 방향</text>
+        <text x="670" y="140" class="t-mono" text-anchor="middle">물</text>
+      </svg>
+      <figcaption><b>그림 7-5.</b> 젖은 노면의 접지면. 속도가 오를수록 물 쐐기(A)가 뒤로 파고들어 마른 접촉 영역(C)이 줄어든다. C가 사라지면 타이어가 물 위에 완전히 뜬 수막 상태다.</figcaption>
+    </figure>
+
+    <p>물 쐐기가 타이어를 들어 올리는 힘은 물의 동압 \(\tfrac12\rho v^2\)에 비례한다. 이 압력이 접지압, 곧 공기압과 비슷해지면 타이어가 뜬다. <span class="term">수막 현상</span><span class="en">(Hydroplaning / Aquaplaning)</span>의 발생 속도가 공기압의 제곱근에 비례하는 이유다. 항공기 타이어 실험에서 나온 Horne의 식을 SI 단위로 바꾸면</p>
+    <div class="formula">$$v_p \approx 6.35\sqrt{p}\qquad (v_p:\ \text{km/h},\ p:\ \text{kPa})$$
+      <div class="where">원식은 \(v_p = 9\sqrt{p}\) (노트, psi). 물 깊이가 트레드 홈 깊이를 넘는 완전 수막 조건의 값이다. 230 kPa라면 약 96 km/h.</div>
+    </div>
+    <p>물 깊이와 트레드 깊이까지 넣은 도로 공학의 경험식으로는 Gallaway 식이 쓰인다. 아래 시뮬레이터는 이 식을 SI 단위로 환산해 발생 속도를 구하고, 물 쐐기가 차지하는 비율을 \((v/v_p)^2\)로 근사한다(동압이 속도의 제곱에 비례하므로).</p>
+
+    <div class="sim" id="sim-hydro">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>수막 현상</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-hydro"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>속도 <output id="hy-v-out"></output></span><input type="range" id="hy-v" min="30" max="160" step="1" value="60"></label>
+          <label class="ctrl"><span>물 깊이 <output id="hy-wd-out"></output></span><input type="range" id="hy-wd" min="0.5" max="12" step="0.5" value="4"></label>
+          <label class="ctrl"><span>트레드 깊이 <output id="hy-td-out"></output></span><input type="range" id="hy-td" min="1" max="8" step="0.1" value="7"></label>
+          <label class="ctrl"><span>공기압 <output id="hy-p-out"></output></span><input type="range" id="hy-p" min="140" max="300" step="5" value="230"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">수막 발생 속도 (Gallaway)</span><span class="v" id="o-hy-vp">—</span></div>
+        <div class="stat"><span class="k">Horne 식</span><span class="v" id="o-hy-horne">—</span></div>
+        <div class="stat"><span class="k">접지면 잔존 비율</span><span class="v" id="o-hy-rem">—</span></div>
+        <div class="stat"><span class="k">치워야 할 물</span><span class="v" id="o-hy-q">—</span></div>
+        <div class="stat"><span class="k">상태</span><span class="v" id="o-hy-st">—</span></div>
+      </div>
+      <div class="sim-note">위: 옆에서 본 접지부(오른쪽이 진행 방향). 아래: 위에서 본 접지면으로, 파란 부분은 물 위에 뜬 영역이고 어두운 부분만 노면과 닿아 있다. 해볼 것: 속도를 올려 접지면이 앞에서부터 잠식되는 것을 본다. 공기압을 160 kPa로 낮추면 발생 속도가 크게 내려간다. 경험식은 트레드 깊이의 영향을 완만하게 보지만, 실제로는 물 깊이가 남은 홈 깊이를 넘는 순간부터 배수로가 가득 차 급격히 나빠진다. 모든 값은 근사이며 노면 거칠기와 타이어 패턴에 따라 달라진다.</div>
+    </div>
+
+    <h3>마모와 관리</h3>
+    <ul>
+      <li><b>트레드 깊이</b>: 새 승용차 타이어는 대표적으로 7~8 mm다. 홈 바닥의 마모 한계 표시(1.6 mm)가 드러나면 법적으로 교체해야 하지만, 젖은 노면 제동 거리는 3 mm 아래에서 이미 눈에 띄게 길어진다.</li>
+      <li><b>편마모</b>: 양쪽 숄더만 닳으면 저압, 중앙만 닳으면 과압, 한쪽 숄더만 닳으면 캠버나 토 정렬 이상을 의심한다.</li>
+      <li><b>자연 감압과 온도</b>: 공기는 고무를 조금씩 투과해 한 달에 수 kPa씩 빠진다. 또 기온이 10 °C 내려가면 압력은 약 10 kPa 떨어진다(절대 압력 330 kPa × 10/293).</li>
+      <li><b>노화</b>: 고무는 마모와 무관하게 산화와 자외선으로 굳는다. 제조 후 오래된 타이어는 홈이 남아 있어도 그립이 떨어진다.</li>
+    </ul>
+    <div class="callout deep">
+      <strong>TPMS: 공기압을 재는 두 가지 방법</strong>
+      <p><b>직접식</b>은 휠 안쪽(대개 밸브 뿌리)에 압력·온도 센서와 배터리, 무선 송신기를 넣어 바퀴마다 실제 압력을 보낸다. 정확하지만 센서 수명과 비용이 따른다. <b>간접식</b>은 ABS의 휠 속도 센서만 쓴다. 공기압이 낮은 타이어는 유효 구름 반지름이 작아져 다른 바퀴보다 조금 빨리 돌고, 타이어의 고유 진동수도 낮아진다. 이 두 신호를 통계적으로 비교해 저압을 추정한다. 추가 부품이 없지만 네 바퀴가 함께 빠지면 알아채기 어렵고, 타이어를 바꾸면 다시 학습시켜야 한다(휠 속도 센서와 차량 네트워크는 <a href="electrical.html">13장</a>).</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== summary -->
+  <section class="keypoints" id="summary">
+    <h2>핵심 정리</h2>
+    <ol>
+      <li>차의 모든 힘은 엽서 크기 접지면 네 개로 전달된다. 접지 면적은 대략 하중/공기압이며, 타이어 폭은 면적이 아니라 접지면의 모양을 바꾼다.</li>
+      <li>205/55R16은 폭 205 mm, 사이드월 = 폭 × 55%, 림 16인치. 외경 \(D = 25.4\,d_{rim} + 2H\).</li>
+      <li>고무 마찰은 점착과 히스테리시스의 합이며 온도·압력·속도에 따라 변한다. 같은 히스테리시스가 구름 저항도 만든다.</li>
+      <li>슬립률 \(\kappa = (\omega r_e - v)/v\). 힘은 10~20% 슬립에서 피크에 이르고, 잠기거나 헛돌면 슬라이딩 μ로 떨어진다. 매직 포뮬러가 이 곡선을 묘사한다.</li>
+      <li>횡력은 슬립각에서 나온다. 작은 각에서는 \(F_y = C_\alpha\alpha\). 브러시 모델에서 미끄럼 영역은 접지면 뒤에서 앞으로 번진다.</li>
+      <li>셀프 얼라이닝 토크는 횡력보다 먼저 꺾인다. 한계 직전 운전대가 가벼워지는 이유다.</li>
+      <li>μ는 하중이 커질수록 낮아진다. 그래서 하중 이동은 한 축의 총 그립을 이동량의 제곱에 비례해 줄인다.</li>
+      <li>종력과 횡력은 마찰원 \(\sqrt{F_x^2+F_y^2}\le\mu F_z\)를 나눠 쓴다. 수막 발생 속도는 공기압의 제곱근에 비례하고, 트레드 홈이 배수를 맡는다.</li>
+    </ol>
+  </section>
+
+  <!-- =============================================================== quiz -->
+  <section class="quiz-sec" id="quiz">
+    <h2>확인 퀴즈</h2>
+    <div class="quiz">
+      <div class="quiz-q"><p>Q1. 225/45R17 타이어의 외경은 약 얼마인가?</p><div class="opts">
+        <button class="opt">533 mm</button><button class="opt" data-correct>634 mm</button><button class="opt">657 mm</button><button class="opt">882 mm</button>
+      </div><div class="quiz-exp">사이드월 = 225 × 0.45 = 101.25 mm, 림 = 17 × 25.4 = 431.8 mm, 외경 = 431.8 + 2 × 101.25 = 634.3 mm. 205/55R16(631.9 mm)과 0.4%밖에 차이 나지 않아 인치업 조합으로 쓰인다.</div></div>
+
+      <div class="quiz-q"><p>Q2. 같은 하중·같은 공기압에서 타이어 폭만 넓히면 접지면은 어떻게 되는가?</p><div class="opts">
+        <button class="opt">면적이 폭에 비례해 커진다</button>
+        <button class="opt" data-correct>면적은 거의 같고, 짧고 넓은 모양이 된다</button>
+        <button class="opt">면적이 줄어든다</button>
+        <button class="opt">모양과 면적 모두 변하지 않는다</button>
+      </div><div class="quiz-exp">접지 면적은 대략 하중/공기압으로 정해진다. 폭이 넓어지면 접지면이 짧아져 접지압 분포가 고르게 되고 고무의 발열과 변형이 줄어 그립에 유리하지만, 면적 자체가 늘어서가 아니다.</div></div>
+
+      <div class="quiz-q"><p>Q3. 급제동에서 바퀴가 잠기는 것(슬립률 −100%)이 나쁜 이유로 가장 알맞은 것은?</p><div class="opts">
+        <button class="opt">슬립률이 0이 되어 제동력이 사라지기 때문</button>
+        <button class="opt">구름 저항이 사라지기 때문</button>
+        <button class="opt" data-correct>제동력이 피크보다 작아지고 횡력도 거의 낼 수 없기 때문</button>
+        <button class="opt">브레이크 패드가 과열되기 때문</button>
+      </div><div class="quiz-exp">잠긴 바퀴는 접지면 전체가 미끄러져 슬라이딩 μ만 낸다. 더 큰 문제는 마찰 예산을 종방향 미끄럼에 모두 써 버려 횡력이 남지 않는다는 것이다. ABS는 슬립률을 피크 부근으로 되돌려 제동력과 조향 능력을 함께 지킨다.</div></div>
+
+      <div class="quiz-q"><p>Q4. 브러시 모델에서 슬립각을 키울 때 접지면의 미끄럼 영역은 어디에서 시작되는가?</p><div class="opts">
+        <button class="opt">접지면 앞쪽 끝</button>
+        <button class="opt">접지면 한가운데</button>
+        <button class="opt" data-correct>접지면 뒤쪽 끝</button>
+        <button class="opt">전체에서 동시에</button>
+      </div><div class="quiz-exp">강모의 횡변형은 뒤로 갈수록 직선으로 커지는데, 버틸 수 있는 한계(μ × 접지압)는 뒤쪽 끝에서 0으로 떨어진다. 그래서 뒤쪽부터 미끄러지고 합력의 작용점이 앞으로 옮겨 가 얼라이닝 토크가 먼저 줄어든다.</div></div>
+
+      <div class="quiz-q"><p>Q5. 어떤 타이어가 제동으로 마찰원의 60%를 쓰고 있다. 동시에 낼 수 있는 최대 횡력은 한계의 몇 %인가?</p><div class="opts">
+        <button class="opt">40%</button><button class="opt">60%</button><button class="opt" data-correct>80%</button><button class="opt">100%</button>
+      </div><div class="quiz-exp">\(\sqrt{1 - 0.6^2} = 0.8\). 종력과 횡력은 산술 합이 아니라 벡터 합으로 제한되므로, 제동을 조금만 풀어도 횡력 여유가 크게 늘어난다.</div></div>
+
+      <div class="quiz-q"><p>Q6. 공기압이 낮은 타이어가 수막 현상에 더 취약한 이유는?</p><div class="opts">
+        <button class="opt">접지 면적이 줄어들기 때문</button>
+        <button class="opt" data-correct>접지압이 낮아 더 낮은 속도의 물 동압으로도 타이어가 들리기 때문</button>
+        <button class="opt">타이어 온도가 내려가기 때문</button>
+        <button class="opt">트레드 홈이 더 깊어지기 때문</button>
+      </div><div class="quiz-exp">타이어는 물의 동압 \(\tfrac12\rho v^2\)이 접지압(대략 공기압)에 이르면 뜬다. 따라서 발생 속도는 \(\sqrt{p}\)에 비례한다. 저압에서는 접지 면적이 오히려 커지지만 접지압이 낮아 물을 밀어내는 힘이 약하다.</div></div>
+    </div>
+  </section>
+</main>
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const cssv = (n) => getComputedStyle(document.body).getPropertyValue(n);
+  const font = (sz, mono, w) => (w ? w + " " : "") + sz + "px " + (mono ? cssv("--mono") : cssv("--font"));
+  const RUBBER = "#3a404d", RIM = "#aeb6c6", WATER = "#3b8fe0";
+  const sm = (v, u) => v + "<small>" + u + "</small>";
+  function label(ctx, s, x, y, c, a, sz, w) {
+    ctx.font = font(sz || 12, false, w); ctx.fillStyle = c; ctx.textAlign = a || "left"; ctx.textBaseline = "middle"; ctx.fillText(s, x, y);
+  }
+  function rr(ctx, x, y, w, h, r) {
+    ctx.beginPath(); ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+  function seg(ctx, x1, y1, x2, y2) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+  const SURF = {
+    dry: { B: 10, C: 1.9, D: 1.0, E: 0.97, name: "마른 아스팔트" },
+    wet: { B: 12, C: 2.3, D: 0.82, E: 1.0, name: "젖은 아스팔트" },
+    snow: { B: 5, C: 2.0, D: 0.3, E: 1.0, name: "눈" },
+    ice: { B: 4, C: 2.0, D: 0.1, E: 1.0, name: "얼음" },
+  };
+  const mf = (x, s) => s.D * Math.sin(s.C * Math.atan(s.B * x - s.E * (s.B * x - Math.atan(s.B * x))));
+
+  /* =================================================== Sim 1: 규격 해독기 */
+  (function () {
+    const dia = (w, ar, rim) => rim * 25.4 + (2 * w * ar) / 100;
+    const DREF = dia(205, 55, 16);
+    let cv = null;
+    const gW = CB.range("sz-w", (v) => v + " mm", upd);
+    const gA = CB.range("sz-ar", (v) => v + " %", upd);
+    const gR = CB.range("sz-rim", (v) => v + " in", upd);
+    function upd() {
+      const W = gW(), AR = gA(), R = gR(), sw = (W * AR) / 100, D = dia(W, AR, R), C = (Math.PI * D) / 1000;
+      CB.stat("o-sz-name", W + "/" + AR + "R" + R);
+      CB.stat("o-sz-sw", sm(sw.toFixed(1), "mm"));
+      CB.stat("o-sz-d", sm(D.toFixed(1), "mm"));
+      CB.stat("o-sz-c", sm(C.toFixed(3), "m"));
+      CB.stat("o-sz-rpm", sm(((100 / 3.6 / C) * 60).toFixed(0), "rpm"));
+      const diff = (D / DREF - 1) * 100;
+      CB.stat("o-sz-diff", sm((diff >= 0 ? "+" : "") + diff.toFixed(1), "%") + " / " + sm(((100 * D) / DREF).toFixed(1), "km/h"));
+      if (cv) cv.redraw();
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette();
+      const W = gW(), AR = gA(), rimD = gR() * 25.4, sw = (W * AR) / 100, D = rimD + 2 * sw;
+      const s = Math.min(w * 0.4, h * 0.74) / Math.max(760, D);
+      const gy = h * 0.9, R = (D / 2) * s, r = (rimD / 2) * s;
+      const cx = w * 0.27, cy = gy - R;
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 1.2; seg(ctx, w * 0.03, gy, w * 0.97, gy);
+      // 옆모습
+      ctx.fillStyle = RUBBER; ctx.strokeStyle = P.dim; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = RIM; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = RUBBER; ctx.lineWidth = Math.max(2, r * 0.12);
+      for (let k = 0; k < 5; k++) { const a = (k * Math.PI * 2) / 5 - Math.PI / 2; seg(ctx, cx, cy, cx + Math.cos(a) * r * 0.92, cy + Math.sin(a) * r * 0.92); }
+      ctx.fillStyle = RUBBER; ctx.beginPath(); ctx.arc(cx, cy, r * 0.2, 0, Math.PI * 2); ctx.fill();
+      const Rr = (DREF / 2) * s;
+      ctx.strokeStyle = P.accent2; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
+      ctx.beginPath(); ctx.arc(cx, gy - Rr, Rr, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = P.accent; ctx.lineWidth = 3; seg(ctx, cx, cy - R, cx, cy - r);
+      // 외경 치수선
+      const dx = Math.min(w * 0.5 - 6, cx + R + 12);
+      ctx.strokeStyle = P.dim; ctx.lineWidth = 1; seg(ctx, dx, gy, dx, gy - 2 * R); seg(ctx, dx - 4, gy - 2 * R, dx + 4, gy - 2 * R); seg(ctx, dx - 4, gy, dx + 4, gy);
+      ctx.save(); ctx.translate(dx + 9, cy); ctx.rotate(-Math.PI / 2); label(ctx, "외경 " + D.toFixed(0) + " mm", 0, 0, P.dim, "center", 11); ctx.restore();
+      label(ctx, "옆모습", cx, 12, P.dim, "center", 12, 600);
+      // 단면
+      const X = w * 0.76, hw = (W / 2) * s, rw = hw * 0.84, t = Math.max(3, 11 * s);
+      ctx.fillStyle = "rgba(174,182,198,0.28)"; ctx.strokeStyle = RIM; ctx.lineWidth = 2;
+      ctx.fillRect(X - rw, cy - r, rw * 2, r * 2); ctx.strokeRect(X - rw, cy - r, rw * 2, r * 2);
+      seg(ctx, X - rw, cy, X + rw, cy);
+      [-1, 1].forEach((sg) => {
+        const y0 = cy + sg * r, y1 = cy + sg * R, dh = sg * (R - r);
+        ctx.beginPath(); ctx.moveTo(X - rw, y0);
+        ctx.bezierCurveTo(X - hw * 1.06, y0 + dh * 0.3, X - hw * 1.06, y0 + dh * 0.8, X - hw * 0.84, y1);
+        ctx.lineTo(X + hw * 0.84, y1);
+        ctx.bezierCurveTo(X + hw * 1.06, y0 + dh * 0.8, X + hw * 1.06, y0 + dh * 0.3, X + rw, y0);
+        ctx.strokeStyle = RUBBER; ctx.lineWidth = t; ctx.lineJoin = "round"; ctx.stroke();
+        ctx.strokeStyle = P.dim; ctx.lineWidth = 1; ctx.stroke();
+        ctx.strokeStyle = RUBBER; ctx.lineWidth = t * 1.8; seg(ctx, X - hw * 0.8, y1, X + hw * 0.8, y1);
+      });
+      ctx.strokeStyle = P.dim; ctx.lineWidth = 1;
+      const wy = cy - R - t - 8;
+      seg(ctx, X - hw, wy, X + hw, wy); seg(ctx, X - hw, wy - 4, X - hw, wy + 4); seg(ctx, X + hw, wy - 4, X + hw, wy + 4);
+      label(ctx, "폭 " + W + " mm", X, wy - 10, P.text, "center", 11);
+      ctx.strokeStyle = P.accent; ctx.lineWidth = 3; seg(ctx, X + hw + 9, cy - R, X + hw + 9, cy - r);
+      label(ctx, sw.toFixed(0) + " mm", X + hw + 14, cy - (R + r) / 2, P.accent, "left", 11, 700);
+      label(ctx, gR() + " in", X, cy - r * 0.45, P.dim, "center", 11);
+      label(ctx, "단면", X, 12, P.dim, "center", 12, 600);
+    }
+    cv = CB.canvas($("cv-size"), draw, { aspect: 0.52, minHeight: 260, maxHeight: 380 });
+    $("sz-up").addEventListener("click", () => {
+      const D = dia(gW(), gA(), gR()), nr = Math.min(22, gR() + 1), nw = Math.min(325, gW() + 10);
+      let best = 55, err = 1e9;
+      for (let ar = 25; ar <= 80; ar += 5) { const e = Math.abs(dia(nw, ar, nr) - D); if (e < err) { err = e; best = ar; } }
+      gR.set(nr); gW.set(nw); gA.set(best);
+    });
+    $("sz-reset").addEventListener("click", () => { gW.set(205); gA.set(55); gR.set(16); });
+    upd();
+  })();
+
+  /* =================================================== Sim 2: 공기압과 접지면 */
+  (function () {
+    let cv = null;
+    const gP = CB.range("pr-p", (v) => v + " kPa", upd);
+    const gF = CB.range("pr-fz", (v) => v.toFixed(1) + " kN", upd);
+    function model() {
+      const p = gP(), fz = gF() * 1000, A = (fz / p) * 10;
+      const r = p / (230 * Math.pow(fz / 4500, 0.7));
+      const wid = 17 * (r > 1 ? Math.max(0.7, 1 - 0.35 * (r - 1)) : 1);
+      const L = Math.min(26, A / wid);
+      const s = CB.clamp((1 - r) * 1.6, -0.8, 0.8);
+      const crr = 0.01 * Math.pow(p / 230, -0.4) * Math.pow(fz / 4500, -0.1);
+      return { p, fz, A, r, wid, L, s, crr };
+    }
+    function upd() {
+      const m = model();
+      CB.stat("o-pr-a", sm(m.A.toFixed(0), "cm²"));
+      CB.stat("o-pr-l", sm(m.L.toFixed(1), "cm"));
+      CB.stat("o-pr-pm", sm((m.fz / (m.wid * m.L) * 10).toFixed(0), "kPa"));
+      CB.stat("o-pr-crr", m.crr.toFixed(4));
+      CB.stat("o-pr-frr", sm((m.crr * m.fz).toFixed(1), "N"));
+      CB.stat("o-pr-st", m.r < 0.85 ? '<span style="color:var(--bad)">부족 · 숄더 마모</span>' : m.r > 1.2 ? '<span style="color:var(--warn)">과다 · 중앙 마모</span>' : '<span style="color:var(--ok)">적정</span>');
+      if (cv) cv.redraw();
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), m = model();
+      // 옆모습
+      const R = Math.min(w * 0.19, h * 0.34), cx = w * 0.24, gy = h * 0.84;
+      const half = Math.min(R * 0.95, ((m.L * 10) / 2) * (R / 316));
+      const cy = gy - Math.sqrt(R * R - half * half);
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, w, gy); ctx.clip();
+      ctx.fillStyle = RUBBER; ctx.strokeStyle = P.dim; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = RIM; ctx.beginPath(); ctx.arc(cx, cy, R * 0.64, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 1.2; seg(ctx, w * 0.02, gy, w * 0.47, gy);
+      ctx.strokeStyle = P.accent; ctx.lineWidth = 4; seg(ctx, cx - half, gy, cx + half, gy);
+      CB.arrow(ctx, cx, cy - R - 34, cx, cy - R - 4, P.accent2, 3);
+      label(ctx, "하중 " + (m.fz / 1000).toFixed(1) + " kN", cx + 8, cy - R - 24, P.accent2, "left", 11, 700);
+      label(ctx, "접지 길이 " + m.L.toFixed(1) + " cm", cx, gy + 14, P.accent, "center", 11, 700);
+      // 접지면
+      const fx = w * 0.74, fy = h * 0.6, sc = Math.min((w * 0.44) / 19, (h * 0.62) / 26);
+      const NX = 21, NY = 25, cw = (m.wid * sc) / NX, ch = (m.L * sc) / NY;
+      ctx.fillStyle = P.accent;
+      for (let i = 0; i < NX; i++) for (let j = 0; j < NY; j++) {
+        const u = ((i + 0.5) / NX) * 2 - 1, v = ((j + 0.5) / NY) * 2 - 1;
+        const vb = (m.s > 0 ? 1 - 0.3 * m.s * (1 - u * u) : 1 + 0.5 * m.s * u * u) * (1 - 0.12 * Math.pow(u, 8));
+        if (Math.abs(v) > vb) continue;
+        const pc = m.p * (1 + m.s * (3 * u * u - 1)) * 1.25 * (1 - Math.pow(v / vb, 4));
+        ctx.globalAlpha = CB.clamp(pc / 700, 0.06, 1);
+        ctx.fillRect(fx + u * (m.wid * sc) / 2 - cw / 2, fy + v * (m.L * sc) / 2 - ch / 2, cw + 0.6, ch + 0.6);
+      }
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = P.faint; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+      ctx.strokeRect(fx - (17 * sc) / 2, fy - (m.L * sc) / 2, 17 * sc, m.L * sc); ctx.setLineDash([]);
+      // 폭 방향 압력 분포
+      const by = h * 0.04, bh = h * 0.16, pw = (17 * sc) / 2;
+      ctx.strokeStyle = P.faint; ctx.setLineDash([3, 3]); seg(ctx, fx - pw, by + bh * (1 - 1 / 2.8), fx + pw, by + bh * (1 - 1 / 2.8)); ctx.setLineDash([]);
+      ctx.strokeStyle = P.accent; ctx.lineWidth = 2; ctx.beginPath();
+      for (let i = 0; i <= 40; i++) {
+        const u = (i / 40) * 2 - 1, f = Math.max(0, 1 + m.s * (3 * u * u - 1));
+        const x = fx + u * (m.wid * sc) / 2, y = by + bh * (1 - f / 2.8);
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      }
+      ctx.stroke();
+      label(ctx, "폭 방향 접지압", fx, by + bh + 9, P.dim, "center", 11);
+      label(ctx, "숄더", fx - pw, h - 10, P.dim, "center", 11); label(ctx, "숄더", fx + pw, h - 10, P.dim, "center", 11);
+      label(ctx, "중앙", fx, h - 10, P.dim, "center", 11);
+    }
+    cv = CB.canvas($("cv-pres"), draw, { aspect: 0.6, minHeight: 280, maxHeight: 380 });
+    upd();
+  })();
+
+  /* =================================================== Sim 3: 슬립률 곡선 */
+  (function () {
+    let cvW = null, cvC = null, ang = 0, gx = 0, Rcur = 60;
+    const VPX = 150;
+    const gSurf = CB.seg("sl-surf", upd);
+    const gK = CB.range("sl-k", (v) => (v > 0 ? "+" : "") + v + " %", upd);
+    const gFz = CB.range("sl-fz", (v) => v.toFixed(1) + " kN", upd);
+    const ls = () => 1 - 0.04 * (gFz() - 4);
+    const mu = (k, key) => Math.sign(k) * mf(Math.abs(k), SURF[key || gSurf()]) * ls();
+    function peak() { let bk = 0, bm = 0; for (let k = 0.005; k <= 1; k += 0.005) { const m = mu(k); if (m > bm) { bm = m; bk = k; } } return { k: bk, m: bm }; }
+    function upd() {
+      const k = gK() / 100, m = mu(k), pk = peak();
+      CB.stat("o-sl-mu", m.toFixed(2));
+      CB.stat("o-sl-fx", sm((m * gFz()).toFixed(2), "kN") + (k < 0 ? " <small>제동</small>" : k > 0 ? " <small>구동</small>" : ""));
+      CB.stat("o-sl-pk", pk.m.toFixed(2) + " <small>(" + (pk.k * 100).toFixed(0) + "%)</small>");
+      CB.stat("o-sl-sl", mu(1).toFixed(2));
+      CB.stat("o-sl-wr", sm((100 * (1 + k)).toFixed(0), "km/h"));
+      if (cvC) cvC.redraw();
+    }
+    function drawW(ctx, w, h) {
+      const P = CB.palette(), k = gK() / 100, m = mu(k);
+      const gy = h * 0.72, R = Math.min(h * 0.25, w * 0.24), cx = w * 0.5, cy = gy - R;
+      Rcur = R;
+      ctx.fillStyle = P.surface; ctx.fillRect(0, gy, w, h - gy);
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 1.2; seg(ctx, 0, gy, w, gy);
+      ctx.strokeStyle = P.faint; ctx.lineWidth = 2;
+      for (let x = -(gx % 40); x < w + 10; x += 40) seg(ctx, x, gy + 2, x - 7, gy + 11);
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang);
+      ctx.fillStyle = RUBBER; ctx.strokeStyle = P.dim; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = P.bg; ctx.lineWidth = 2;
+      for (let i = 0; i < 18; i++) { const a = (i * Math.PI) / 9; seg(ctx, Math.cos(a) * R * 0.88, Math.sin(a) * R * 0.88, Math.cos(a) * R, Math.sin(a) * R); }
+      ctx.fillStyle = RIM; ctx.beginPath(); ctx.arc(0, 0, R * 0.62, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = RUBBER; ctx.lineWidth = Math.max(2, R * 0.08);
+      for (let i = 0; i < 5; i++) { const a = (i * Math.PI * 2) / 5; seg(ctx, 0, 0, Math.cos(a) * R * 0.58, Math.sin(a) * R * 0.58); }
+      ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(R * 0.45, 0, R * 0.07, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      const x0 = w * 0.1, Lv = w * 0.36, Lw = Lv * (1 + k);
+      label(ctx, "차속 v", x0, 12, P.accent2, "left", 11, 700);
+      CB.arrow(ctx, x0, 26, x0 + Lv, 26, P.accent2, 3);
+      label(ctx, "바퀴 원주 속도 ωr", x0, 44, P.accent, "left", 11, 700);
+      if (Lw > 3) CB.arrow(ctx, x0, 58, x0 + Lw, 58, P.accent, 3); else label(ctx, "0 (회전 정지)", x0, 58, P.accent, "left", 11);
+      if (Math.abs(m) > 0.01) {
+        CB.arrow(ctx, cx, gy + 18, cx + m * w * 0.3, gy + 18, P.ok, 4);
+        label(ctx, "Fx", cx + m * w * 0.3 + (m > 0 ? 6 : -6), gy + 18, P.ok, m > 0 ? "left" : "right", 12, 700);
+      }
+      const pk = peak().k, a = Math.abs(k);
+      const st = k <= -0.99 ? "바퀴 잠김: 접지면 전체가 미끄러진다" : k >= 0.6 ? "휠스핀" : a < 0.02 ? "자유 구름: 힘 없음" : a < pk * 0.7 ? "선형 구간" : a <= pk * 1.4 ? "피크 부근" : "미끄럼 구간: 힘이 줄어든다";
+      label(ctx, st, w / 2, h - 10, P.text, "center", 12, 600);
+    }
+    function drawC(ctx, w, h) {
+      const P = CB.palette(), k = gK() / 100, cur = gSurf(), pk = peak();
+      const series = Object.keys(SURF).filter((s) => s !== cur).concat([cur]).map((key) => {
+        const d = []; for (let x = -1; x <= 1.0001; x += 0.01) d.push([x, mu(x, key)]);
+        return { data: d, color: key === cur ? P.accent : P.faint, width: key === cur ? 2.6 : 1.4 };
+      });
+      CB.chart(ctx, null, {
+        x: [-1, 1], y: [-1.2, 1.2], xLabel: "슬립률 κ (− 제동, + 구동)", yLabel: "μ = Fx / Fz", xFmt: (v) => Math.round(v * 100) + "%",
+        xTicks: [-1, -0.5, 0, 0.5, 1], series,
+        vlines: [{ x: -pk.k, color: P.faint }, { x: pk.k, color: P.faint }],
+        hlines: [{ y: 0, color: P.axis, dash: [] }],
+        points: [{ x: k, y: mu(k), color: P.accent2, r: 6, label: "μ " + mu(k).toFixed(2) }],
+      });
+    }
+    cvW = CB.canvas($("cv-slipw"), drawW, { aspect: 0.8, maxHeight: 340 });
+    cvC = CB.canvas($("cv-slip"), drawC, { aspect: 0.8, maxHeight: 340 });
+    CB.loop($("cv-slipw"), (dt) => { ang += ((VPX * (1 + gK() / 100)) / Rcur) * dt; gx += VPX * dt; cvW.redraw(); });
+    $("sl-abs").addEventListener("click", () => gK.set(-Math.round(peak().k * 100)));
+    $("sl-lock").addEventListener("click", () => gK.set(-100));
+    $("sl-spin").addEventListener("click", () => gK.set(100));
+    upd();
+  })();
+
+  /* =================================================== Sim 4: 슬립각과 브러시 모델 */
+  (function () {
+    const FZ = 4000, A = 0.07;
+    let cvT = null, cvC = null, G = { cx: 100, cy: 100 };
+    const gAl = CB.range("br-al", (v) => v.toFixed(1) + "°", upd);
+    const gMu = CB.range("br-mu", (v) => v.toFixed(2), upd);
+    const gCa = CB.range("br-ca", (v) => v + " N/deg", upd);
+    function brush(alDeg, mu, caDeg) {
+      const Ca = (caDeg * 180) / Math.PI, sg = Math.tan((Math.abs(alDeg) * Math.PI) / 180);
+      const z = Math.min(1, (Ca * sg) / (3 * mu * FZ));
+      const Fy = mu * FZ * (3 * z - 3 * z * z + z * z * z), Mz = mu * FZ * A * z * Math.pow(1 - z, 3);
+      return { Ca, sg, z, Fy, Mz, tp: Fy > 1 ? Mz / Fy : A / 3 };
+    }
+    function upd() {
+      const b = brush(gAl(), gMu(), gCa()), s = gAl() < 0 ? -1 : 1;
+      CB.stat("o-br-fy", sm(((s * b.Fy) / 1000).toFixed(2), "kN"));
+      CB.stat("o-br-lin", sm(((gCa() * gAl()) / 1000).toFixed(2), "kN"));
+      CB.stat("o-br-mz", sm((s * b.Mz).toFixed(1), "N·m"));
+      CB.stat("o-br-tp", sm((b.tp * 1000).toFixed(1), "mm"));
+      CB.stat("o-br-ad", b.z >= 1 ? '<span style="color:var(--bad)">0% · 전부 미끄럼</span>' : sm(((1 - b.z) * 100).toFixed(0), "%"));
+      if (cvT) cvT.redraw(); if (cvC) cvC.redraw();
+    }
+    function drawT(ctx, w, h) {
+      const P = CB.palette(), al = gAl(), mu = gMu(), b = brush(al, mu, gCa());
+      const cx = w / 2, cy = h * 0.54, Ap = h * 0.3, tw = Math.min(w * 0.3, Ap * 0.95), K = (tw * 0.85) / 0.018;
+      const dir = al < 0 ? 1 : -1, cp = b.Ca / (2 * A * A), ar = (al * Math.PI) / 180;
+      G = { cx, cy };
+      rr(ctx, cx - tw, cy - Ap * 1.25, tw * 2, Ap * 2.5, tw * 0.35);
+      ctx.fillStyle = P.surface; ctx.fill(); ctx.strokeStyle = P.border; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.strokeStyle = P.faint; ctx.setLineDash([5, 4]); ctx.lineWidth = 1; seg(ctx, cx, h * 0.03, cx, h * 0.97); ctx.setLineDash([]);
+      const lim = (x) => (mu * ((3 * FZ) / (4 * A)) * (1 - (x * x) / (A * A))) / cp;
+      ctx.strokeStyle = P.dim; ctx.setLineDash([3, 3]); ctx.beginPath();
+      for (let i = 0; i <= 40; i++) { const x = A - (i / 40) * 2 * A, px = cx + dir * lim(x) * K, py = cy - (x / A) * Ap; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+      ctx.stroke(); ctx.setLineDash([]);
+      const N = 29, sAd = 2 * A * (1 - b.z);
+      for (let i = 0; i < N; i++) {
+        const x = A - ((i + 0.5) / N) * 2 * A, s = A - x, stick = s <= sAd;
+        const d = stick ? s * b.sg : lim(x), py = cy - (x / A) * Ap, px = cx + dir * d * K;
+        ctx.strokeStyle = stick ? P.accent2 : P.bad; ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = 2;
+        seg(ctx, cx, py, px, py);
+        ctx.beginPath(); ctx.arc(px, py, 2.4, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.strokeStyle = P.text; ctx.lineWidth = 3; seg(ctx, cx, cy - Ap, cx, cy + Ap);
+      const Lv = h * 0.47;
+      CB.arrow(ctx, cx, cy, cx + Lv * Math.sin(ar), cy - Lv * Math.cos(ar), P.accent, 3);
+      label(ctx, "진행 방향 (α = " + al.toFixed(1) + "°)", cx + Lv * Math.sin(ar) + (al >= 0 ? 8 : -8), cy - Lv * Math.cos(ar) + 8, P.accent, al >= 0 ? "left" : "right", 11, 700);
+      if (b.Fy > 20) {
+        const fy = cy + (b.tp / A) * Ap, len = (b.Fy / 5000) * w * 0.42;
+        CB.arrow(ctx, cx, fy, cx + dir * len, fy, P.ok, 4);
+        label(ctx, "Fy", cx + dir * (len + 6), fy, P.ok, dir > 0 ? "left" : "right", 12, 700);
+        ctx.strokeStyle = P.ok; ctx.lineWidth = 1; seg(ctx, cx - dir * 10, cy, cx - dir * 10, fy);
+        label(ctx, "t", cx - dir * 18, (cy + fy) / 2, P.ok, "center", 11, 700);
+      }
+      ctx.fillStyle = P.text; ctx.beginPath(); ctx.arc(cx, cy, 3.5, 0, Math.PI * 2); ctx.fill();
+      label(ctx, "앞", cx - tw + 8, cy - Ap * 1.25 + 12, P.dim, "left", 11);
+      label(ctx, "뒤", cx - tw + 8, cy + Ap * 1.25 - 12, P.dim, "left", 11);
+    }
+    function drawC(ctx, w, h) {
+      const P = CB.palette(), mu = gMu(), ca = gCa(), al = Math.abs(gAl()), b = brush(al, mu, ca);
+      const fy = [], mz = [], lin = [];
+      for (let a = 0; a <= 15.001; a += 0.1) { const q = brush(a, mu, ca); fy.push([a, q.Fy / 1000]); mz.push([a, q.Mz]); lin.push([a, (ca * a) / 1000]); }
+      const bw = w - 70;
+      CB.chart(ctx, { x: 54, y: 14, w: bw, h: h * 0.44 - 14 }, { x: [0, 15], y: [0, 5], yLabel: "", series: [{ data: lin, color: P.faint, dash: [5, 4], width: 1.4 }, { data: fy, color: P.ok, width: 2.4 }],
+        points: [{ x: al, y: b.Fy / 1000, color: P.ok, r: 5 }], vlines: [{ x: al, color: P.faint }] });
+      label(ctx, "횡력 Fy (kN)", 60, 24, P.ok, "left", 11, 700);
+      CB.chart(ctx, { x: 54, y: h * 0.5 + 6, w: bw, h: h * 0.5 - 52 }, { x: [0, 15], y: [0, 40], xLabel: "슬립각 |α| (deg)", series: [{ data: mz, color: P.accent, width: 2.4 }],
+        points: [{ x: al, y: b.Mz, color: P.accent, r: 5 }], vlines: [{ x: al, color: P.faint }] });
+      label(ctx, "얼라이닝 토크 Mz (N·m)", w - 20, h * 0.5 + 16, P.accent, "right", 11, 700);
+    }
+    cvT = CB.canvas($("cv-brush"), drawT, { aspect: 0.9, maxHeight: 360 });
+    cvC = CB.canvas($("cv-brushc"), drawC, { aspect: 0.9, maxHeight: 360 });
+    const setFrom = (p) => { if (p.y < G.cy - 10) gAl.set(CB.clamp(Math.round((Math.atan2(p.x - G.cx, G.cy - p.y) * 1800) / Math.PI) / 10, -15, 15)); };
+    CB.drag($("cv-brush"), { down: setFrom, move: setFrom });
+    upd();
+  })();
+
+  /* =================================================== Sim 5: 하중 민감도 */
+  (function () {
+    const FZ0 = 4, MU0 = 1.05;
+    let cvA = null, cvC = null;
+    const gD = CB.range("ld-d", (v) => v.toFixed(2) + " kN", upd);
+    const gKs = CB.range("ld-k", (v) => v.toFixed(2), upd);
+    const fmax = (fz) => MU0 * fz * (1 - gKs() * (fz / FZ0 - 1));
+    function upd() {
+      const d = gD(), fi = fmax(FZ0 - d), fo = fmax(FZ0 + d), sum = fi + fo, loss = (1 - sum / (2 * fmax(FZ0))) * 100;
+      CB.stat("o-ld-in", sm(fi.toFixed(2), "kN"));
+      CB.stat("o-ld-out", sm(fo.toFixed(2), "kN"));
+      CB.stat("o-ld-sum", sm(sum.toFixed(2), "kN"));
+      CB.stat("o-ld-loss", sm(loss.toFixed(1), "%"));
+      if (cvA) cvA.redraw(); if (cvC) cvC.redraw();
+    }
+    function drawA(ctx, w, h) {
+      const P = CB.palette(), d = gD(), gy = h * 0.66, tr = w * 0.46, xi = w / 2 - tr / 2, xo = w / 2 + tr / 2;
+      const fzi = FZ0 - d, fzo = FZ0 + d;
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 1.2; seg(ctx, w * 0.03, gy, w * 0.97, gy);
+      const roll = (d / 3.6) * 0.1, by = gy - h * 0.3;
+      ctx.save(); ctx.translate(w / 2, gy - h * 0.12); ctx.rotate(roll);
+      rr(ctx, -tr * 0.62, -h * 0.3, tr * 1.24, h * 0.24, 12);
+      ctx.globalAlpha = 0.25; ctx.fillStyle = P.accent; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.strokeStyle = P.accent; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = P.text; ctx.beginPath(); ctx.arc(0, -h * 0.18, 4, 0, Math.PI * 2); ctx.fill();
+      CB.arrow(ctx, 0, -h * 0.18, d * w * 0.045 + 6, -h * 0.18, P.dim, 2.5);
+      ctx.restore();
+      label(ctx, "관성력", w / 2, by - h * 0.14, P.dim, "center", 11);
+      [[xi, fzi, "안쪽"], [xo, fzo, "바깥쪽"]].forEach(([x, fz, name]) => {
+        const sq = 1 + (fz - FZ0) * 0.03;
+        rr(ctx, x - 13 * sq, gy - 44 / sq, 26 * sq, 44 / sq, 6); ctx.fillStyle = RUBBER; ctx.fill(); ctx.strokeStyle = P.dim; ctx.lineWidth = 1.2; ctx.stroke();
+        const len = (fz / 8) * h * 0.2;
+        if (len > 3) CB.arrow(ctx, x, gy + 8 + len, x, gy + 8, P.accent2, 3);
+        label(ctx, fz.toFixed(2) + " kN", x, gy + h * 0.2 + 22, P.accent2, "center", 11, 700);
+        const f = fmax(fz), fl = (f / 8) * w * 0.3;
+        if (fl > 3) CB.arrow(ctx, x - 15, gy - 12, x - 15 - fl, gy - 12, P.accent, 3.5);
+        label(ctx, f.toFixed(2), x - 15 - fl / 2, gy - 26, P.accent, "center", 11, 700);
+        label(ctx, name, x, gy - 58, P.dim, "center", 11);
+      });
+      label(ctx, "좌회전 (뒤에서 본 모습)", w / 2, 14, P.dim, "center", 12, 600);
+    }
+    function drawC(ctx, w, h) {
+      const P = CB.palette(), d = gD(), cur = [], lin = [];
+      for (let f = 0; f <= 8.001; f += 0.1) { cur.push([f, fmax(f)]); lin.push([f, MU0 * f]); }
+      const fi = fmax(FZ0 - d), fo = fmax(FZ0 + d), avg = (fi + fo) / 2, f0 = fmax(FZ0);
+      const c = CB.chart(ctx, null, { x: [0, 8], y: [0, 8], xLabel: "수직 하중 Fz (kN)", yLabel: "최대 횡력 (kN)",
+        series: [{ data: lin, color: P.faint, dash: [5, 4], width: 1.4 }, { data: cur, color: P.accent, width: 2.4 }, { data: [[FZ0 - d, fi], [FZ0 + d, fo]], color: P.accent2, width: 1.6 }],
+        vlines: [{ x: FZ0, color: P.faint }],
+        points: [{ x: FZ0 - d, y: fi, color: P.accent2, r: 5, label: "안" }, { x: FZ0 + d, y: fo, color: P.accent2, r: 5, label: "밖" }, { x: FZ0, y: f0, color: P.accent, r: 5 }, { x: FZ0, y: avg, color: P.bad, r: 5 }] });
+      if (f0 - avg > 0.02) label(ctx, "손실 " + (f0 - avg).toFixed(2) + " kN", c.X(FZ0) + 9, c.Y(avg) + 12, P.bad, "left", 11, 700);
+      label(ctx, "μ 일정(직선)", c.X(5.2), c.Y(6.6), P.dim, "right", 11);
+    }
+    cvA = CB.canvas($("cv-load"), drawA, { aspect: 0.8, maxHeight: 340 });
+    cvC = CB.canvas($("cv-loadc"), drawC, { aspect: 0.8, maxHeight: 340 });
+    upd();
+  })();
+
+  /* =================================================== Sim 6: 마찰원 */
+  (function () {
+    const FZ = 4;
+    let cvA = null, cvC = null, pt = { x: 0.3, y: -0.5 }, demo = false, td = 0, G = { cx: 100, cy: 100, R0: 80 };
+    const gSurf = CB.seg("fc-surf", upd);
+    const gAl = CB.range("fc-al", (v) => v.toFixed(1) + "°", upd);
+    const gK = CB.range("fc-k", (v) => v + " %", upd);
+    const comb = (k, alDeg, S) => {
+      const ta = Math.tan((alDeg * Math.PI) / 180), sg = Math.hypot(k, ta), F = mf(sg, S);
+      return { fx: (F * k) / sg, fy: (F * ta) / sg };
+    };
+    function path(t) {
+      const q = 0.96, H = Math.PI / 2;
+      if (t < 0.2) return { x: 0, y: -q * (t / 0.2) };
+      if (t < 0.55) { const u = ((t - 0.2) / 0.35) * H; return { x: q * Math.sin(u), y: -q * Math.cos(u) }; }
+      if (t < 0.7) return { x: q, y: 0 };
+      const u = ((t - 0.7) / 0.3) * H * 0.55; return { x: q * Math.cos(u), y: q * Math.sin(u) };
+    }
+    function actual() {
+      const lim = SURF[gSurf()].D, mag = Math.hypot(pt.x, pt.y), s = mag > lim ? lim / mag : 1;
+      return { x: pt.x * s, y: pt.y * s, mag, lim };
+    }
+    function upd() {
+      const a = actual(), S = SURF[gSurf()];
+      CB.stat("o-fc-fx", sm(Math.abs(a.y * FZ).toFixed(2), "kN") + " <small>" + (a.y > 0.005 ? "구동" : a.y < -0.005 ? "제동" : "") + "</small>");
+      CB.stat("o-fc-fy", sm(Math.abs(a.x * FZ).toFixed(2), "kN"));
+      const use = (a.mag / a.lim) * 100;
+      CB.stat("o-fc-use", use > 100 ? '<span style="color:var(--bad)">' + use.toFixed(0) + "% 한계 초과</span>" : sm(use.toFixed(0), "%"));
+      CB.stat("o-fc-rem", sm((Math.sqrt(Math.max(0, a.lim * a.lim - a.y * a.y)) * FZ).toFixed(2), "kN"));
+      const c0 = comb(0, gAl(), S), c1 = comb(gK() / 100, gAl(), S);
+      CB.stat("o-fc-loss", sm(((1 - c1.fy / c0.fy) * 100).toFixed(0), "%"));
+      if (cvA) cvA.redraw(); if (cvC) cvC.redraw();
+    }
+    function drawA(ctx, w, h) {
+      const P = CB.palette(), S = SURF[gSurf()], cx = w / 2, cy = h / 2, R0 = Math.min(w, h) * 0.38, a = actual(), Rl = R0 * a.lim;
+      G = { cx, cy, R0 };
+      ctx.strokeStyle = P.grid; ctx.lineWidth = 1;
+      [0.25, 0.5, 0.75].forEach((f) => { ctx.beginPath(); ctx.arc(cx, cy, Rl * f, 0, Math.PI * 2); ctx.stroke(); });
+      ctx.strokeStyle = P.axis; seg(ctx, cx - R0 * 1.2, cy, cx + R0 * 1.2, cy); seg(ctx, cx, cy - R0 * 1.2, cx, cy + R0 * 1.2);
+      ctx.globalAlpha = 0.1; ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(cx, cy, Rl, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+      ctx.strokeStyle = P.text; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, Rl, 0, Math.PI * 2); ctx.stroke();
+      label(ctx, "구동", cx + 6, cy - R0 * 1.15, P.dim, "left", 11); label(ctx, "제동", cx + 6, cy + R0 * 1.15, P.dim, "left", 11);
+      label(ctx, "횡력", cx + R0 * 1.2, cy - 10, P.dim, "right", 11);
+      label(ctx, "μFz = " + (a.lim * FZ).toFixed(1) + " kN", cx - R0 * 1.2, 14, P.text, "left", 11, 600);
+      // 조합 슬립 궤적
+      ctx.strokeStyle = P.accent2; ctx.lineWidth = 2; ctx.beginPath();
+      for (let i = 0; i <= 100; i++) { const c = comb(i / 100, gAl(), S), x = cx + c.fy * R0, y = cy + c.fx * R0; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      ctx.stroke();
+      const ck = comb(gK() / 100, gAl(), S);
+      ctx.fillStyle = P.accent2; ctx.beginPath(); ctx.arc(cx + ck.fy * R0, cy + ck.fx * R0, 5, 0, Math.PI * 2); ctx.fill();
+      if (demo) {
+        ctx.strokeStyle = P.ok; ctx.lineWidth = 2; ctx.beginPath();
+        for (let i = 0; i <= 100; i++) { const p = path(i / 100), x = cx + p.x * Rl, y = cy - p.y * Rl; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+        ctx.stroke();
+        ctx.strokeStyle = P.dim; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(cx, cy + 0.96 * Rl); ctx.lineTo(cx, cy); ctx.lineTo(cx + 0.96 * Rl, cy); ctx.stroke(); ctx.setLineDash([]);
+        const ph = td < 0.2 ? "직선 제동" : td < 0.55 ? "제동을 풀며 조향" : td < 0.7 ? "정점: 횡력만" : "조향을 풀며 가속";
+        label(ctx, ph, cx, h - 12, P.ok, "center", 12, 700);
+      }
+      const ax = cx + a.x * R0, ay = cy - a.y * R0, rx = cx + pt.x * R0, ry = cy - pt.y * R0;
+      if (a.mag > a.lim) {
+        ctx.strokeStyle = P.bad; ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5; seg(ctx, ax, ay, rx, ry); ctx.setLineDash([]);
+        ctx.beginPath(); ctx.arc(rx, ry, 6, 0, Math.PI * 2); ctx.stroke();
+        label(ctx, "한계 초과: 미끄러진다", cx, h - 12, P.bad, "center", 12, 700);
+      }
+      CB.arrow(ctx, cx, cy, ax, ay, P.accent, 3);
+      ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(ax, ay, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = P.bg; ctx.lineWidth = 2; ctx.stroke();
+    }
+    function drawC(ctx, w, h) {
+      const P = CB.palette(), S = SURF[gSurf()], al = gAl(), k = gK() / 100, fx = [], fy = [];
+      for (let i = 0; i <= 60; i++) { const c = comb(i / 100, al, S); fx.push([i, c.fx * FZ]); fy.push([i, c.fy * FZ]); }
+      const c = comb(k, al, S);
+      CB.chart(ctx, null, { x: [0, 60], y: [0, 4.5], xLabel: "제동 슬립률 |κ| (%)", yLabel: "힘 (kN)",
+        series: [{ data: fx, color: P.accent, width: 2.4 }, { data: fy, color: P.accent2, width: 2.4 }],
+        vlines: [{ x: k * 100, color: P.faint }],
+        points: [{ x: k * 100, y: c.fx * FZ, color: P.accent, r: 5 }, { x: k * 100, y: c.fy * FZ, color: P.accent2, r: 5 }] });
+      label(ctx, "제동력 |Fx|", w - 24, 26, P.accent, "right", 11, 700);
+      label(ctx, "횡력 Fy (α = " + al.toFixed(1) + "°)", w - 24, 42, P.accent2, "right", 11, 700);
+    }
+    cvA = CB.canvas($("cv-fc"), drawA, { aspect: 0.9, maxHeight: 360 });
+    cvC = CB.canvas($("cv-fcc"), drawC, { aspect: 0.9, maxHeight: 360 });
+    const setFrom = (p) => { demo = false; pt = { x: CB.clamp((p.x - G.cx) / G.R0, -1.2, 1.2), y: CB.clamp((G.cy - p.y) / G.R0, -1.2, 1.2) }; upd(); };
+    CB.drag($("cv-fc"), { down: setFrom, move: setFrom });
+    CB.loop($("cv-fc"), (dt) => {
+      if (!demo) return;
+      td += dt / 7;
+      if (td >= 1) { td = 1; demo = false; }
+      const p = path(td), lim = SURF[gSurf()].D;
+      pt = { x: p.x * lim, y: p.y * lim }; upd();
+    });
+    $("fc-demo").addEventListener("click", () => { td = 0; demo = true; });
+    $("fc-reset").addEventListener("click", () => { demo = false; pt = { x: 0.3, y: -0.5 }; gAl.set(5); gK.set(5); });
+    upd();
+  })();
+
+  /* =================================================== Sim 7: 수막 현상 */
+  (function () {
+    let cv = null;
+    const gV = CB.range("hy-v", (v) => v + " km/h", upd);
+    const gWd = CB.range("hy-wd", (v) => v.toFixed(1) + " mm", upd);
+    const gTd = CB.range("hy-td", (v) => v.toFixed(1) + " mm", upd);
+    const gP = CB.range("hy-p", (v) => v + " kPa", upd);
+    function model() {
+      const P = gP() / 6.895, TD = (gTd() / 25.4) * 32, WD = gWd() / 25.4, k = Math.pow(WD, 0.06);
+      const A = Math.max(10.409 / k + 3.507, (28.952 / k - 7.817) * Math.pow(0.03, 0.14));
+      const vp = Math.pow(10, 0.04) * Math.pow(P, 0.3) * Math.pow(TD + 1, 0.06) * A * 1.609;
+      const f = Math.min(1, Math.pow(gV() / vp, 2));
+      return { vp, horne: 6.35 * Math.sqrt(gP()), f, q: 0.2 * (gWd() / 1000) * (gV() / 3.6) * 1000 };
+    }
+    function upd() {
+      const m = model();
+      CB.stat("o-hy-vp", sm(m.vp.toFixed(0), "km/h"));
+      CB.stat("o-hy-horne", sm(m.horne.toFixed(0), "km/h"));
+      CB.stat("o-hy-rem", sm(((1 - m.f) * 100).toFixed(0), "%"));
+      CB.stat("o-hy-q", sm(m.q.toFixed(1), "L/s"));
+      CB.stat("o-hy-st", m.f >= 1 ? '<span style="color:var(--bad)">완전 수막</span>' : m.f > 0.5 ? '<span style="color:var(--warn)">부분 수막</span>' : '<span style="color:var(--ok)">접지 유지</span>');
+      if (cv) cv.redraw();
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), m = model(), gy = h * 0.46, cx = w * 0.5, Lc = w * 0.24, R = Math.max(h * 0.95, Lc * 1.6);
+      const wd = 5 + gWd() * 2.2, xl = cx + Lc, xt = xl - m.f * 2 * Lc, lift = m.f >= 1 ? 3 : 0;
+      ctx.fillStyle = P.surface; ctx.fillRect(0, gy, w, h * 0.08);
+      // 앞쪽 물
+      ctx.fillStyle = WATER; ctx.globalAlpha = 0.5;
+      ctx.beginPath(); ctx.moveTo(w, gy); ctx.lineTo(w, gy - wd); ctx.lineTo(xl + 46, gy - wd);
+      ctx.quadraticCurveTo(xl + 22, gy - wd - 4 - m.f * 10, xl + 8, gy - wd - m.f * 14); ctx.lineTo(xl, gy); ctx.closePath(); ctx.fill();
+      ctx.fillRect(0, gy - 2, cx - Lc, 2);
+      ctx.globalAlpha = 1;
+      // 타이어
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, w, gy - lift); ctx.clip();
+      ctx.fillStyle = RUBBER; ctx.strokeStyle = P.dim; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(cx, gy - lift - Math.sqrt(R * R - Lc * Lc), R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.restore();
+      // 물 쐐기
+      if (m.f > 0.01) {
+        ctx.beginPath(); ctx.moveTo(xt, gy); ctx.lineTo(xl, gy); ctx.lineTo(xl, gy - wd); ctx.closePath();
+        ctx.fillStyle = P.bg; ctx.fill(); ctx.fillStyle = WATER; ctx.globalAlpha = 0.6; ctx.fill(); ctx.globalAlpha = 1;
+      }
+      if (lift) { ctx.fillStyle = WATER; ctx.globalAlpha = 0.6; ctx.fillRect(cx - Lc, gy - lift, 2 * Lc, lift); ctx.globalAlpha = 1; }
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 1.2; seg(ctx, 0, gy, w, gy);
+      CB.arrow(ctx, w * 0.08, 20, w * 0.08 + w * 0.0018 * gV() + 20, 20, P.accent, 3);
+      label(ctx, gV() + " km/h", w * 0.08, 36, P.accent, "left", 11, 700);
+      label(ctx, "물 " + gWd().toFixed(1) + " mm", w - 8, gy - wd - 12, WATER, "right", 11, 700);
+      // 위에서 본 접지면
+      const fy = h * 0.78, fh = h * 0.15;
+      rr(ctx, cx - Lc, fy - fh, 2 * Lc, 2 * fh, 14);
+      ctx.fillStyle = RUBBER; ctx.fill();
+      ctx.save(); rr(ctx, cx - Lc, fy - fh, 2 * Lc, 2 * fh, 14); ctx.clip();
+      ctx.strokeStyle = P.bg; ctx.lineWidth = 1 + gTd() * 0.7;
+      [-0.55, -0.18, 0.18, 0.55].forEach((u) => seg(ctx, cx - Lc, fy + u * fh, cx + Lc, fy + u * fh));
+      ctx.lineWidth = 1; for (let x = cx - Lc + 8; x < cx + Lc; x += 14) { seg(ctx, x, fy - fh, x + 6, fy - fh * 0.6); seg(ctx, x, fy + fh, x + 6, fy + fh * 0.6); }
+      if (m.f > 0.01) {
+        ctx.fillStyle = WATER; ctx.globalAlpha = 0.75; ctx.beginPath(); ctx.moveTo(xl + 2, fy - fh);
+        for (let i = 0; i <= 20; i++) { const u = (i / 20) * 2 - 1; ctx.lineTo(m.f >= 1 ? cx - Lc - 2 : xl - m.f * 2 * Lc * (1 - 0.35 * u * u), fy + u * fh); }
+        ctx.lineTo(xl + 2, fy + fh); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+      }
+      ctx.restore();
+      ctx.strokeStyle = P.dim; ctx.lineWidth = 1.2; rr(ctx, cx - Lc, fy - fh, 2 * Lc, 2 * fh, 14); ctx.stroke();
+      label(ctx, "접지 " + ((1 - m.f) * 100).toFixed(0) + "%", cx - Lc - 6, fy, P.text, "right", 11, 700);
+      label(ctx, "수막 " + (m.f * 100).toFixed(0) + "%", cx + Lc + 6, fy, WATER, "left", 11, 700);
+      label(ctx, "위에서 본 접지면 (→ 진행 방향)", cx, h - 9, P.dim, "center", 11);
+    }
+    cv = CB.canvas($("cv-hydro"), draw, { aspect: 0.62, minHeight: 280, maxHeight: 380 });
+    upd();
+  })();
+})();
+</script>
+</body>
+</html>

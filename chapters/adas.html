@@ -1,0 +1,1454 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>ADAS: 운전자 보조 · CarBook</title>
+<meta name="description" content="SAE 자동화 레벨, ACC와 스트링 안정성, AEB와 TTC, 제동 회피와 조향 회피, 차로 유지 제어, 사각지대 경고와 자동 주차까지 운전자 보조 시스템의 제어 루프를 시뮬레이터로 배운다.">
+<link rel="canonical" href="https://carbook.euiyun.com/chapters/adas.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="CarBook">
+<meta property="og:title" content="ADAS: 운전자 보조 · CarBook">
+<meta property="og:description" content="SAE 자동화 레벨, ACC와 스트링 안정성, AEB와 TTC, 제동 회피와 조향 회피, 차로 유지 제어, 사각지대 경고와 자동 주차까지 운전자 보조 시스템의 제어 루프를 시뮬레이터로 배운다.">
+<meta property="og:url" content="https://carbook.euiyun.com/chapters/adas.html">
+<meta property="og:image" content="https://carbook.euiyun.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TechArticle","headline":"ADAS: 운전자 보조","name":"ADAS: 운전자 보조 · CarBook","url":"https://carbook.euiyun.com/chapters/adas.html","mainEntityOfPage":"https://carbook.euiyun.com/chapters/adas.html","inLanguage":"ko","isAccessibleForFree":true,"learningResourceType":"interactive textbook chapter","position":17,"image":"https://carbook.euiyun.com/og.png","dateModified":"2026-10-02","isPartOf":{"@type":"Book","@id":"https://carbook.euiyun.com/#book","name":"CarBook — 인터랙티브 자동차 교과서","url":"https://carbook.euiyun.com/"},"publisher":{"@type":"Organization","name":"CarBook","url":"https://carbook.euiyun.com/"},"description":"SAE 자동화 레벨, ACC와 스트링 안정성, AEB와 TTC, 제동 회피와 조향 회피, 차로 유지 제어, 사각지대 경고와 자동 주차까지 운전자 보조 시스템의 제어 루프를 시뮬레이터로 배운다."},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"CarBook","item":"https://carbook.euiyun.com/"},{"@type":"ListItem","position":2,"name":"17 ADAS: 운전자 보조","item":"https://carbook.euiyun.com/chapters/adas.html"}]}]}</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="../css/style.css">
+<script src="../js/common.js"></script>
+<style>
+  .fig-lg svg .t, .fig-lg svg .t-acc { font-size: 17px; }
+  .fig-lg svg .t-dim { font-size: 15px; }
+  .fig-lg svg .t-mono { font-size: 14px; }
+  .sim-desc { font-size: 14px; color: var(--text-dim); line-height: 1.6; }
+  .sim-desc b { color: var(--text); }
+  .sim .legend { padding-bottom: 10px; }
+  .sim-view canvas + canvas { border-top: 1px solid var(--border); }
+</style>
+</head>
+<body data-chapter="adas">
+<main class="chapter">
+  <header class="chapter-hero">
+    <div class="eyebrow">Chapter 17</div>
+    <h1>ADAS: 운전자 보조</h1>
+    <p class="lead">안전벨트와 에어백은 사고가 난 뒤에 사람을 지킨다. ADAS는 한 걸음 앞에서, 사고가 나기 전에 차가 스스로 보고 판단해 속도와 방향을 조금씩 고쳐 준다. 이 장에서는 앞차와의 간격을 지키는 ACC, 충돌 직전에 제동하는 AEB, 차로 중앙을 따라가는 조향 보조, 사각지대 경고와 자동 주차가 어떤 계산으로 움직이는지 직접 제어기를 돌려 보며 살핀다.</p>
+    <ul class="objectives">
+      <li>SAE J3016 자동화 레벨 0~5를 "누가 운전하고, 누가 감시하고, 누가 비상시에 대응하는가"로 구분한다.</li>
+      <li>ACC의 시간 간격 정책과 제어 법칙을 쓰고, 스트링 안정성 조건을 설명한다.</li>
+      <li>TTC를 계산하고 AEB의 경고·부분 제동·완전 제동 단계와 회피 한계를 구한다.</li>
+      <li>제동 회피와 조향 회피의 마지막 시점이 속도에 따라 어떻게 달라지는지 계산한다.</li>
+      <li>횡 오프셋과 헤딩 오차로 조향각을 만드는 차로 유지 제어기를 이해한다.</li>
+      <li>사각지대 경고, 자동 주차, 운전자 모니터링의 원리와 ADAS의 한계를 안다.</li>
+    </ul>
+  </header>
+
+  <!-- =============================================================== 1 -->
+  <section id="intro">
+    <h2>수동 안전에서 능동 안전으로</h2>
+    <p><a href="body.html">11장</a>의 크럼플 존, 안전벨트, 에어백은 충돌이 일어난 <b>뒤</b>에 탑승자가 받는 충격을 줄인다. 이를 <span class="term">수동 안전</span><span class="en">(Passive Safety)</span>이라 한다. 반면 충돌 자체를 피하거나 충돌 속도를 낮추는 기술을 <span class="term">능동 안전</span><span class="en">(Active Safety)</span>이라 한다. <a href="brake.html">8장</a>의 ABS와 <a href="steering.html">10장</a>의 ESC가 그 출발점이었다. 둘은 차 내부 센서(바퀴 속도, 요레이트)만 보고 운전자의 조작을 다듬는다. <span class="term">ADAS</span><span class="en">(Advanced Driver Assistance Systems, 첨단 운전자 보조 시스템)</span>는 여기에 차 <b>바깥</b>을 보는 센서를 더한 것이다. 앞차와의 거리, 차선의 위치, 옆 차로의 차량을 알게 되면 차는 운전자가 하던 일의 일부를 대신할 수 있다.</p>
+    <p>교통사고의 대부분은 전방 주시 태만, 판단 착오, 늦은 반응 같은 사람의 실수에서 시작한다. 사람의 반응 시간은 위험을 알아채고 브레이크를 밟기까지 대표적으로 약 1~1.5 s다. 시속 100 km라면 그동안 28~42 m를 그대로 달린다. 기계는 수십~수백 ms 안에 반응하고, 졸지도 한눈을 팔지도 않는다. ADAS가 노리는 것은 바로 이 차이다.</p>
+
+    <h3>인지–판단–제어 루프</h3>
+    <p>모든 ADAS 기능은 같은 뼈대를 가진다. <b>센서</b>가 주변을 측정하고, <b>인지</b> 단계가 그 신호에서 차선·차량·보행자와 그 거리·속도를 뽑아내고, <b>판단</b> 단계가 위험도와 목표 가감속·목표 조향을 정하고, <b>제어</b> 단계가 구동·제동·조향 액추에이터에 명령을 내린다. 차가 움직이면 주변 상황이 바뀌고, 그것이 다시 센서로 들어온다. 닫힌 피드백 루프다. 운전자는 이 루프의 바깥에서 경고를 받고, 언제든 핸들이나 페달로 개입해 시스템을 이긴다.</p>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 720 300" role="img" aria-label="인지 판단 제어 루프">
+        <defs><marker id="ad-ar" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0 0 L10 4 L0 8 Z" fill="var(--text-dim)"/></marker></defs>
+        <rect x="250" y="16" width="220" height="50" rx="10" class="f-surface"/>
+        <text x="360" y="47" class="t" text-anchor="middle">운전자</text>
+        <rect x="20" y="120" width="130" height="70" rx="10" class="f-acc2-soft"/>
+        <text x="85" y="150" class="t" text-anchor="middle">센서</text><text x="85" y="174" class="t-dim" text-anchor="middle">카메라·레이더</text>
+        <rect x="165" y="120" width="130" height="70" rx="10" class="f-elev"/>
+        <text x="230" y="150" class="t" text-anchor="middle">인지</text><text x="230" y="174" class="t-dim" text-anchor="middle">차선·물체</text>
+        <rect x="310" y="120" width="130" height="70" rx="10" class="f-elev"/>
+        <text x="375" y="150" class="t" text-anchor="middle">판단</text><text x="375" y="174" class="t-dim" text-anchor="middle">위험도·목표값</text>
+        <rect x="455" y="120" width="130" height="70" rx="10" class="f-acc-soft"/>
+        <text x="520" y="150" class="t" text-anchor="middle">제어</text><text x="520" y="174" class="t-dim" text-anchor="middle">제동·구동·조향</text>
+        <rect x="600" y="120" width="104" height="70" rx="10" class="f-surface"/>
+        <text x="652" y="150" class="t" text-anchor="middle">차량</text><text x="652" y="174" class="t-dim" text-anchor="middle">도로·주변</text>
+        <g class="s-line" marker-end="url(#ad-ar)">
+          <line x1="150" y1="155" x2="164" y2="155"/><line x1="295" y1="155" x2="309" y2="155"/><line x1="440" y1="155" x2="454" y2="155"/><line x1="585" y1="155" x2="599" y2="155"/>
+          <path d="M652 190 L652 240 L85 240 L85 192"/>
+          <path d="M375 120 L375 68"/>
+          <path d="M470 41 L520 41 L520 118"/>
+        </g>
+        <text x="366" y="100" class="t-dim" text-anchor="end">경고</text>
+        <text x="530" y="90" class="t-dim">개입·해제</text>
+        <text x="368" y="266" class="t-dim" text-anchor="middle">차가 움직인 결과가 다시 센서로 들어온다</text>
+      </svg>
+      <figcaption><b>그림 17-1.</b> ADAS의 인지–판단–제어 루프. 기능이 달라도 뼈대는 같다. 운전자는 경고를 받고, 조작으로 언제든 시스템을 이길 수 있어야 한다.</figcaption>
+    </figure>
+
+    <h3>어떤 센서를 쓰는가</h3>
+    <p>센서의 원리와 한계는 <a href="sensors.html">18장</a>에서 자세히 다룬다. 여기서는 어떤 기능이 어떤 센서에 기대는지만 정리한다.</p>
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 720 320" role="img" aria-label="ADAS 센서 배치">
+        <path d="M435 160 L700 118 L700 202 Z" class="f-acc2-soft"/>
+        <path d="M420 160 L560 50 A180 180 0 0 1 560 270 Z" class="f-acc-soft"/>
+        <path d="M285 128 L190 30 A140 140 0 0 0 150 128 Z" fill="var(--ok)" opacity="0.18" stroke="var(--ok)"/>
+        <path d="M285 192 L190 290 A140 140 0 0 1 150 192 Z" fill="var(--ok)" opacity="0.18" stroke="var(--ok)"/>
+        <g fill="none" stroke="var(--warn)" stroke-width="2">
+          <path d="M440 132 A22 22 0 0 1 462 150"/><path d="M462 170 A22 22 0 0 1 440 188"/>
+          <path d="M280 132 A22 22 0 0 0 258 150"/><path d="M258 170 A22 22 0 0 0 280 188"/>
+          <path d="M448 120 A34 34 0 0 1 474 148"/><path d="M474 172 A34 34 0 0 1 448 200"/>
+          <path d="M272 120 A34 34 0 0 0 246 148"/><path d="M246 172 A34 34 0 0 0 272 200"/>
+        </g>
+        <rect x="285" y="128" width="150" height="64" rx="18" class="f-acc"/>
+        <rect x="372" y="138" width="22" height="44" rx="4" fill="rgba(15,22,36,0.55)"/>
+        <rect x="312" y="140" width="14" height="40" rx="3" fill="rgba(15,22,36,0.55)"/>
+        <text x="696" y="106" class="t" text-anchor="end">전방 레이더</text>
+        <text x="696" y="226" class="t-dim" text-anchor="end">ACC·AEB (거리·속도)</text>
+        <text x="520" y="36" class="t" text-anchor="middle">전방 카메라</text>
+        <text x="520" y="296" class="t-dim" text-anchor="middle">차선·물체 분류·표지</text>
+        <text x="20" y="40" class="t">후측방 레이더</text>
+        <text x="20" y="62" class="t-dim">BSD·후측방 교차</text>
+        <text x="20" y="286" class="t" style="fill:var(--warn)">초음파(범퍼)</text>
+        <text x="20" y="308" class="t-dim">주차·근접 경고</text>
+      </svg>
+      <figcaption><b>그림 17-2.</b> 대표적인 ADAS 센서 배치(위에서 본 모습, 오른쪽이 전방). 전방 레이더와 카메라가 주행 보조를, 후측방 레이더가 옆·뒤를, 범퍼의 초음파 센서가 수 m 이내의 근거리를 맡는다.</figcaption>
+    </figure>
+    <div class="table-wrap"><table>
+      <thead><tr><th>센서</th><th>잘하는 것</th><th>대표 감지 거리</th><th>주로 쓰는 기능</th></tr></thead>
+      <tbody>
+        <tr><td>전방 레이더(77 GHz)</td><td>거리·상대 속도 직접 측정, 악천후에 강함</td><td>약 150~250 m</td><td>ACC, FCW, AEB</td></tr>
+        <tr><td>전방 카메라</td><td>차선, 물체 종류, 표지·신호 인식</td><td>약 100~150 m</td><td>LDW/LKA/LFA, AEB(보행자), 하이빔 보조</td></tr>
+        <tr><td>코너 레이더</td><td>옆·뒤에서 다가오는 차량</td><td>약 70~100 m</td><td>BSD, 후측방 교차 경고, 차로 변경 보조</td></tr>
+        <tr><td>초음파</td><td>수 m 이내 근거리 장애물</td><td>약 0.2~5 m</td><td>주차 거리 경고, 자동 주차</td></tr>
+        <tr><td>실내 카메라</td><td>운전자의 시선·눈 감김</td><td>실내</td><td>운전자 모니터링(DMS)</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- =============================================================== 2 -->
+  <section id="levels">
+    <h2>자동화 레벨: 누가 운전하는가</h2>
+    <p>"자율주행 레벨 2", "레벨 3" 같은 말은 미국 자동차공학회의 표준 <span class="term">SAE J3016</span>에서 온다. 이 표준은 운전을 몇 가지 일로 쪼갠 뒤 각각을 사람과 시스템 중 누가 맡는지로 레벨을 나눈다. 성능이 얼마나 좋은가가 아니라 <b>책임이 누구에게 있는가</b>의 구분이라는 점이 중요하다.</p>
+    <ul>
+      <li><b>조향</b>과 <b>가감속</b>: 차를 좌우·앞뒤로 움직이는 일. 둘을 합쳐 지속적인 차량 운동 제어라 한다.</li>
+      <li><b>주변 감시</b><span class="en">(OEDR: Object and Event Detection and Response)</span>: 도로와 다른 교통 참여자를 살피고 그에 맞게 대응하는 일.</li>
+      <li><b>비상 대응</b><span class="en">(DDT Fallback)</span>: 시스템이 고장 나거나 감당할 수 없는 상황이 됐을 때 차를 안전한 상태로 만드는 일.</li>
+      <li><span class="term">운행 설계 영역</span><span class="en">(ODD: Operational Design Domain)</span>: 시스템이 작동하도록 설계된 조건. 도로 종류, 속도 범위, 날씨, 시간대, 지역 등으로 정한다. "고속도로 본선, 시속 60 km 이하 정체 구간, 맑은 낮" 같은 식이다.</li>
+    </ul>
+    <p>조향·가감속·주변 감시를 묶어 <span class="term">동적 운전 과업</span><span class="en">(DDT: Dynamic Driving Task)</span>이라 한다. 레벨 0~2는 사람이 DDT의 일부 또는 전부를 수행하므로 <b>운전자 보조</b>이고, 레벨 3~5는 작동 중 시스템이 DDT 전체를 수행하므로 <b>자동 운전</b>이다.</p>
+
+    <div class="sim" id="sim-lv">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>자동화 레벨 탐색기</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-lv"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>SAE 레벨 <output id="lv-out"></output></span><input type="range" id="lv" min="0" max="5" value="2" step="1"></label>
+          <div class="sim-desc" id="lv-desc"></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">이름</span><span class="v" id="o-lv-name">—</span></div>
+        <div class="stat"><span class="k">운전자의 손</span><span class="v" id="o-lv-hands">—</span></div>
+        <div class="stat"><span class="k">운전자의 눈</span><span class="v" id="o-lv-eyes">—</span></div>
+        <div class="stat"><span class="k">작동 조건(ODD)</span><span class="v" id="o-lv-odd">—</span></div>
+      </div>
+      <div class="sim-note">주황은 사람, 파랑은 시스템이 맡는 일이다. 해볼 것: 레벨 2에서 3으로 올리면 '주변 감시'가 시스템으로 넘어간다. 레벨 3에서 4로 올리면 '비상 대응'까지 넘어가 사람이 없어도 된다. 레벨 4와 5의 차이는 일이 아니라 ODD가 제한되는지 여부다.</div>
+    </div>
+
+    <h3>레벨 2와 3 사이의 선</h3>
+    <p>레벨 2 차는 스스로 가감속하고 조향하므로 겉보기에는 "알아서 달리는 차"다. 하지만 주변 감시는 여전히 사람의 일이다. 운전자는 손을 핸들에 두고 전방을 계속 봐야 하며, 시스템이 놓친 정지 차량이나 끼어드는 차에 즉시 대응할 책임이 있다. 사고가 나면 운전 주체는 사람이다.</p>
+    <p>레벨 3은 ODD 안에서 시스템이 주변 감시까지 맡는다. 운전자는 전방에서 눈을 떼도 되지만, 시스템이 <b>제어권 인수 요청</b><span class="en">(Takeover Request)</span>을 하면 수 초 안에 운전을 넘겨받아야 한다. 그래서 잠을 자거나 운전석을 떠날 수는 없다. 레벨 3 차로 유지 시스템을 규정한 UN R157은 처음에 시속 60 km 이하 정체 구간으로 시작했고 이후 속도 범위가 넓어졌다. 눈을 뗀 사람이 상황을 파악하고 넘겨받는 데 걸리는 시간이 길고 사람마다 크게 달라서, 이 인수 구간이 레벨 3 설계의 가장 어려운 부분이다.</p>
+    <div class="callout warn">
+      <strong>레벨은 이름이 아니라 책임이다</strong>
+      <p>시판되는 "고속도로 주행 보조", "오토파일럿" 류의 기능은 대부분 레벨 2다. 손을 떼도 한동안 잘 달린다는 사실이 레벨을 올려 주지 않는다. 또 충돌 직전에만 잠깐 개입하는 AEB나 경고만 하는 FCW·LDW는 지속적인 제어가 아니므로 J3016에서는 레벨 0으로 분류한다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 3 -->
+  <section id="acc">
+    <h2>종방향 보조: 크루즈 컨트롤에서 ACC로</h2>
+    <p><span class="term">크루즈 컨트롤</span><span class="en">(Cruise Control)</span>은 운전자가 정한 속도를 유지한다. 측정한 차속과 설정 속도의 차이에 비례해(그리고 그 적분에 비례해) 구동력을 조절하는 단순한 속도 피드백이다. 오르막에서 느려지면 스로틀을 더 열고, 내리막에서 빨라지면 닫는다. 문제는 앞차를 모른다는 점이다. 앞차가 느리면 운전자가 직접 브레이크를 밟아야 한다.</p>
+    <p><span class="term">ACC</span><span class="en">(Adaptive Cruise Control, 스마트 크루즈 컨트롤)</span>는 전방 레이더나 카메라로 앞차까지의 거리 \(d\)와 상대 속도를 측정해 간격까지 관리한다. 여기서 "얼마나 떨어져야 하는가"를 정하는 규칙이 <span class="term">간격 정책</span>이다. 가장 널리 쓰는 것이 <span class="term">일정 시간 간격</span><span class="en">(Constant Time Gap)</span> 정책이다.</p>
+    <div class="formula">$$d^{*} = d_0 + h\,v$$
+      <div class="where">\(d^{*}\): 목표 간격, \(d_0\): 정지 시 간격(대표적으로 약 3~5 m), \(h\): 시간 간격(Time Gap, 대표적으로 약 1.0~2.5 s 범위에서 3~4단계로 선택), \(v\): 자차 속도.</div>
+    </div>
+    <p>속도가 두 배면 간격도 거의 두 배가 된다. "앞차가 지나간 지점을 \(h\)초 뒤에 지난다"는 뜻이며, 운전 교육에서 말하는 "2초 규칙"과 같은 생각이다. 제동 거리는 속도의 제곱에 비례하지만(<a href="brake.html">8장</a>) 앞차도 순간 정지하지 않고 감속하며 서므로, 필요한 것은 반응 지연 동안 달리는 거리 \(h\,v\)에 약간의 여유다.</p>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 720 300" role="img" aria-label="ACC 시간 간격과 모드 전환">
+        <line x1="20" y1="150" x2="700" y2="150" class="s-axis"/>
+        <path d="M178 122 L470 108 L470 138 Z" class="f-acc2-soft"/>
+        <g transform="translate(68,100)"><path d="M0 40 L0 22 Q2 18 12 17 L28 4 Q32 0 40 0 L78 0 Q84 0 88 5 L100 18 L106 20 Q110 21 110 26 L110 40 Z" class="f-acc"/><circle cx="24" cy="40" r="10" fill="#1c2028"/><circle cx="86" cy="40" r="10" fill="#1c2028"/></g>
+        <g transform="translate(470,100)"><path d="M0 40 L0 22 Q2 18 12 17 L28 4 Q32 0 40 0 L78 0 Q84 0 88 5 L100 18 L106 20 Q110 21 110 26 L110 40 Z" fill="var(--text-dim)"/><circle cx="24" cy="40" r="10" fill="#1c2028"/><circle cx="86" cy="40" r="10" fill="#1c2028"/></g>
+        <line x1="178" y1="172" x2="470" y2="172" class="s-acc"/><line x1="178" y1="164" x2="178" y2="180" class="s-acc"/><line x1="470" y1="164" x2="470" y2="180" class="s-acc"/>
+        <text x="324" y="196" class="t-acc" text-anchor="middle">d* = d₀ + h·v</text>
+        <text x="123" y="90" class="t" text-anchor="middle">자차 v</text>
+        <text x="525" y="90" class="t" text-anchor="middle">앞차 v_l</text>
+        <text x="324" y="100" class="t-dim" text-anchor="middle">레이더: 거리·상대 속도</text>
+        <rect x="40" y="232" width="250" height="48" rx="10" class="f-acc-soft"/>
+        <text x="165" y="262" class="t" text-anchor="middle">속도 제어: v → v_set</text>
+        <rect x="430" y="232" width="250" height="48" rx="10" class="f-acc2-soft"/>
+        <text x="555" y="262" class="t" text-anchor="middle">간격 제어: d → d*</text>
+        <line x1="294" y1="248" x2="426" y2="248" class="s-line" marker-end="url(#ad-ar)"/>
+        <line x1="426" y1="266" x2="294" y2="266" class="s-line" marker-end="url(#ad-ar)"/>
+        <text x="360" y="240" class="t-mono" text-anchor="middle">느린 앞차</text>
+        <text x="360" y="286" class="t-mono" text-anchor="middle">앞이 비면</text>
+      </svg>
+      <figcaption><b>그림 17-3.</b> ACC의 일정 시간 간격 정책과 두 가지 제어 모드. 앞이 비어 있으면 설정 속도를 따라가고, 느린 앞차가 잡히면 간격을 따라간다.</figcaption>
+    </figure>
+
+    <h3>제어 법칙과 모드 전환</h3>
+    <p>간격 제어 모드에서 ACC는 <b>간격 오차</b>와 <b>상대 속도</b> 두 가지를 되먹여 목표 가속도를 만든다. 속도 제어 모드에서는 설정 속도와의 차이만 본다. 둘 중 <b>더 작은 값</b>(더 조심스러운 쪽)을 고르면 모드 전환이 저절로 이루어진다.</p>
+    <div class="formula">$$a_{\text{gap}} = k_g\,(d - d^{*}) + k_v\,(v_l - v),\qquad a_{\text{spd}} = k_s\,(v_{\text{set}} - v),\qquad a_{\text{cmd}} = \min(a_{\text{gap}},\,a_{\text{spd}})$$
+      <div class="where">\(k_g\): 간격 이득(1/s²), \(k_v\): 상대 속도 이득(1/s), \(v_l\): 앞차 속도. 승차감을 위해 \(a_{\text{cmd}}\)는 대표적으로 약 −3.5 ~ +2 m/s² 범위로 제한하고 변화율(저크)도 제한한다. 그 이상의 감속이 필요하면 운전자에게 경고하고, 그다음은 AEB의 몫이다.</div>
+    </div>
+    <p>목표 가속도는 파워트레인(엔진 토크·모터 토크)과 ESC 유압 제동(<a href="brake.html">8장</a>)으로 나뉘어 실행된다. 전기차는 감속의 대부분을 회생 제동으로 처리한다(<a href="hybrid.html">14장</a>). <span class="term">스톱 앤 고</span><span class="en">(Stop &amp; Go)</span> 기능이 있는 ACC는 앞차를 따라 완전히 정지하고, 앞차가 출발하면 다시 따라간다. 정지 유지에는 ESC의 유압 유지나 전자식 주차 브레이크를 쓴다.</p>
+    <div class="callout tip">
+      <strong>계산 예: 시속 100 km, 시간 간격 1.5 s</strong>
+      <p>\(v = 27.8\) m/s, \(d_0 = 5\) m이면 \(d^{*} = 5 + 1.5\times 27.8 = 46.7\) m. 앞차가 시속 80 km(22.2 m/s)로 달리고 있고 지금 간격이 60 m라면, \(k_g = 0.15\), \(k_v = 0.6\)일 때 \(a_{\text{gap}} = 0.15\times(60-46.7) + 0.6\times(22.2-27.8) = 2.0 - 3.3 = -1.3\) m/s². 간격은 아직 남았지만 접근 속도가 크므로 미리 부드럽게 감속을 시작한다.</p>
+    </div>
+
+    <div class="sim" id="sim-acc">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>ACC 추종: 간격 오차와 상대 속도 피드백</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-acc"></canvas><canvas id="cv-accg"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>앞차 속도 <output id="acc-vl-out"></output></span><input type="range" id="acc-vl" min="0" max="130" value="90" step="1"></label>
+          <div class="ctrl-row"><button class="btn" id="acc-brake">앞차 급감속</button><button class="btn" id="acc-cut">끼어들기</button></div>
+          <label class="ctrl"><span>설정 속도 v_set <output id="acc-vset-out"></output></span><input type="range" id="acc-vset" min="30" max="140" value="110" step="5"></label>
+          <label class="ctrl"><span>시간 간격 h <output id="acc-h-out"></output></span><input type="range" id="acc-h" min="0.6" max="2.6" value="1.6" step="0.1"></label>
+          <label class="ctrl"><span>간격 이득 k_g <output id="acc-kg-out"></output></span><input type="range" id="acc-kg" min="0.02" max="0.6" value="0.15" step="0.01"></label>
+          <label class="ctrl"><span>상대 속도 이득 k_v <output id="acc-kv-out"></output></span><input type="range" id="acc-kv" min="0" max="1.5" value="0.6" step="0.05"></label>
+          <div class="ctrl-row"><button class="btn primary" id="acc-play">일시정지</button><button class="btn" id="acc-reset">초기화</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">제어 모드</span><span class="v" id="o-acc-mode">—</span></div>
+        <div class="stat"><span class="k">간격 / 목표</span><span class="v" id="o-acc-gap">—</span></div>
+        <div class="stat"><span class="k">실제 시간 간격</span><span class="v" id="o-acc-tg">—</span></div>
+        <div class="stat"><span class="k">TTC</span><span class="v" id="o-acc-ttc">—</span></div>
+        <div class="stat"><span class="k">자차 가속도</span><span class="v" id="o-acc-a">—</span></div>
+      </div>
+      <div class="sim-note">모델: 목표 가속도를 −3.5 ~ +2.0 m/s²로 제한하고, 실제 가속도는 0.4 s 1차 지연으로 따라간다. 간격은 실제 비율, 차는 크게 그렸다. 해볼 것: 앞차 속도를 0으로 내려 스톱 앤 고를 보자. k_v를 0으로 두면 간격만 보고 제어하므로 속도가 출렁인다. 시간 간격을 0.6 s로 줄이고 '앞차 급감속'을 누르면 ACC의 감속 한계로는 부족해 추돌한다. 여기서부터가 AEB의 영역이다.</div>
+    </div>
+
+    <h3>스트링 안정성: 유령 정체는 어디서 오는가</h3>
+    <p>차 한 대가 앞차를 잘 따라가는 것과, 그런 차가 여러 대 줄지어 달릴 때 전체가 안정한 것은 다른 문제다. 선두가 잠깐 속도를 줄였을 때 그 흔들림이 뒤로 갈수록 <b>작아지면</b> <span class="term">스트링 안정</span><span class="en">(String Stable)</span>, <b>커지면</b> 불안정이다. 불안정한 줄에서는 선두가 시속 10 km만 줄였는데 여덟 번째 차는 완전히 멈춰 서는 일이 생긴다. 사고도 공사도 없는데 생기는 <b>유령 정체</b>의 원리다.</p>
+    <p>차 한 대의 응답 지연을 시정수 \(\tau\)의 1차 지연으로 두면, 앞차 위치에서 내 차 위치로 가는 전달 함수는 다음과 같다.</p>
+    <div class="formula">$$G(s) = \frac{X_i(s)}{X_{i-1}(s)} = \frac{k_v s + k_g}{\tau s^{3} + s^{2} + (k_v + k_g h)\,s + k_g},\qquad \text{string stable} \iff |G(j\omega)| \le 1\ \ \forall\,\omega$$
+      <div class="where">지연이 없을 때(\(\tau = 0\)) 조건은 \(k_g h^{2} + 2 k_v h \ge 2\)로 정리된다. 시간 간격 \(h\)가 길수록, 상대 속도 이득 \(k_v\)가 클수록 안정하다. 지연 \(\tau\)가 커지면 필요한 \(h\)도 커진다.</div>
+    </div>
+    <p>사람 운전자는 반응 지연이 1 s 안팎이면서 시간 간격은 그보다 짧게 두는 경우가 많아 대체로 스트링 불안정하다. 교통량이 많을 때 작은 브레이크 한 번이 뒤로 가며 정체로 자라는 이유다. ACC도 시간 간격을 지나치게 짧게 잡으면 같은 문제를 겪는다. 앞차의 가속도를 통신(V2V)으로 미리 받는 협조형 ACC(CACC)는 지연을 실질적으로 줄여 훨씬 짧은 간격에서도 안정할 수 있다(<a href="autonomy.html">21장</a>).</p>
+
+    <div class="sim" id="sim-st">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>스트링 안정성: 8대 군집에서 흔들림이 자라는가</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-st"></canvas><canvas id="cv-stv"></canvas><canvas id="cv-stg"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>시간 간격 h <output id="st-h-out"></output></span><input type="range" id="st-h" min="0.3" max="2.5" value="1.6" step="0.05"></label>
+          <label class="ctrl"><span>간격 이득 k_g <output id="st-kg-out"></output></span><input type="range" id="st-kg" min="0.05" max="1" value="0.3" step="0.01"></label>
+          <label class="ctrl"><span>상대 속도 이득 k_v <output id="st-kv-out"></output></span><input type="range" id="st-kv" min="0.1" max="1.5" value="0.5" step="0.05"></label>
+          <label class="ctrl"><span>응답 지연 τ <output id="st-tau-out"></output></span><input type="range" id="st-tau" min="0.1" max="1.2" value="0.5" step="0.05"></label>
+          <label class="ctrl"><span>선두 감속량 <output id="st-dip-out"></output></span><input type="range" id="st-dip" min="5" max="40" value="20" step="1"></label>
+          <label class="ctrl"><span>재생 시각 <output id="st-t-out"></output></span><input type="range" id="st-t" min="0" max="70" value="0" step="0.1"></label>
+          <button class="btn primary" id="st-play">일시정지</button>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">선두 속도 저하</span><span class="v" id="o-st-d0">—</span></div>
+        <div class="stat"><span class="k">8번째 차 속도 저하</span><span class="v" id="o-st-d7">—</span></div>
+        <div class="stat"><span class="k">최대 증폭 |G|max</span><span class="v" id="o-st-g">—</span></div>
+        <div class="stat"><span class="k">필요 시간 간격(τ=0)</span><span class="v" id="o-st-hmin">—</span></div>
+        <div class="stat"><span class="k">판정</span><span class="v" id="o-st-res">—</span></div>
+      </div>
+      <div class="sim-note">위: 선두(오른쪽 끝)에 붙인 좌표로 본 군집. 가운데: 8대의 속도. 아래: 한 대를 지날 때마다 흔들림이 몇 배가 되는지 나타내는 |G(jω)|. 1을 넘는 주파수가 있으면 불안정하다. 시속 90 km로 달리던 선두가 5초 시점에 감속했다가 다시 가속한다. 해볼 것: h를 1.0 s, 0.5 s로 줄여 가면 뒤차일수록 더 깊이 감속하고, 끝내 정지하거나 추돌한다. 그 상태에서 k_v를 키우거나 τ를 줄여 다시 안정시켜 보자.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 4 -->
+  <section id="aeb">
+    <h2>충돌 방지: FCW와 AEB</h2>
+    <p>ACC가 편의 기능이라면 <span class="term">FCW</span><span class="en">(Forward Collision Warning, 전방 충돌 경고)</span>와 <span class="term">AEB</span><span class="en">(Autonomous Emergency Braking, 자동 긴급 제동)</span>는 안전 기능이다. 운전자가 ACC를 켰든 안 켰든 항상 뒤에서 지켜보다가, 충돌이 임박했는데 운전자가 반응하지 않으면 개입한다. 판단의 기준이 되는 양이 <span class="term">TTC</span><span class="en">(Time To Collision, 충돌까지 시간)</span>다.</p>
+    <div class="formula">$$\mathrm{TTC} = \frac{d}{v - v_o} = \frac{d}{v_{\text{rel}}}\qquad (v > v_o)$$
+      <div class="where">\(d\): 장애물까지 거리, \(v\): 자차 속도, \(v_o\): 장애물 속도, \(v_{\text{rel}}\): 접근 속도. 지금 속도를 그대로 유지하면 몇 초 뒤에 부딪히는가를 뜻한다. 앞차가 감속 중이면 가속도까지 넣은 2차식으로 계산한다.</div>
+    </div>
+    <p>AEB는 TTC가 줄어드는 데 따라 단계적으로 강도를 높인다. 처음부터 완전 제동을 걸지 않는 까닭은 <b>오작동의 비용</b> 때문이다. 필요 없는 급제동은 뒤차의 추돌을 부르고 운전자의 신뢰를 잃는다. 그래서 확신이 낮은 이른 시점에는 경고만 하고, 운전자가 스스로 피할 수 없을 만큼 늦어져 충돌이 거의 확실해졌을 때에야 강하게 제동한다.</p>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 720 280" role="img" aria-label="AEB 단계">
+        <rect x="60" y="34" width="77" height="50" class="f-surface"/>
+        <rect x="137" y="34" width="194" height="50" fill="var(--warn)" opacity="0.3" stroke="var(--warn)"/>
+        <rect x="331" y="34" width="116" height="50" class="f-acc-soft"/>
+        <rect x="447" y="34" width="193" height="50" fill="var(--bad)" opacity="0.3" stroke="var(--bad)"/>
+        <text x="234" y="65" class="t" text-anchor="middle">경고(FCW)</text>
+        <text x="389" y="65" class="t" text-anchor="middle">부분 제동</text>
+        <text x="543" y="65" class="t" text-anchor="middle">완전 제동</text>
+        <line x1="60" y1="130" x2="660" y2="130" class="s-axis"/>
+        <polyline points="60,130 331,130 345,162 447,162 465,206 640,206" fill="none" stroke="var(--accent)" stroke-width="3"/>
+        <text x="52" y="135" class="t-mono" text-anchor="end">0</text>
+        <text x="52" y="167" class="t-mono" text-anchor="end">0.4 g</text>
+        <text x="52" y="211" class="t-mono" text-anchor="end">1 g</text>
+        <text x="200" y="120" class="t-dim" text-anchor="middle">감속도</text>
+        <line x1="60" y1="232" x2="640" y2="232" class="s-axis"/>
+        <g class="s-line"><line x1="137" y1="226" x2="137" y2="238"/><line x1="331" y1="226" x2="331" y2="238"/><line x1="447" y1="226" x2="447" y2="238"/><line x1="640" y1="226" x2="640" y2="238"/></g>
+        <text x="137" y="258" class="t-mono" text-anchor="middle">2.0 s</text>
+        <text x="331" y="258" class="t-mono" text-anchor="middle">1.6 s</text>
+        <text x="447" y="258" class="t-mono" text-anchor="middle">1.0 s</text>
+        <text x="640" y="258" class="t-mono" text-anchor="middle">0</text>
+        <text x="60" y="258" class="t-dim">TTC →</text>
+        <text x="652" y="212" class="t" style="fill:var(--bad)">충돌</text>
+      </svg>
+      <figcaption><b>그림 17-4.</b> AEB의 단계적 개입(문턱값은 대표적인 예이며 축은 비례가 아니다). TTC가 줄어들수록 경고 → 부분 제동 → 완전 제동으로 강도를 높인다. 경고 단계에서 브레이크에 미리 압력을 채워 두어(프리필) 이후의 제동 지연을 줄인다.</figcaption>
+    </figure>
+    <ul>
+      <li><b>경고</b>(TTC 대표적으로 약 2~2.7 s): 계기판 표시와 경고음, 때로는 짧게 툭 치는 제동(저크). 운전자가 브레이크를 밟으면 <b>제동 보조</b>가 압력을 끝까지 올려 준다.</li>
+      <li><b>부분 제동</b>(약 1.5~2 s): 0.3~0.5 g로 속도를 줄이며 운전자에게 마지막 기회를 준다.</li>
+      <li><b>완전 제동</b>(약 0.6~1.2 s): 노면이 허락하는 최대 감속. ESC 유압 펌프나 전동 부스터가 수백 ms 안에 압력을 올린다(<a href="brake.html">8장</a>).</li>
+    </ul>
+    <div class="callout tip">
+      <strong>계산 예: 시속 50 km로 정지 차량에 접근</strong>
+      <p>\(v = 13.9\) m/s. 거리 20 m에서 TTC = 20/13.9 = 1.44 s. 마른 노면(\(\mu = 0.9\))의 최대 감속은 \(\mu g = 8.8\) m/s², 제동 거리는 \(v^2/(2\mu g) = 13.9^2/17.7 = 10.9\) m다. 시스템 지연이 0.3 s면 그동안 4.2 m를 더 가므로 약 15 m 앞, TTC로는 약 1.1 s에서 완전 제동을 시작해야 간신히 선다. 같은 계산을 시속 100 km로 하면 제동 거리만 43.7 m, 필요한 TTC는 약 1.9 s다. 완전 제동 문턱이 1.0 s인 시스템은 이 속도에서 충돌을 피하지 못하고 충돌 속도를 낮출 뿐이다.</p>
+    </div>
+
+    <div class="sim" id="sim-aeb">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>AEB와 TTC: 언제 경고하고 언제 제동하는가</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-aeb"></canvas><canvas id="cv-aebt"></canvas><canvas id="cv-aebs"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>자차 속도 <output id="aeb-v-out"></output></span><input type="range" id="aeb-v" min="20" max="130" value="50" step="1"></label>
+          <label class="ctrl"><span>장애물까지 거리 <output id="aeb-d-out"></output></span><input type="range" id="aeb-d" min="10" max="150" value="60" step="1"></label>
+          <label class="ctrl"><span>장애물 속도 <output id="aeb-vo-out"></output></span><input type="range" id="aeb-vo" min="0" max="60" value="0" step="1"></label>
+          <label class="ctrl"><span>노면 마찰 μ <output id="aeb-mu-out"></output></span><input type="range" id="aeb-mu" min="0.2" max="1" value="0.9" step="0.05"></label>
+          <label class="ctrl"><span>시스템 지연 <output id="aeb-dl-out"></output></span><input type="range" id="aeb-dl" min="0.1" max="0.8" value="0.3" step="0.05"></label>
+          <label class="ctrl"><span>완전 제동 TTC 문턱 <output id="aeb-tf-out"></output></span><input type="range" id="aeb-tf" min="0.6" max="2.4" value="1.0" step="0.1"></label>
+          <button class="btn primary" id="aeb-run">실행</button>
+        </div>
+      </div>
+      <div class="legend"><span><i style="background:var(--warn)"></i>경고 시점</span><span><i style="background:var(--accent)"></i>부분 제동</span><span><i style="background:var(--bad)"></i>완전 제동</span></div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">처음 TTC</span><span class="v" id="o-aeb-ttc">—</span></div>
+        <div class="stat"><span class="k">AEB 결과</span><span class="v" id="o-aeb-a">—</span></div>
+        <div class="stat"><span class="k">경고 + 사람(1.2 s)</span><span class="v" id="o-aeb-h">—</span></div>
+        <div class="stat"><span class="k">AEB 회피 한계 속도</span><span class="v" id="o-aeb-lim">—</span></div>
+      </div>
+      <div class="sim-note">위: 같은 상황을 AEB가 처리할 때와, 경고(TTC 2.0 s)를 듣고 사람이 1.2 s 뒤에 브레이크를 끝까지 밟을 때(압력이 오르는 데 0.2 s). 가운데: 두 경우의 속도–시간. 아래: 충분히 먼 거리에서 접근했을 때 처음 속도에 따른 충돌 속도(0이면 회피). 부분 제동은 TTC 1.6 s에서 0.4 g로 건다. 해볼 것: 속도를 올려 가며 AEB가 회피에서 '충돌 속도 저감'으로 바뀌는 지점을 찾자. μ를 0.3(눈길)으로 내리면 한계가 크게 낮아진다. 완전 제동 문턱을 2 s로 올리면 훨씬 잘 피하지만, 실제로는 그만큼 오작동 위험이 커진다.</div>
+    </div>
+
+    <h3>피할 수 있는 마지막 순간: 제동이냐 조향이냐</h3>
+    <p>왜 AEB는 더 일찍 제동하지 않을까. 운전자가 아직 <b>핸들로 피할 수 있는 동안</b>에는 시스템이 충돌을 단정할 수 없기 때문이다. 앞차를 추월하려고 바짝 붙는 것과 부딪히러 가는 것은 마지막 순간까지 구별되지 않는다. 그래서 두 가지 거리가 중요해진다.</p>
+    <div class="formula">$$d_{\text{brake}} = \frac{v_{\text{rel}}^{2}}{2\mu g},\qquad d_{\text{steer}} = v_{\text{rel}}\sqrt{\frac{2\,w}{a_y}}$$
+      <div class="where">\(d_{\text{brake}}\): 제동으로 피할 수 있는 마지막 거리, \(d_{\text{steer}}\): 조향으로 피할 수 있는 마지막 거리, \(w\): 옆으로 비켜야 하는 폭, \(a_y\): 낼 수 있는 횡가속도(최대 \(\mu g\)). 조향 회피 시간 \(\sqrt{2w/a_y}\)는 속도와 무관하다.</div>
+    </div>
+    <p>제동 거리는 속도의 <b>제곱</b>에, 조향 회피 거리는 속도에 <b>비례</b>한다. 따라서 저속에서는 제동이 더 늦게까지 통하고, 고속에서는 조향이 더 늦게까지 통한다. 두 곡선이 만나는 속도는 \(v^{*} = 2\mu g\sqrt{2w/a_y}\)로, \(\mu = 0.9\), \(w = 2\) m이면 약 43 km/h다. 도심 속도에서 AEB가 대부분의 추돌을 완전히 막을 수 있는 반면, 고속도로 속도에서는 충돌을 피하지 못하고 줄이는 데 그치는 근본적인 이유다. 그래서 고속 영역에는 옆 공간이 비었을 때 운전자의 회피 조향을 돕는 <b>회피 조향 보조</b><span class="en">(Evasive Steering Assist)</span>가 더해지고 있다.</p>
+
+    <div class="sim" id="sim-bs">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>제동 회피 vs 조향 회피: 마지막 시점 비교</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-bs"></canvas><canvas id="cv-bsg"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>접근 속도 <output id="bs-v-out"></output></span><input type="range" id="bs-v" min="10" max="150" value="80" step="1"></label>
+          <label class="ctrl"><span>노면 마찰 μ <output id="bs-mu-out"></output></span><input type="range" id="bs-mu" min="0.2" max="1" value="0.9" step="0.05"></label>
+          <label class="ctrl"><span>비켜야 하는 폭 w <output id="bs-w-out"></output></span><input type="range" id="bs-w" min="0.5" max="3.5" value="2" step="0.1"></label>
+          <label class="ctrl"><span>반응·작동 지연 <output id="bs-dl-out"></output></span><input type="range" id="bs-dl" min="0" max="1.5" value="0" step="0.05"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">마지막 제동 시점</span><span class="v" id="o-bs-b">—</span></div>
+        <div class="stat"><span class="k">마지막 조향 시점</span><span class="v" id="o-bs-s">—</span></div>
+        <div class="stat"><span class="k">교차 속도 v*</span><span class="v" id="o-bs-x">—</span></div>
+        <div class="stat"><span class="k">이 속도에서 더 늦게까지 가능한 것</span><span class="v" id="o-bs-r">—</span></div>
+      </div>
+      <div class="sim-note">위: 정지 장애물 앞의 두 마지막 시점(세로 방향은 확대해 그렸다). 주황 눈금보다 늦으면 제동으로는 못 피하고, 파란 눈금보다 늦으면 조향으로도 못 피한다. 아래: 속도에 따른 두 거리. 붉은 영역은 어떤 방법으로도 피할 수 없는 구간이다. 횡가속도는 μg를 모두 쓴다고 가정했다. 해볼 것: 속도를 30 km/h와 120 km/h로 바꿔 순서가 뒤집히는 것을 확인하자. w를 0.5 m로 줄이면(부분 겹침) 조향 회피가 훨씬 유리해진다. 지연을 1.2 s(사람)로 두면 두 거리가 모두 얼마나 늘어나는가?</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 5 -->
+  <section id="lateral">
+    <h2>횡방향 보조: 차선을 보고 조향한다</h2>
+    <p>횡방향 기능은 전방 카메라가 차선을 찾는 데서 시작한다. 인지 단계(<a href="perception.html">19장</a>)는 영상에서 좌우 차선을 검출해 차 기준 좌표의 3차 다항식 같은 곡선으로 내놓는다. 이 곡선에서 제어에 필요한 세 가지 양이 나온다.</p>
+    <ul>
+      <li><span class="term">횡 오프셋</span> \(e_y\): 차로 중앙에서 차가 옆으로 벗어난 거리.</li>
+      <li><span class="term">헤딩 오차</span> \(e_\psi\): 차로 방향과 차 진행 방향 사이의 각도.</li>
+      <li><b>곡률</b> \(\kappa = 1/R\): 앞쪽 도로가 얼마나 휘는가.</li>
+    </ul>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 720 300" role="img" aria-label="횡 오프셋과 헤딩 오차">
+        <rect x="20" y="50" width="680" height="200" class="f-surface" stroke="none"/>
+        <line x1="20" y1="50" x2="700" y2="50" stroke="var(--text)" stroke-width="3"/>
+        <line x1="20" y1="250" x2="700" y2="250" stroke="var(--text)" stroke-width="3"/>
+        <line x1="20" y1="150" x2="700" y2="150" stroke="var(--text-dim)" stroke-width="1.5" stroke-dasharray="10 8"/>
+        <path d="M312 187 L560 70 L560 250 Z" class="f-acc2-soft" opacity="0.6"/>
+        <g transform="translate(250,200) rotate(-14)">
+          <rect x="-62" y="-27" width="124" height="54" rx="14" class="f-acc"/>
+          <rect x="14" y="-20" width="20" height="40" rx="4" fill="rgba(15,22,36,0.55)"/>
+          <line x1="62" y1="0" x2="330" y2="0" stroke="var(--accent)" stroke-width="2" stroke-dasharray="6 5"/>
+        </g>
+        <line x1="250" y1="200" x2="590" y2="200" class="s-line" stroke-dasharray="4 4"/>
+        <path d="M430 200 A180 180 0 0 0 425 156" fill="none" stroke="var(--bad)" stroke-width="2.5"/>
+        <text x="442" y="186" class="t" style="fill:var(--bad);font-weight:700">e_ψ</text>
+        <line x1="250" y1="150" x2="250" y2="200" stroke="var(--bad)" stroke-width="3"/>
+        <text x="238" y="182" class="t" text-anchor="end" style="fill:var(--bad);font-weight:700">e_y</text>
+        <text x="690" y="142" class="t-dim" text-anchor="end">차로 중앙선</text>
+        <text x="690" y="40" class="t-dim" text-anchor="end">차선(카메라가 검출)</text>
+        <text x="600" y="232" class="t-dim" text-anchor="middle">카메라 시야</text>
+        <text x="30" y="282" class="t-dim">조향 명령 δ = −k_y·e_y − k_ψ·e_ψ + (곡률 피드포워드)</text>
+      </svg>
+      <figcaption><b>그림 17-5.</b> 차로 유지 제어의 입력. 횡 오프셋 \(e_y\)만 보면 늦고 출렁이므로, 앞으로 어느 쪽으로 가고 있는지를 나타내는 헤딩 오차 \(e_\psi\)를 함께 쓴다.</figcaption>
+    </figure>
+
+    <p>기능은 개입 강도에 따라 세 단계로 나뉜다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>기능</th><th>하는 일</th><th>개입 방식</th></tr></thead>
+      <tbody>
+        <tr><td><b>LDW</b> 차로 이탈 경고</td><td>방향지시등 없이 차선을 밟으려 하면 알린다</td><td>경고음, 핸들 진동</td></tr>
+        <tr><td><b>LKA</b> 차로 이탈 방지 보조</td><td>차선에 가까워졌을 때만 안쪽으로 되돌린다</td><td>짧은 조향 토크(또는 한쪽 바퀴 제동)</td></tr>
+        <tr><td><b>LFA / LCA</b> 차로 중앙 유지</td><td>항상 차로 중앙을 따라가도록 계속 조향한다</td><td>지속적인 조향 토크</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>제어기: 오프셋과 헤딩 오차의 피드백</h3>
+    <p>저속에서 차의 움직임은 <a href="steering.html">10장</a>의 기구학 자전거 모델로 잘 설명된다. 차로를 따라가는 좌표로 쓰면 다음과 같다.</p>
+    <div class="formula">$$\dot e_y = v\,\sin e_\psi,\qquad \dot e_\psi = \frac{v}{L}\tan\delta - \kappa\,\dot s,\qquad \delta = -k_y\,e_y - k_\psi\,e_\psi + \arctan(L\kappa)$$
+      <div class="where">\(\delta\): 앞바퀴 조향각, \(L\): 축거, \(\dot s\): 차로 방향 속도. 마지막 항이 <b>곡률 피드포워드</b>다. 반지름 \(R\)인 커브를 도는 데 필요한 조향각 \(L/R\)(애커먼 각)을 오차가 생기기 전에 미리 넣는다.</div>
+    </div>
+    <p>오차가 작다고 보고 선형화하면 \(\ddot e_y + (v k_\psi/L)\,\dot e_y + (v^2 k_y/L)\,e_y = 0\)이라는 2차 계가 된다. 고유 진동수는 \(\omega_n = v\sqrt{k_y/L}\), 감쇠비는 \(\zeta = k_\psi/(2\sqrt{k_y L})\)다. \(k_y\)는 복원력(스프링), \(k_\psi\)는 감쇠(댐퍼) 역할을 한다. \(k_\psi\)가 작으면 차가 차로 안에서 좌우로 출렁이고, 속도가 높을수록 같은 이득에서도 응답이 빨라져 조향 액추에이터의 지연이 문제가 되기 시작한다. 그래서 실제 제어기는 속도에 따라 이득을 바꾼다.</p>
+    <div class="callout tip">
+      <strong>계산 예: 피드포워드가 없으면 커브에서 얼마나 밀리는가</strong>
+      <p>반지름 200 m 커브, \(L = 2.7\) m면 필요한 조향각은 \(L/R = 0.0135\) rad(0.77°)이다. 피드포워드가 없으면 이 각도를 피드백 항 \(k_y e_y\)가 만들어야 하므로, \(k_y = 0.05\) rad/m일 때 \(e_y = 0.0135/0.05 = 0.27\) m만큼 바깥으로 밀린 채 돈다. 차폭 1.8 m, 차로 폭 3.5 m에서 차선까지 여유는 0.85 m뿐이므로 적지 않은 값이다. 곡률을 미리 넣으면 이 정상 오차가 사라진다.</p>
+    </div>
+    <p>계산된 조향각은 <a href="steering.html">10장</a>의 <span class="term">EPS</span>(전동 파워 스티어링) 모터가 실행한다. EPS는 원래 운전자의 조향 토크를 증폭하는 장치지만, 제어기가 요청한 토크를 그 위에 <b>겹쳐</b> 넣을 수 있다. 보조 토크의 크기와 횡가속도는 일부러 제한한다(대표적으로 핸들 토크 약 3 N·m, 횡가속도 약 3 m/s² 이내). 운전자가 원하면 가볍게 이길 수 있어야 하고, 오작동하더라도 손으로 잡을 수 있어야 하기 때문이다. 그 대가로 급한 커브에서는 시스템이 따라가지 못하고 해제된다.</p>
+
+    <div class="sim" id="sim-lk">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>차로 유지 제어: 자전거 모델을 직접 적분</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-lk"></canvas><canvas id="cv-lkg"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>기능</span><div class="seg" id="lk-mode"><button data-value="off">LDW만</button><button data-value="lka">LKA</button><button data-value="lfa" class="on">LFA</button></div></div>
+          <label class="ctrl"><span>속도 <output id="lk-v-out"></output></span><input type="range" id="lk-v" min="40" max="130" value="90" step="5"></label>
+          <label class="ctrl"><span>오프셋 이득 k_y <output id="lk-ky-out"></output></span><input type="range" id="lk-ky" min="0.005" max="0.3" value="0.05" step="0.005"></label>
+          <label class="ctrl"><span>헤딩 이득 k_ψ <output id="lk-kp-out"></output></span><input type="range" id="lk-kp" min="0" max="2.5" value="0.8" step="0.05"></label>
+          <label class="check"><input type="checkbox" id="lk-ff" checked> 곡률 피드포워드</label>
+          <div class="ctrl-row"><button class="btn" id="lk-wind">옆바람 3초</button><button class="btn" id="lk-reset">초기화</button><button class="btn primary" id="lk-play">일시정지</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">횡 오프셋 e_y</span><span class="v" id="o-lk-ey">—</span></div>
+        <div class="stat"><span class="k">헤딩 오차 e_ψ</span><span class="v" id="o-lk-ep">—</span></div>
+        <div class="stat"><span class="k">앞바퀴 조향각 δ</span><span class="v" id="o-lk-d">—</span></div>
+        <div class="stat"><span class="k">도로 곡률 반지름</span><span class="v" id="o-lk-r">—</span></div>
+        <div class="stat"><span class="k">감쇠비 ζ</span><span class="v" id="o-lk-z">—</span></div>
+        <div class="stat"><span class="k">상태</span><span class="v" id="o-lk-st">—</span></div>
+      </div>
+      <div class="sim-note">차로를 따라가는 시점으로 본 그림이다(바퀴 조향각은 8배 과장). 조향 액추에이터는 0.12 s 지연과 속도 제한이 있다. 옆바람은 차를 오른쪽으로 0.8 m/s로 미는 것으로 근사했다. 해볼 것: 피드포워드를 끄면 커브마다 바깥으로 밀린 채 돈다. k_ψ를 0.1로 내리면 좌우로 출렁이고, 속도를 올리면 더 심해진다. LKA로 바꾸면 차선에 가까워질 때만 되돌리므로 차로 안에서 탁구공처럼 오간다. 'LDW만'은 손을 놓은 상태로, 경고만 하고 그대로 벗어난다.</div>
+    </div>
+
+    <h3>고속도로 주행 보조와 차로 변경</h3>
+    <p>ACC(종방향)와 LFA(횡방향)를 함께 켜면 차가 스스로 간격을 지키며 차로 중앙을 달린다. 이것이 <span class="term">고속도로 주행 보조</span><span class="en">(Highway Driving Assist)</span>이며, 레벨 2의 대표적인 모습이다. 내비게이션 지도와 연동하면 커브나 제한 속도 구간 앞에서 미리 감속하고, 차선이 흐릿한 구간에서는 앞차의 궤적을 따라가기도 한다.</p>
+    <p><b>차로 변경 보조</b>는 운전자가 방향지시등을 켜면 후측방 레이더로 옆 차로의 빈 공간과 접근 차량을 확인한 뒤, 몇 초에 걸친 부드러운 횡 이동 궤적을 만들어 따라간다. 옆 차로 뒤에서 빠르게 다가오는 차가 있으면 시작하지 않는다. 시속 100 km로 달리는 내 차 뒤 60 m에서 시속 140 km 차가 오고 있다면 접근 속도는 11 m/s, 5.4 s 만에 따라잡힌다. 차로 변경에 5~6 s가 걸리므로 그 정도 거리까지는 봐야 한다. 후측방 레이더의 감지 거리가 70~100 m인 이유다.</p>
+  </section>
+
+  <!-- =============================================================== 6 -->
+  <section id="surround">
+    <h2>옆과 뒤: 사각지대, 교차 경고, 자동 주차</h2>
+    <h3>사각지대 경고(BSD)</h3>
+    <p>사이드 미러가 보여 주는 범위는 생각보다 좁다. 운전석 쪽 평면 미러의 시야각은 대표적으로 약 15~20°, 조수석 쪽 볼록 미러는 약 25~30°다. 미러에 비치는 영역과 고개를 돌리지 않고 볼 수 있는 영역 사이에는 차 한 대가 통째로 들어가는 틈이 생긴다. 이것이 <span class="term">사각지대</span><span class="en">(Blind Spot)</span>다. <span class="term">BSD</span><span class="en">(Blind Spot Detection, 후측방 경고)</span>는 뒷범퍼 양 모서리 안쪽의 레이더로 이 영역에 차가 있는지 감시해 사이드 미러의 경고등을 켠다. 그 상태에서 그쪽으로 방향지시등을 켜면 경고음을 내고, 차로를 넘으려 하면 반대쪽 바퀴를 살짝 제동하거나 조향 토크로 되돌리는 <b>충돌 방지 보조</b>로 이어진다.</p>
+
+    <div class="sim" id="sim-bd">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>사각지대: 미러에 보이는가, 레이더가 잡는가</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-bd" style="touch-action:none"></canvas><div class="hint">옆 차를 끌어 옮긴다</div></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>사이드 미러를 바깥으로 돌린 각도 <output id="bd-rot-out"></output></span><input type="range" id="bd-rot" min="0" max="20" value="0" step="1"></label>
+          <div class="ctrl"><span>옆 차 종류</span><div class="seg" id="bd-type"><button data-value="car" class="on">승용차</button><button data-value="moto">이륜차</button></div></div>
+          <div class="ctrl"><span>방향지시등</span><div class="seg" id="bd-turn"><button data-value="off" class="on">끔</button><button data-value="L">왼쪽</button><button data-value="R">오른쪽</button></div></div>
+          <label class="check"><input type="checkbox" id="bd-mir" checked> 미러·직접 시야 표시</label>
+          <label class="check"><input type="checkbox" id="bd-rad" checked> 레이더 경고 영역 표시</label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">직접 시야</span><span class="v" id="o-bd-dir">—</span></div>
+        <div class="stat"><span class="k">사이드 미러</span><span class="v" id="o-bd-side">—</span></div>
+        <div class="stat"><span class="k">룸미러</span><span class="v" id="o-bd-room">—</span></div>
+        <div class="stat"><span class="k">운전자에게</span><span class="v" id="o-bd-see">—</span></div>
+        <div class="stat"><span class="k">BSD</span><span class="v" id="o-bd-bsd">—</span></div>
+      </div>
+      <div class="sim-note">왼쪽 운전석 차를 위에서 본 그림(오른쪽이 전방). 초록 부채꼴은 미러에 비치는 범위, 옅은 선 앞쪽은 고개를 돌리지 않고 보이는 범위, 파란 사각형은 BSD 경고 영역(대표적인 예)이다. 해볼 것: 옆 차를 내 차 뒷문 옆에 두면 어느 미러에도 없고 직접 보이지도 않는다. 그 위치에서 미러를 바깥으로 15° 돌리면 사각지대가 메워지는 대신 내 차 옆면이 미러에서 사라진다. 이륜차로 바꾸면 사각지대에 숨는 범위가 더 넓어진다.</div>
+    </div>
+
+    <h3>후측방 교차 경고</h3>
+    <p>같은 후측방 레이더는 후진할 때 다른 일을 한다. 좌우에 차가 주차된 자리에서 뒤로 빠져나올 때 운전자는 옆에서 다가오는 차를 볼 수 없다. <span class="term">후측방 교차 충돌 경고</span><span class="en">(RCTA: Rear Cross Traffic Alert)</span>는 뒷범퍼 모서리에서 옆으로 퍼지는 레이더 빔으로 수십 m 밖에서 가로질러 오는 차량을 찾아 경고하고, 필요하면 제동한다. 레이더가 상대 속도를 직접 재므로 다가오는 물체만 골라낼 수 있다.</p>
+
+    <h3>자동 주차</h3>
+    <p>주차 보조는 범퍼에 박힌 <span class="term">초음파 센서</span>에서 시작한다. 약 40~50 kHz의 초음파 펄스를 쏘고 반사파가 돌아오는 시간 \(t\)를 재면 거리는 \(d = c\,t/2\)다(\(c \approx 343\) m/s). 1 m 떨어진 벽이라면 왕복 5.8 ms다. 감지 거리는 수 m에 불과하지만 값싸고 가까운 거리에 정확하다. 차 옆면을 향한 초음파 센서는 주차된 차들 옆을 천천히 지나가며 거리 변화를 기록한다. 거리가 갑자기 멀어졌다가 다시 가까워지는 구간의 길이가 곧 빈 공간의 길이다. 최근에는 서라운드 뷰 카메라가 주차선을 직접 인식하기도 한다.</p>
+    <p>공간을 찾으면 경로를 만든다. 평행 주차의 가장 단순한 경로는 <b>반대 방향으로 꺾인 원호 두 개</b>다. 뒷바퀴 축 중심의 최소 회전 반지름을 \(R = L/\tan\delta_{\max}\)라 하면, 원호 하나의 각도 \(\alpha\)와 옆으로 옮겨야 할 거리 \(D\), 앞뒤 이동 거리 \(X\)의 관계는 다음과 같다.</p>
+    <div class="formula">$$D = 2R\,(1-\cos\alpha),\qquad X = 2R\,\sin\alpha,\qquad L_{\min} = b + \sqrt{a^{2} + 2RW}$$
+      <div class="where">\(a\): 뒷축에서 앞범퍼까지 거리, \(b\): 뒷축에서 뒷범퍼까지 거리(뒤 오버행), \(W\): 차폭. \(L_{\min}\)은 한 번에 들어갈 수 있는 최소 공간 길이로, 차의 앞 바깥 모서리가 앞차의 뒤 모서리를 스치지 않을 조건에서 나온다.</div>
+    </div>
+    <div class="callout tip">
+      <strong>계산 예: 한 번에 들어가려면 얼마나 긴 자리가 필요한가</strong>
+      <p>길이 4.5 m, 폭 1.8 m, 축거 2.7 m, 앞뒤 오버행 0.9 m씩인 차의 최대 조향각이 35°라면 \(R = 2.7/\tan 35° = 3.86\) m. \(a = 3.6\) m이므로 \(L_{\min} = 0.9 + \sqrt{3.6^2 + 2\times3.86\times1.8} = 0.9 + 5.18 = 6.08\) m. 차 길이보다 약 1.6 m 긴 자리가 있어야 한 번에 들어간다. 그보다 짧으면 앞뒤로 몇 번 나누어 움직여야 한다.</p>
+    </div>
+
+    <div class="sim" id="sim-pk">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>자동 평행 주차: 원호 두 개로 만드는 경로</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-pk"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>주차 공간 길이 <output id="pk-len-out"></output></span><input type="range" id="pk-len" min="4.8" max="9" value="6.6" step="0.05"></label>
+          <label class="ctrl"><span>최대 조향각 <output id="pk-st-out"></output></span><input type="range" id="pk-st" min="25" max="42" value="35" step="1"></label>
+          <label class="ctrl"><span>옆 차와의 간격 <output id="pk-gap-out"></output></span><input type="range" id="pk-gap" min="0.3" max="1.5" value="0.6" step="0.05"></label>
+          <label class="ctrl"><span>진행 <output id="pk-u-out"></output></span><input type="range" id="pk-u" min="0" max="100" value="0" step="0.5"></label>
+          <button class="btn primary" id="pk-play">주차 실행</button>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">회전 반지름 R</span><span class="v" id="o-pk-r">—</span></div>
+        <div class="stat"><span class="k">원호 각 α</span><span class="v" id="o-pk-a">—</span></div>
+        <div class="stat"><span class="k">필요 최소 길이</span><span class="v" id="o-pk-min">—</span></div>
+        <div class="stat"><span class="k">여유</span><span class="v" id="o-pk-m">—</span></div>
+        <div class="stat"><span class="k">단계</span><span class="v" id="o-pk-ph">—</span></div>
+      </div>
+      <div class="sim-note">아래쪽이 연석이다. 주황 곡선은 뒷축 중심이 지나는 경로, 점은 두 원호의 중심, 노란 점선은 앞 바깥 모서리가 그리는 궤적이다. 차는 앞차 옆에 나란히 섰다가 핸들을 오른쪽 끝까지 돌려 후진하고, 중간에서 왼쪽 끝까지 돌려 마저 후진한다. 해볼 것: 공간 길이를 줄여 노란 궤적이 앞차 모서리에 닿는 순간을 찾자. 그 길이가 '필요 최소 길이'다. 최대 조향각을 키우면(회전 반지름이 작은 차) 더 짧은 자리에 들어간다.</div>
+    </div>
+
+    <h3>어댑티브 헤드램프</h3>
+    <p>조명도 주변을 보고 바뀐다. 조향각과 속도에 따라 램프를 커브 안쪽으로 돌리는 <b>AFS</b><span class="en">(Adaptive Front-lighting System)</span>, 전방 카메라가 마주 오는 차나 앞차의 불빛을 보면 상향등을 자동으로 끄는 <b>하이빔 보조</b>, 그리고 수십~수천 개의 LED를 따로 켜고 꺼서 상향등을 유지한 채 다른 차가 있는 부분만 어둡게 비우는 <b>매트릭스 헤드램프</b><span class="en">(ADB: Adaptive Driving Beam)</span>가 있다. 밤에 더 멀리 보이게 해 운전자의 인지를 돕는다는 점에서 이것도 능동 안전의 일부다.</p>
+  </section>
+
+  <!-- =============================================================== 7 -->
+  <section id="driver">
+    <h2>운전자 모니터링과 ADAS의 한계</h2>
+    <p>레벨 2 이하에서는 운전자가 계속 감시해야 한다. 그런데 시스템이 잘 작동할수록 사람은 지루해지고 주의가 흐트러진다. 이 모순을 메우는 것이 운전자 감시다.</p>
+    <ul>
+      <li><b>핸즈온 감지</b>: EPS 토크 센서로 운전자가 핸들에 주는 미세한 토크를 읽거나, 핸들 림에 넣은 정전 용량 센서로 손이 닿아 있는지 직접 잰다. 토크 방식은 손을 가만히 얹고만 있으면 놓은 것으로 오인하고 물건을 걸어 속일 수도 있어, 정전 용량 방식이 늘고 있다. 일정 시간 손이 감지되지 않으면 경고 → 경고음 → 기능 해제 순으로 진행하고, 끝까지 반응이 없으면 비상등을 켜고 차로 안에서 서서히 정지시키기도 한다.</li>
+      <li><span class="term">DMS</span><span class="en">(Driver Monitoring System)</span>: 근적외선 조명과 카메라로 얼굴 방향, 시선, 눈꺼풀이 감긴 시간의 비율을 측정해 전방 주시 태만과 졸음을 판단한다. 적외선을 쓰므로 밤이나 선글라스 너머로도 본다. 운전자가 한눈을 팔고 있으면 FCW 경고를 더 일찍 내는 식으로 다른 기능과 연동한다.</li>
+    </ul>
+
+    <h3>한계와 오용</h3>
+    <p>ADAS는 정해진 조건 안에서만 믿을 수 있다. 자주 문제가 되는 상황은 다음과 같다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>상황</th><th>왜 어려운가</th></tr></thead>
+      <tbody>
+        <tr><td>정지한 물체</td><td>레이더에는 가드레일, 표지판, 맨홀, 육교도 모두 "정지 물체"로 잡힌다. 높이 분해능이 낮은 레이더는 도로 위 정지 차량과 머리 위 구조물을 구별하기 어려워, 고속에서는 정지 표적을 걸러 내는 경우가 많다. 그래서 고속 주행 중 갓길에 걸친 정지 차량이나 사고 차량에 늦게 반응할 수 있다.</td></tr>
+        <tr><td>끼어들기·앞차의 차로 변경</td><td>앞차가 비켜난 뒤 그 앞의 정지 차량이 갑자기 드러나는 상황은 남은 거리가 짧고 표적이 정지 물체다.</td></tr>
+        <tr><td>악천후·역광</td><td>폭우, 눈, 안개, 낮은 해는 카메라의 차선·물체 인식을 떨어뜨리고, 센서 표면의 눈이나 흙은 레이더를 가린다.</td></tr>
+        <tr><td>차선 상태</td><td>지워진 차선, 공사 구간의 겹친 차선, 분기·합류부, 급커브에서 횡방향 기능이 해제되거나 잘못된 선을 따라간다.</td></tr>
+        <tr><td>낮은 마찰</td><td>AEB의 제동 시점은 마른 노면을 전제로 잡혀 있는 경우가 많아, 눈길·빗길에서는 같은 TTC에서 제동해도 멈추지 못한다.</td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout warn">
+      <strong>과신이 가장 큰 위험이다</strong>
+      <p>기능이 열 번 잘 작동하면 운전자는 열한 번째도 그럴 것이라 믿고 휴대전화를 본다. 이를 <b>자동화 과신</b>이라 한다. 레벨 2 시스템은 "대부분의 경우"를 처리하도록 만든 것이지 "모든 경우"를 책임지는 것이 아니다. 핸들에 무게추를 다는 것처럼 감시 장치를 속이는 행위는 시스템이 전제로 삼은 마지막 안전장치, 곧 운전자 자신을 없애는 일이다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 8 -->
+  <section id="ncap">
+    <h2>평가: 능동 안전을 어떻게 시험하는가</h2>
+    <p><a href="body.html">11장</a>에서 본 신차 안전도 평가(NCAP)는 충돌 시험만 하지 않는다. Euro NCAP과 한국 KNCAP 등은 사고 예방 성능을 별도 항목으로 점수화하며, 그 비중이 해마다 커지고 있다. 실제 차를 부술 수는 없으므로 시험에는 부딪혀도 부서지지 않는 표적을 쓴다. 레이더·카메라에 실제 차처럼 보이도록 만든 연질 차량 표적, 팔다리가 움직이는 보행자·자전거 더미를 낮은 주행 플랫폼 위에 얹어 정해진 궤적으로 움직인다. 시험 차는 조향·가감속 로봇이 몰아 속도와 겹침량을 수 cm, 0.1 km/h 단위로 반복 재현한다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>시험 영역</th><th>대표 시나리오</th><th>평가하는 것</th></tr></thead>
+      <tbody>
+        <tr><td>차 대 차 AEB</td><td>정지한 표적, 느리게 가는 표적, 감속하는 표적에 후방에서 접근. 교차로 좌회전 중 마주 오는 차</td><td>속도 구간별 충돌 회피 여부 또는 속도 저감량, 경고 시점</td></tr>
+        <tr><td>교통 약자 AEB</td><td>주차 차량 뒤에서 뛰어나오는 어린이, 길을 건너는 성인, 같은 방향 자전거, 야간 보행자, 후진 중 보행자</td><td>검출과 제동이 충분히 빠른가</td></tr>
+        <tr><td>차로 지원</td><td>실선·점선·차선 없는 길가로 서서히 이탈, 옆 차로에 추월 차량이나 마주 오는 차가 있을 때의 이탈</td><td>차선을 넘는 거리, 긴급 조향 개입</td></tr>
+        <tr><td>속도 지원·운전자 감시</td><td>제한 속도 인식, 졸음·주의 분산 검출, 안전벨트 알림</td><td>인식 정확도와 경고의 적절성</td></tr>
+        <tr><td>주행 보조 등급</td><td>ACC와 차로 중앙 유지의 성능, 운전자 참여 유지, 고장 시 대응</td><td>보조 능력과 운전자 개입 유도의 균형</td></tr>
+      </tbody>
+    </table></div>
+    <p>평가와 별도로 법규도 능동 안전을 의무화하고 있다. 유럽은 일반 안전 규정에 따라 신차에 AEB, 차로 이탈 긴급 조향, 지능형 속도 보조, 졸음 경고 등을 단계적으로 의무 장착하도록 했고, UN 규정으로는 승용차 AEB(R152), 조향 보조(R79), 레벨 3 차로 유지(R157) 등이 있다. 한국도 승용차 AEB와 차로 이탈 경고를 단계적으로 의무화했다.</p>
+    <div class="callout deep">
+      <strong>시험장 밖의 문제</strong>
+      <p>시험 시나리오는 유한하지만 실제 도로의 상황은 끝이 없다. 정해진 시험을 통과하도록 조율된 시스템이 시험에 없는 상황에서 얼마나 잘 작동하는지는 별개의 문제다. 고장이 없는데도 인지의 한계 때문에 생기는 위험은 '의도된 기능의 안전(SOTIF)'이라는 이름으로 따로 다루며, <a href="autonomy.html">21장</a>에서 살핀다. 이 장의 기능들이 한 단계 더 나아가 스스로 경로를 계획하는 과정은 <a href="planning.html">20장</a>으로 이어진다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== summary -->
+  <section class="keypoints" id="summary">
+    <h2>핵심 정리</h2>
+    <ol>
+      <li>ADAS는 바깥을 보는 센서로 인지–판단–제어 루프를 돌려 사고가 나기 전에 개입하는 능동 안전 기술이다. 운전자는 언제든 조작으로 시스템을 이길 수 있어야 한다.</li>
+      <li>SAE 레벨은 조향·가감속, 주변 감시, 비상 대응을 누가 맡는지로 나뉜다. 레벨 2까지는 사람이 계속 감시하고, 레벨 3부터 ODD 안에서 시스템이 감시한다.</li>
+      <li>ACC는 목표 간격 \(d^{*} = d_0 + h v\)를 두고 간격 오차와 상대 속도를 되먹인다. 속도 제어와 간격 제어 중 작은 가속도를 골라 모드가 전환된다.</li>
+      <li>선두의 흔들림이 뒤로 갈수록 줄어들면 스트링 안정이다. 시간 간격이 짧고 지연이 크면 \(|G(j\omega)|\)가 1을 넘어 유령 정체가 생긴다.</li>
+      <li>AEB는 TTC \(= d/v_{\text{rel}}\)가 줄어들수록 경고 → 부분 제동 → 완전 제동으로 강도를 높인다. 오작동을 피하려고 강한 제동은 충돌이 거의 확실해진 뒤에 건다.</li>
+      <li>제동 회피 거리는 \(v^2/(2\mu g)\), 조향 회피 거리는 \(v\sqrt{2w/a_y}\)다. 저속에서는 제동이, 고속에서는 조향이 더 늦게까지 통하므로 고속에서 AEB는 충돌을 줄일 뿐 다 막지 못한다.</li>
+      <li>차로 유지는 \(\delta = -k_y e_y - k_\psi e_\psi + \arctan(L\kappa)\)로 조향한다. \(k_y\)는 복원력, \(k_\psi\)는 감쇠, 곡률 피드포워드는 커브의 정상 오차를 없앤다. 실행은 EPS의 토크 겹침으로 한다.</li>
+      <li>후측방 레이더는 사각지대와 교차 차량을, 초음파는 주차 공간을 본다. 평행 주차는 원호 두 개 경로로 풀리며 최소 공간 길이는 \(b + \sqrt{a^2 + 2RW}\)다.</li>
+    </ol>
+  </section>
+
+  <!-- =============================================================== quiz -->
+  <section class="quiz-sec" id="quiz">
+    <h2>확인 퀴즈</h2>
+    <div class="quiz">
+      <div class="quiz-q"><p>Q1. ACC와 차로 중앙 유지를 함께 켜고 고속도로를 달리는 차가 있다. 이 차가 레벨 2인지 레벨 3인지를 가르는 기준은?</p><div class="opts">
+        <button class="opt">차가 스스로 조향과 가감속을 모두 하는가</button>
+        <button class="opt" data-correct>주변 감시를 사람이 계속 해야 하는가, 시스템이 맡는가</button>
+        <button class="opt">달릴 수 있는 최고 속도</button>
+        <button class="opt">라이다가 달려 있는가</button>
+      </div><div class="quiz-exp">레벨 2와 3 모두 시스템이 조향과 가감속을 한다. 차이는 주변 감시(OEDR)의 주체다. 레벨 2는 운전자가 항상 전방을 보고 즉시 대응해야 하고, 레벨 3은 ODD 안에서 시스템이 감시하며 운전자는 인수 요청에만 응하면 된다. 센서 종류나 속도는 기준이 아니다.</div></div>
+
+      <div class="quiz-q"><p>Q2. 시속 90 km로 달리는 ACC 차량의 시간 간격이 1.8 s, 정지 간격이 5 m다. 목표 간격은?</p><div class="opts">
+        <button class="opt">25 m</button><button class="opt">45 m</button><button class="opt" data-correct>50 m</button><button class="opt">167 m</button>
+      </div><div class="quiz-exp">\(v = 90/3.6 = 25\) m/s이므로 \(d^{*} = 5 + 1.8\times25 = 50\) m.</div></div>
+
+      <div class="quiz-q"><p>Q3. ACC 차량이 줄지어 달릴 때 스트링 불안정이 되기 쉬운 조건은?</p><div class="opts">
+        <button class="opt">시간 간격을 길게 잡고 상대 속도 이득을 키운다</button>
+        <button class="opt" data-correct>시간 간격을 짧게 잡고 차의 응답 지연이 크다</button>
+        <button class="opt">설정 속도가 낮다</button>
+        <button class="opt">정지 간격이 길다</button>
+      </div><div class="quiz-exp">지연이 없을 때의 조건 \(k_g h^2 + 2k_v h \ge 2\)에서 보듯 \(h\)가 짧을수록 불안정하고, 응답 지연 \(\tau\)가 커질수록 필요한 \(h\)가 길어진다. 이때 선두의 작은 감속이 뒤로 가며 증폭되어 유령 정체가 된다.</div></div>
+
+      <div class="quiz-q"><p>Q4. 시속 72 km(20 m/s)로 달리다 30 m 앞의 정지 차량을 발견했다. TTC와, μ = 1.0 노면에서 지연 없이 완전 제동할 때의 제동 거리는?</p><div class="opts">
+        <button class="opt">TTC 0.67 s, 제동 거리 10 m</button>
+        <button class="opt" data-correct>TTC 1.5 s, 제동 거리 약 20 m</button>
+        <button class="opt">TTC 1.5 s, 제동 거리 약 41 m</button>
+        <button class="opt">TTC 3.0 s, 제동 거리 약 20 m</button>
+      </div><div class="quiz-exp">TTC = 30/20 = 1.5 s. 제동 거리 = \(20^2/(2\times9.81) \approx 20.4\) m. 남은 30 m 안에 설 수 있지만 여유는 10 m, 시간으로 0.5 s뿐이다. 시스템 지연이 0.5 s를 넘으면 충돌한다.</div></div>
+
+      <div class="quiz-q"><p>Q5. 고속에서 AEB만으로는 충돌을 완전히 피하기 어려운 근본 이유는?</p><div class="opts">
+        <button class="opt">고속에서는 레이더가 작동하지 않기 때문</button>
+        <button class="opt">브레이크가 과열되기 때문</button>
+        <button class="opt" data-correct>제동 거리는 속도의 제곱에 비례하는데, 운전자가 조향으로 피할 수 있는 동안에는 충돌을 단정할 수 없어 강한 제동을 늦게 걸기 때문</button>
+        <button class="opt">고속에서는 타이어 마찰 계수가 0이 되기 때문</button>
+      </div><div class="quiz-exp">제동 회피 거리는 \(v^2\)에, 조향 회피 거리는 \(v\)에 비례한다. 고속에서는 조향으로 피할 수 있는 마지막 시점이 제동으로 피할 수 있는 마지막 시점보다 훨씬 늦다. 오작동을 피하려면 조향 회피 가능성이 사라질 때까지 기다려야 하고, 그때는 이미 제동만으로 멈출 거리가 남지 않는다.</div></div>
+
+      <div class="quiz-q"><p>Q6. 차로 중앙 유지 제어에서 곡률 피드포워드 항 \(\arctan(L\kappa)\)를 빼면 커브에서 어떤 일이 생기는가?</p><div class="opts">
+        <button class="opt">차가 좌우로 점점 크게 진동한다</button>
+        <button class="opt" data-correct>커브를 도는 내내 바깥쪽으로 일정하게 밀린 채(정상 오차) 달린다</button>
+        <button class="opt">직선에서도 한쪽으로 치우친다</button>
+        <button class="opt">아무 차이도 없다</button>
+      </div><div class="quiz-exp">커브를 돌려면 조향각 \(L/R\)이 계속 필요하다. 피드포워드가 없으면 이 각도를 \(k_y e_y\)가 만들어야 하므로 \(e_y = (L/R)/k_y\)만큼의 오프셋이 남는다. 진동은 감쇠 역할인 \(k_\psi\)가 부족할 때의 증상이다.</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const cssv = (n) => getComputedStyle(document.body).getPropertyValue(n);
+  const font = (sz, mono, w) => (w ? w + " " : "") + sz + "px " + (mono ? cssv("--mono") : cssv("--font"));
+  const G = CB.G, clamp = CB.clamp, CARL = CB.CAR.L, CARW = CB.CAR.W, WB = CB.CAR.wb;
+  const DEG = Math.PI / 180;
+  function txt(ctx, s, x, y, color, align, base, f) {
+    if (f) ctx.font = f;
+    ctx.fillStyle = color; ctx.textAlign = align || "left"; ctx.textBaseline = base || "alphabetic";
+    ctx.fillText(s, x, y);
+  }
+  function poly(ctx, pts, color, lw, dash, close) {
+    if (pts.length < 2) return;
+    ctx.save();
+    ctx.strokeStyle = color; ctx.lineWidth = lw || 1.5; ctx.setLineDash(dash || []); ctx.lineJoin = "round";
+    ctx.beginPath();
+    pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+    if (close) ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
+  }
+  const seg = (ctx, x1, y1, x2, y2, color, lw, dash) => poly(ctx, [[x1, y1], [x2, y2]], color, lw, dash);
+
+  /* =================================================== Sim 1: 자동화 레벨 */
+  (function () {
+    const LV = [
+      { name: "자동화 없음", steer: "H", acc: "H", oedr: "H", fb: "H", odd: "—", hands: "잡는다", eyes: "전방 주시",
+        desc: "<b>레벨 0.</b> 운전자가 모든 것을 한다. 시스템은 경고하거나(FCW, LDW, BSD) 순간적으로만 개입한다(AEB)." },
+      { name: "운전자 보조", steer: "E", acc: "E", oedr: "H", fb: "H", odd: "제한", hands: "잡는다", eyes: "전방 주시",
+        desc: "<b>레벨 1.</b> 조향과 가감속 가운데 <b>하나</b>를 시스템이 지속적으로 맡는다. 예: ACC만 켠 상태, 또는 차로 유지만 켠 상태." },
+      { name: "부분 자동화", steer: "S", acc: "S", oedr: "H", fb: "H", odd: "제한", hands: "잡는다", eyes: "전방 주시",
+        desc: "<b>레벨 2.</b> 조향과 가감속을 시스템이 함께 한다. 예: 고속도로 주행 보조(ACC + 차로 중앙 유지). 감시와 책임은 여전히 운전자에게 있다." },
+      { name: "조건부 자동화", steer: "S", acc: "S", oedr: "S", fb: "H", odd: "제한", hands: "떼도 됨", eyes: "떼도 됨",
+        desc: "<b>레벨 3.</b> ODD 안에서는 시스템이 주변 감시까지 한다. 운전자는 눈을 떼도 되지만 인수 요청이 오면 넘겨받아야 한다. 예: 고속도로 정체 구간 자동 주행." },
+      { name: "고도 자동화", steer: "S", acc: "S", oedr: "S", fb: "S", odd: "제한", hands: "필요 없음", eyes: "자유",
+        desc: "<b>레벨 4.</b> ODD 안에서는 비상 대응까지 시스템이 한다. 사람이 응하지 않아도 스스로 안전하게 멈춘다. 예: 정해진 구역을 도는 무인 택시." },
+      { name: "완전 자동화", steer: "S", acc: "S", oedr: "S", fb: "S", odd: "무제한", hands: "필요 없음", eyes: "자유",
+        desc: "<b>레벨 5.</b> 사람이 운전할 수 있는 모든 도로와 조건에서 시스템이 운전한다. 핸들과 페달이 없어도 된다. 아직 실현되지 않았다." },
+    ];
+    const ROWS = [["steer", "조향"], ["acc", "가감속"], ["oedr", "주변 감시"], ["fb", "비상 대응"]];
+    function icon(ctx, kind, cx, cy, r) {
+      ctx.save();
+      ctx.strokeStyle = ctx.fillStyle = "#fff"; ctx.lineWidth = Math.max(1.6, r * 0.16); ctx.lineCap = "round"; ctx.lineJoin = "round";
+      if (kind === "steer") {
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, cy, r * 0.22, 0, Math.PI * 2); ctx.fill();
+        [Math.PI, 0, Math.PI / 2].forEach((a) => { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); ctx.stroke(); });
+      } else if (kind === "acc") {
+        ctx.translate(cx, cy); ctx.rotate(0.3);
+        ctx.strokeRect(-r * 0.42, -r * 0.9, r * 0.84, r * 1.8);
+        for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(-r * 0.2, k * r * 0.45); ctx.lineTo(r * 0.2, k * r * 0.45); ctx.stroke(); }
+      } else if (kind === "oedr") {
+        ctx.beginPath(); ctx.moveTo(cx - r * 1.1, cy); ctx.quadraticCurveTo(cx, cy - r * 1.05, cx + r * 1.1, cy); ctx.quadraticCurveTo(cx, cy + r * 1.05, cx - r * 1.1, cy); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, cy, r * 0.32, 0, Math.PI * 2); ctx.fill();
+      } else {
+        ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r * 1.05, cy + r * 0.8); ctx.lineTo(cx - r * 1.05, cy + r * 0.8); ctx.closePath(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx, cy - r * 0.35); ctx.lineTo(cx, cy + r * 0.2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, cy + r * 0.5, r * 0.09, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    }
+    const gLv = CB.range("lv", (v) => "레벨 " + v, () => update());
+    function draw(ctx, w, h) {
+      const P = CB.palette(), lv = gLv(), L = LV[lv];
+      const colOf = (o) => (o === "H" ? P.accent : P.accent2);
+      const who = (o) => (o === "H" ? "사람" : o === "S" ? "시스템" : "둘 중 하나");
+      const r = Math.min(26, w / 15);
+      ROWS.forEach(([key, label], i) => {
+        const cx = (w * (i + 0.5)) / 4, cy = 14 + r, o = L[key];
+        if (o === "E") {
+          ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI / 2, Math.PI * 1.5); ctx.fill();
+          ctx.fillStyle = P.accent2; ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI / 2, Math.PI / 2); ctx.fill();
+        } else { ctx.fillStyle = colOf(o); ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); }
+        icon(ctx, key, cx, cy, r * 0.5);
+        txt(ctx, label, cx, cy + r + 17, P.text, "center", "alphabetic", font(13, false, 700));
+        txt(ctx, who(o), cx, cy + r + 34, o === "E" ? P.dim : colOf(o), "center", "alphabetic", font(12, false, 600));
+      });
+      const y0 = 14 + 2 * r + 48, tx = 8, labW = Math.min(96, w * 0.26), cw = (w - tx * 2 - labW) / 6;
+      const rowH = Math.min(30, (h - y0 - 22 - 8) / 5);
+      for (let c = 0; c < 6; c++) txt(ctx, "L" + c, tx + labW + (c + 0.5) * cw, y0 + 14, c === lv ? P.text : P.dim, "center", "alphabetic", font(12, true, c === lv ? 700 : 400));
+      const rows = ROWS.concat([["odd", "ODD"]]);
+      rows.forEach(([key, label], ri) => {
+        const y = y0 + 22 + ri * rowH;
+        txt(ctx, label, tx + 2, y + rowH / 2, P.text, "left", "middle", font(12.5, false, 600));
+        for (let c = 0; c < 6; c++) {
+          const o = LV[c][key], x = tx + labW + c * cw;
+          ctx.save();
+          ctx.globalAlpha = c === lv ? 1 : 0.32;
+          if (key === "odd") {
+            ctx.fillStyle = P.surface; ctx.fillRect(x + 2, y + 2, cw - 4, rowH - 4);
+            txt(ctx, o, x + cw / 2, y + rowH / 2, P.text, "center", "middle", font(11, false, 600));
+          } else if (o === "E") {
+            ctx.fillStyle = P.accent; ctx.fillRect(x + 2, y + 2, (cw - 4) / 2, rowH - 4);
+            ctx.fillStyle = P.accent2; ctx.fillRect(x + cw / 2, y + 2, (cw - 4) / 2, rowH - 4);
+            txt(ctx, "택1", x + cw / 2, y + rowH / 2, "#fff", "center", "middle", font(11, false, 700));
+          } else {
+            ctx.fillStyle = colOf(o); ctx.fillRect(x + 2, y + 2, cw - 4, rowH - 4);
+            txt(ctx, o === "H" ? "사람" : "시스템", x + cw / 2, y + rowH / 2, "#fff", "center", "middle", font(11, false, 700));
+          }
+          ctx.restore();
+        }
+      });
+      ctx.strokeStyle = P.text; ctx.lineWidth = 2;
+      ctx.strokeRect(tx + labW + lv * cw, y0 + 20, cw, rows.length * rowH + 4);
+    }
+    const cv = CB.canvas($("cv-lv"), draw, { aspect: 0.62, minHeight: 300, maxHeight: 360 });
+    function update() {
+      const L = LV[gLv()];
+      CB.stat("o-lv-name", L.name); CB.stat("o-lv-hands", L.hands); CB.stat("o-lv-eyes", L.eyes); CB.stat("o-lv-odd", L.odd);
+      $("lv-desc").innerHTML = L.desc;
+      cv.redraw();
+    }
+    update();
+  })();
+
+  /* =================================================== Sim 2: ACC 추종 */
+  (function () {
+    const D0 = 5, AMAX = 2.0, AMIN = -3.5, TAU = 0.4, RANGE = 150, SPAN = 40;
+    const gVl = CB.range("acc-vl", (v) => v + " km/h");
+    const gVset = CB.range("acc-vset", (v) => v + " km/h");
+    const gH = CB.range("acc-h", (v) => v.toFixed(1) + " s");
+    const gKg = CB.range("acc-kg", (v) => v.toFixed(2) + " 1/s²");
+    const gKv = CB.range("acc-kv", (v) => v.toFixed(2) + " 1/s");
+    let S, hist = [], recT = 0, playing = true;
+    function reset() {
+      const vl = CB.ms(gVl()), ve = Math.min(vl, CB.ms(gVset()));
+      S = { t: 0, xe: 0, ve, ae: 0, xl: CARL + D0 + gH() * ve, vl, al: 0, hard: false, mode: "gap", crash: 0, crashV: 0 };
+      hist = []; recT = 0;
+    }
+    const gapOf = () => S.xl - S.xe - CARL;
+    function step(dt) {
+      const dv = CB.ms(gVl()) - S.vl;
+      S.al = clamp(dv / 0.5, S.hard ? -6.5 : -1.5, 1.5);
+      S.vl = Math.max(0, S.vl + S.al * dt);
+      if (S.hard && Math.abs(dv) < 0.3) S.hard = false;
+      S.xl += S.vl * dt;
+      const gap = gapOf(), dstar = D0 + gH() * S.ve;
+      const aS = 0.4 * (CB.ms(gVset()) - S.ve);
+      const aG = gKg() * (gap - dstar) + gKv() * (S.vl - S.ve);
+      let u;
+      if (gap > RANGE || aS <= aG) { u = aS; S.mode = "speed"; } else { u = aG; S.mode = "gap"; }
+      u = clamp(u, AMIN, AMAX);
+      S.ae += ((u - S.ae) * dt) / TAU;
+      S.ve += S.ae * dt;
+      if (S.ve <= 0) { S.ve = 0; if (S.ae < 0) S.ae = 0; }
+      S.xe += S.ve * dt; S.t += dt;
+      if (gapOf() <= 0) { S.crash = 1.8; S.crashV = S.ve - S.vl; }
+    }
+    function drawRoad(ctx, w, h) {
+      const P = CB.palette();
+      const carPx = clamp(w * 0.1, 34, 64), sc = carPx / CARL, carH = 1.45 * sc;
+      const X0 = 12 + carPx, sx = (w - X0 - carPx - 12) / 100, gy = h * 0.74;
+      const gap = Math.max(0, gapOf()), dstar = D0 + gH() * S.ve;
+      ctx.fillStyle = P.surface; ctx.fillRect(0, gy, w, h - gy);
+      seg(ctx, 0, gy, w, gy, P.axis, 1.2);
+      const per = 12 * sx, off = (S.xe * sx) % per;
+      ctx.fillStyle = P.faint;
+      for (let x = -off; x < w; x += per) ctx.fillRect(x, gy + (h - gy) * 0.5 - 1.5, per * 0.4, 3);
+      const shown = gap <= 100;
+      const xl = X0 + Math.min(gap, 100) * sx;
+      ctx.fillStyle = P.accent2 + "22";
+      ctx.beginPath(); ctx.moveTo(X0, gy - carH * 0.45); ctx.lineTo(xl, gy - carH * 0.95); ctx.lineTo(xl, gy - carH * 0.05); ctx.closePath(); ctx.fill();
+      const xd = X0 + dstar * sx;
+      if (xd < w - 4) {
+        seg(ctx, xd, gy - carH * 1.5, xd, gy, P.ok, 1.5, [4, 3]);
+        txt(ctx, "목표", xd, gy - carH * 1.5 - 4, P.ok, "center", "alphabetic", font(11, false, 600));
+      }
+      CB.carSide(ctx, X0 - carPx / 2, gy, sc, { color: S.crash > 0 ? P.bad : P.accent, wheelAngle: S.xe / CB.CAR.r });
+      if (S.ae < -0.5) { ctx.fillStyle = "#ff3b30"; ctx.fillRect(X0 - carPx, gy - carH * 0.62, 3, carH * 0.2); }
+      if (shown) {
+        CB.carSide(ctx, xl + carPx / 2, gy, sc, { color: P.dim, wheelAngle: S.xl / CB.CAR.r });
+        if (S.al < -0.5) { ctx.fillStyle = "#ff3b30"; ctx.fillRect(xl, gy - carH * 0.62, 3, carH * 0.2); }
+        const yd = gy + 14;
+        if (gap * sx > 24) { CB.arrow(ctx, (X0 + xl) / 2, yd, xl, yd, P.text, 1.2); CB.arrow(ctx, (X0 + xl) / 2, yd, X0, yd, P.text, 1.2); }
+        txt(ctx, gap.toFixed(1) + " m", (X0 + xl) / 2, yd + 16, P.text, "center", "alphabetic", font(12, true, 600));
+      } else txt(ctx, "앞차: 그림 범위 밖 →", w - 8, gy - carH * 0.5, P.dim, "right", "middle", font(12));
+      if (Math.abs(S.ae) > 0.15) CB.arrow(ctx, X0 - carPx / 2, gy - carH - 8, X0 - carPx / 2 + S.ae * 9, gy - carH - 8, S.ae < 0 ? P.bad : P.ok, 2.5);
+      txt(ctx, S.mode === "speed" ? "속도 제어" : "간격 제어", 8, 16, S.mode === "speed" ? P.accent : P.accent2, "left", "alphabetic", font(12, false, 700));
+      if (S.crash > 0) txt(ctx, "추돌 (상대 속도 " + CB.kmh(S.crashV).toFixed(0) + " km/h) — ACC 감속 한계 초과", w / 2, 16, P.bad, "center", "alphabetic", font(12, false, 700));
+    }
+    function drawCh(ctx, w, h) {
+      const P = CB.palette();
+      const t1 = Math.max(SPAN, S.t), t0 = t1 - SPAN;
+      const bx = 50, bw = w - bx - 14, gy = 22, ph = (h - 10 - 2 * gy - 44) / 3;
+      const box = (i) => ({ x: bx, y: 10 + i * (ph + gy), w: bw, h: ph });
+      const col = (k, m) => hist.map((r) => [r[0], r[k] * (m || 1)]);
+      const xFmt = (v) => v.toFixed(0);
+      const lab = (i, items) => { let x = bx + 6; items.forEach(([s, c]) => { txt(ctx, s, x, box(i).y + 4, c, "left", "top", font(11, false, 600)); x += ctx.measureText(s).width + 10; }); };
+      CB.chart(ctx, box(0), { x: [t0, t1], y: [0, 150], yTicks: [0, 50, 100, 150], xFmt, yLabel: "km/h",
+        series: [{ data: col(2, 3.6), color: P.dim }, { data: col(1, 3.6), color: P.accent }], hlines: [{ y: gVset(), color: P.faint, label: "설정" }] });
+      lab(0, [["자차", P.accent], ["앞차", P.dim]]);
+      const gmax = Math.max(60, Math.min(160, Math.ceil(hist.reduce((m, r) => Math.max(m, r[3], r[4]), 0) / 20) * 20));
+      CB.chart(ctx, box(1), { x: [t0, t1], y: [0, gmax], xFmt, yLabel: "간격 m",
+        series: [{ data: col(4), color: P.ok, dash: [5, 4], width: 1.5 }, { data: col(3), color: P.accent2 }] });
+      lab(1, [["실제", P.accent2], ["목표", P.ok]]);
+      CB.chart(ctx, box(2), { x: [t0, t1], y: [-4, 2.5], yTicks: [-4, -2, 0, 2], xFmt, yLabel: "m/s²", xLabel: "시간 (s)",
+        series: [{ data: col(5), color: P.accent }], hlines: [{ y: AMIN, color: P.bad, label: "감속 한계" }, { y: AMAX, color: P.faint }] });
+    }
+    reset();
+    const cvEl = $("cv-acc");
+    const cv = CB.canvas(cvEl, drawRoad, { aspect: 0.3, minHeight: 130, maxHeight: 190 });
+    const cvG = CB.canvas($("cv-accg"), drawCh, { aspect: 0.8, minHeight: 320, maxHeight: 400 });
+    $("acc-brake").addEventListener("click", () => { S.hard = true; gVl.set(Math.max(0, Math.round(CB.kmh(S.vl) - 50))); });
+    $("acc-cut").addEventListener("click", () => {
+      const g = Math.max(8, gapOf() * 0.35);
+      S.xl = S.xe + CARL + g; S.vl = Math.max(0, S.ve - CB.ms(15)); S.hard = false;
+      gVl.set(Math.round(CB.kmh(S.vl)));
+    });
+    $("acc-reset").addEventListener("click", reset);
+    $("acc-play").addEventListener("click", (e) => { playing = !playing; e.target.textContent = playing ? "일시정지" : "재생"; });
+    CB.loop(cvEl, (dt) => {
+      if (playing) {
+        if (S.crash > 0) {
+          S.crash -= dt;
+          if (S.crash <= 0) { S.ve = S.vl; S.ae = 0; S.xe = S.xl - CARL - D0 - gH() * S.ve; }
+        } else {
+          const n = Math.max(1, Math.ceil(dt / 0.01));
+          for (let i = 0; i < n && S.crash <= 0; i++) step(dt / n);
+          recT += dt;
+          if (recT >= 0.1) { recT = 0; hist.push([S.t, S.ve, S.vl, Math.max(0, gapOf()), D0 + gH() * S.ve, S.ae]); if (hist.length > SPAN * 10 + 5) hist.shift(); }
+        }
+      }
+      const gap = Math.max(0, gapOf());
+      CB.stat("o-acc-mode", S.mode === "speed" ? "속도 제어" : "간격 제어");
+      CB.stat("o-acc-gap", gap.toFixed(1) + " / " + (D0 + gH() * S.ve).toFixed(1) + "<small>m</small>");
+      CB.stat("o-acc-tg", S.ve > 0.5 ? (gap / S.ve).toFixed(2) + "<small>s</small>" : "정지");
+      CB.stat("o-acc-ttc", S.ve - S.vl > 0.2 ? Math.min(99, gap / (S.ve - S.vl)).toFixed(1) + "<small>s</small>" : "∞");
+      CB.stat("o-acc-a", S.ae.toFixed(2) + "<small>m/s²</small>");
+      cv.redraw(); cvG.redraw();
+    });
+  })();
+
+  /* =================================================== Sim 3: 스트링 안정성 */
+  (function () {
+    const N = 8, V0 = 25, D0 = 5, T = 70, DT = 0.02, REC = 5;
+    const gH = CB.range("st-h", (v) => v.toFixed(2) + " s", () => simulate());
+    const gKg = CB.range("st-kg", (v) => v.toFixed(2) + " 1/s²", () => simulate());
+    const gKv = CB.range("st-kv", (v) => v.toFixed(2) + " 1/s", () => simulate());
+    const gTau = CB.range("st-tau", (v) => v.toFixed(2) + " s", () => simulate());
+    const gDip = CB.range("st-dip", (v) => v + " km/h", () => simulate());
+    let internal = false, tp = 0, playing = true, R = null;
+    const gT = CB.range("st-t", (v) => v.toFixed(1) + " s", (v) => { if (!internal) { tp = v; redraw(); } });
+    const hue = (i) => "hsl(" + ((i * 42 + 15) % 360) + ",70%,50%)";
+    function gmag(om, h, kg, kv, tau) {
+      const re = kg - om * om, im = (kv + kg * h) * om - tau * om * om * om;
+      return Math.hypot(kg, kv * om) / Math.hypot(re, im);
+    }
+    function simulate() {
+      const h = gH(), kg = gKg(), kv = gKv(), tau = gTau(), dip = CB.ms(gDip());
+      const x = [], v = [], a = [], u = [];
+      for (let i = 0; i < N; i++) { x[i] = -i * (CARL + D0 + h * V0); v[i] = V0; a[i] = 0; u[i] = 0; }
+      const rec = { t: [], v: [], x: [], a: [] };
+      for (let i = 0; i < N; i++) { rec.v.push([]); rec.x.push([]); rec.a.push([]); }
+      const tB = 5, tDec = dip / 2, tHold = 3, tAcc = dip / 1.5;
+      let crash = null, span = 0;
+      const steps = Math.round(T / DT);
+      for (let k = 0; k <= steps; k++) {
+        const t = k * DT;
+        if (k % REC === 0 || crash) {
+          rec.t.push(t);
+          for (let i = 0; i < N; i++) { rec.v[i].push(v[i]); rec.x[i].push(x[i]); rec.a[i].push(a[i]); }
+          span = Math.max(span, x[0] - x[N - 1]);
+        }
+        if (crash) break;
+        let a0 = 0;
+        if (t >= tB && t < tB + tDec) a0 = -2; else if (t >= tB + tDec + tHold && t < tB + tDec + tHold + tAcc) a0 = 1.5;
+        for (let i = 1; i < N; i++) u[i] = clamp(kg * (x[i - 1] - x[i] - CARL - D0 - h * v[i]) + kv * (v[i - 1] - v[i]), -8, 3);
+        a[0] = a0; v[0] = clamp(v[0] + a0 * DT, 0, V0); x[0] += v[0] * DT;
+        for (let i = 1; i < N; i++) {
+          a[i] += ((u[i] - a[i]) * DT) / tau;
+          v[i] += a[i] * DT;
+          if (v[i] <= 0) { v[i] = 0; if (a[i] < 0) a[i] = 0; }
+          x[i] += v[i] * DT;
+        }
+        for (let i = 1; i < N && !crash; i++) if (x[i - 1] - x[i] - CARL <= 0) crash = { t, i };
+      }
+      let gm = 0;
+      for (let k = 0; k <= 300; k++) gm = Math.max(gm, gmag(0.005 * Math.pow(1000, k / 300), h, kg, kv, tau));
+      const minOf = (arr) => arr.reduce((m, q) => Math.min(m, q), Infinity);
+      R = { rec, crash, span: span + CARL + 6, tEnd: rec.t[rec.t.length - 1], gm, h, kg, kv, tau,
+        d0: V0 - minOf(rec.v[0]), d7: V0 - minOf(rec.v[N - 1]), hmin: (Math.sqrt(kv * kv + 2 * kg) - kv) / kg };
+      if (tp > R.tEnd) tp = 0;
+      CB.stat("o-st-d0", CB.kmh(R.d0).toFixed(0) + "<small>km/h</small>");
+      CB.stat("o-st-d7", CB.kmh(R.d7).toFixed(0) + "<small>km/h</small>");
+      CB.stat("o-st-g", gm.toFixed(2));
+      CB.stat("o-st-hmin", R.hmin.toFixed(2) + "<small>s</small>");
+      CB.stat("o-st-res", crash ? (crash.i + 1) + "번째 차 추돌" : gm <= 1.003 ? "안정(감쇠)" : "불안정(증폭)");
+      redraw();
+    }
+    function drawRoad(ctx, w, h) {
+      if (!R) return;
+      const P = CB.palette(), rec = R.rec;
+      const k = clamp(Math.round(tp / (DT * REC)), 0, rec.t.length - 1);
+      const sx = (w - 24) / R.span, len = clamp(9.5 * sx * 0.85, 6, 28), wid = Math.max(4, len * 0.45);
+      const cy = h * 0.58, lane = Math.max(wid + 10, h * 0.34);
+      ctx.fillStyle = P.surface; ctx.fillRect(0, cy - lane / 2, w, lane);
+      seg(ctx, 0, cy - lane / 2, w, cy - lane / 2, P.dim, 1.5); seg(ctx, 0, cy + lane / 2, w, cy + lane / 2, P.dim, 1.5);
+      const per = 20 * sx, off = (rec.x[0][k] * sx) % per;
+      ctx.fillStyle = P.faint;
+      for (let px = w + off; px > -per; px -= per) ctx.fillRect(px - per, cy + lane / 2 - 4, per * 0.35, 2);
+      for (let i = N - 1; i >= 0; i--) {
+        const px = w - 12 - (rec.x[0][k] - rec.x[i][k]) * sx - len / 2;
+        const hit = R.crash && k === rec.t.length - 1 && (i === R.crash.i || i === R.crash.i - 1);
+        CB.carTop(ctx, px, cy, 0, { len, wid, color: hit ? P.bad : hue(i), brake: rec.a[i][k] < -0.3 });
+        if (len >= 12) txt(ctx, String(i + 1), px, cy - lane / 2 - 4, P.dim, "center", "alphabetic", font(10, true));
+      }
+      txt(ctx, "t = " + rec.t[k].toFixed(1) + " s", 8, 13, P.text, "left", "alphabetic", font(11, true, 600));
+      txt(ctx, "진행 방향 →", w - 8, h - 5, P.faint, "right", "alphabetic", font(11));
+    }
+    function drawV(ctx, w, h) {
+      if (!R) return;
+      const P = CB.palette(), rec = R.rec;
+      const box = { x: 50, y: 12, w: w - 50 - 14, h: h - 12 - 46 };
+      const series = [];
+      for (let i = N - 1; i >= 0; i--) series.push({ data: rec.t.map((t, k) => [t, rec.v[i][k] * 3.6]), color: i ? hue(i) : P.text, width: i ? 1.6 : 2.6 });
+      const ch = CB.chart(ctx, box, { x: [0, T], y: [0, 100], xLabel: "시간 (s)", yLabel: "속도 km/h", series, vlines: [{ x: Math.min(tp, R.tEnd), color: P.dim }] });
+      txt(ctx, "선두", ch.X(2), ch.Y(90) - 8, P.text, "left", "alphabetic", font(11, false, 700));
+      txt(ctx, "8번째", ch.X(T) - 6, ch.Y(12), hue(N - 1), "right", "alphabetic", font(11, false, 700));
+    }
+    function drawG(ctx, w, h) {
+      if (!R) return;
+      const P = CB.palette();
+      const box = { x: 50, y: 12, w: w - 50 - 14, h: h - 12 - 46 };
+      const data = [];
+      for (let k = 0; k <= 200; k++) { const om = 0.01 * Math.pow(500, k / 200); data.push([om, gmag(om, R.h, R.kg, R.kv, R.tau)]); }
+      const ymax = clamp(Math.ceil(R.gm * 5 + 0.5) / 5, 1.4, 4);
+      const ch = CB.chart(ctx, box, { x: [0.01, 5], y: [0, ymax], logX: true, xLabel: "흔들림의 각주파수 ω (rad/s)", yLabel: "|G(jω)|",
+        series: [{ data, color: R.gm > 1.003 ? P.bad : P.ok, width: 2.4 }], hlines: [{ y: 1, color: P.text, label: "1 (경계)" }] });
+      if (R.gm > 1.003) {
+        ctx.save(); ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); ctx.clip();
+        ctx.fillStyle = P.bad + "22"; ctx.fillRect(box.x, box.y, box.w, ch.Y(1) - box.y);
+        ctx.restore();
+      }
+    }
+    let cv = null, cvV = null, cvG = null;
+    function redraw() { if (cvG) { cv.redraw(); cvV.redraw(); cvG.redraw(); } }
+    simulate();
+    const cvEl = $("cv-st");
+    cv = CB.canvas(cvEl, drawRoad, { aspect: 0.16, minHeight: 76, maxHeight: 110 });
+    cvV = CB.canvas($("cv-stv"), drawV, { aspect: 0.5, minHeight: 220, maxHeight: 320 });
+    cvG = CB.canvas($("cv-stg"), drawG, { aspect: 0.34, minHeight: 170, maxHeight: 220 });
+    $("st-play").addEventListener("click", (e) => { playing = !playing; e.target.textContent = playing ? "일시정지" : "재생"; });
+    let hold = 0;
+    CB.loop(cvEl, (dt) => {
+      if (!playing) return;
+      if (tp >= R.tEnd) { hold += dt; if (hold > 1.5) { hold = 0; tp = 0; } } else tp = Math.min(R.tEnd, tp + dt * 4);
+      internal = true; gT.set(tp); internal = false;
+      cv.redraw(); cvV.redraw();
+    });
+  })();
+
+  /* =================================================== Sim 4: AEB와 TTC */
+  (function () {
+    const WARN = 2.0, PART = 1.6, REACT = 1.2, HDELAY = 0.2, KDT = 0.02;
+    const gV = CB.range("aeb-v", (v) => v + " km/h", () => recompute());
+    const gD = CB.range("aeb-d", (v) => v + " m", () => recompute());
+    const gVo = CB.range("aeb-vo", (v) => v + " km/h", () => recompute());
+    const gMu = CB.range("aeb-mu", (v) => v.toFixed(2), () => recompute());
+    const gDl = CB.range("aeb-dl", (v) => v.toFixed(2) + " s", () => recompute());
+    const gTf = CB.range("aeb-tf", (v) => v.toFixed(1) + " s", () => recompute());
+    function sim(v0, d0, vo, mu, delay, tFull, human, dt, keep) {
+      let t = 0, v = v0, gap = d0, xe = 0, hit = false, vImp = 0;
+      const ev = { warn: null, part: null, full: null };
+      const tr = keep ? [] : null, every = Math.round(KDT / dt), nmax = Math.round(60 / dt);
+      for (let k = 0; k < nmax; k++) {
+        const vr = v - vo, ttc = vr > 0.01 ? gap / vr : Infinity;
+        if (ev.warn === null && ttc <= WARN) ev.warn = t;
+        let a = 0;
+        if (human) {
+          if (ev.warn !== null && t >= ev.warn + REACT + HDELAY) { a = mu * G; if (ev.full === null) ev.full = t; }
+        } else {
+          if (ev.part === null && ttc <= PART) ev.part = t;
+          if (ev.full === null && ttc <= tFull) ev.full = t;
+          if (ev.part !== null && t >= ev.part + delay) a = Math.min(0.4 * G, mu * G);
+          if (ev.full !== null && t >= ev.full + delay) a = mu * G;
+        }
+        if (tr && k % every === 0) tr.push([t, v, xe, gap]);
+        if (vr <= 0) break;
+        v = Math.max(0, v - a * dt);
+        gap -= (v - vo) * dt; xe += v * dt; t += dt;
+        if (gap <= 0) { hit = true; vImp = v - vo; gap = 0; break; }
+      }
+      if (tr) tr.push([t, v, xe, gap]);
+      return { tr, ev, hit, vImp, gapEnd: gap, tEnd: t, xeEnd: xe };
+    }
+    function at(res, t) {
+      const tr = res.tr, n = tr.length;
+      if (t >= res.tEnd) return tr[n - 1];
+      const i = clamp(Math.floor(t / KDT), 0, n - 2), p = tr[i], q = tr[i + 1];
+      const f = q[0] > p[0] ? clamp((t - p[0]) / (q[0] - p[0]), 0, 1) : 0;
+      return p.map((pv, j) => pv + (q[j] - pv) * f);
+    }
+    let A = null, H = null, SW = null, tp = Infinity, running = false, cv = null, cvT = null, cvS = null;
+    const resTxt = (r) => (r.hit ? "충돌 " + CB.kmh(r.vImp).toFixed(0) + "<small>km/h</small>" : "회피 · " + r.gapEnd.toFixed(1) + "<small>m 남음</small>");
+    function recompute() {
+      const v0 = CB.ms(gV()), d0 = gD(), vo = CB.ms(gVo()), mu = gMu(), dl = gDl(), tf = gTf();
+      A = sim(v0, d0, vo, mu, dl, tf, false, 0.005, true);
+      H = sim(v0, d0, vo, mu, dl, tf, true, 0.005, true);
+      SW = { a: [], h: [], lim: null };
+      for (let kv = 10; kv <= 130; kv += 2) {
+        const v = CB.ms(kv), vr = v - vo;
+        let ia = 0, ih = 0;
+        if (vr > 0.1) {
+          const ra = sim(v, vr * 4, vo, mu, dl, tf, false, 0.01, false), rh = sim(v, vr * 4, vo, mu, dl, tf, true, 0.01, false);
+          ia = ra.hit ? CB.kmh(ra.vImp) : 0; ih = rh.hit ? CB.kmh(rh.vImp) : 0;
+        }
+        SW.a.push([kv, ia]); SW.h.push([kv, ih]);
+        if (SW.lim === null && ia > 0) SW.lim = kv - 2;
+      }
+      const vr0 = v0 - vo;
+      CB.stat("o-aeb-ttc", vr0 > 0.1 ? (d0 / vr0).toFixed(2) + "<small>s</small>" : "접근 없음");
+      CB.stat("o-aeb-a", resTxt(A)); CB.stat("o-aeb-h", resTxt(H));
+      CB.stat("o-aeb-lim", SW.lim === null ? "130<small>km/h 이상</small>" : SW.lim < 10 ? "10<small>km/h 미만</small>" : "약 " + SW.lim + "<small>km/h</small>");
+      tp = Infinity; running = false;
+      if (cvS) { cv.redraw(); cvT.redraw(); cvS.redraw(); }
+    }
+    function drawRoad(ctx, w, h) {
+      const P = CB.palette();
+      const carPx = clamp(w * 0.09, 30, 54), sc = carPx / CARL, carH = 1.45 * sc;
+      const xmax = Math.max(gD(), A.xeEnd + A.gapEnd, H.xeEnd + H.gapEnd) + 2;
+      const X0 = 8 + carPx, sx = (w - 16 - 2 * carPx) / xmax;
+      const rows = [[A, "AEB", P.accent, h * 0.44], [H, "경고 + 사람 반응 1.2 s", P.accent2, h * 0.92]];
+      rows.forEach(([res, label, color, gy]) => {
+        const s = at(res, tp), done = tp >= res.tEnd;
+        seg(ctx, 0, gy, w, gy, P.axis, 1.2);
+        const marks = res === A ? [[res.ev.warn, P.warn], [res.ev.part, P.accent], [res.ev.full, P.bad]] : [[res.ev.warn, P.warn], [res.ev.full, P.bad]];
+        marks.forEach(([te, c]) => {
+          if (te === null) return;
+          const px = X0 + at(res, te)[2] * sx;
+          ctx.fillStyle = c; ctx.fillRect(px - 1.5, gy - carH * 1.5, 3, carH * 1.5 + 5);
+        });
+        const xo = X0 + (s[2] + s[3]) * sx;
+        CB.carSide(ctx, xo + carPx / 2, gy, sc, { color: P.dim });
+        const braking = res.ev.full !== null && tp >= res.ev.full || (res.ev.part !== null && tp >= res.ev.part);
+        CB.carSide(ctx, X0 + s[2] * sx - carPx / 2, gy, sc, { color: done && res.hit ? P.bad : color, wheelAngle: s[2] / CB.CAR.r, pitch: braking && !done ? 0.035 : 0 });
+        txt(ctx, label, 8, gy - carH - 22, color, "left", "alphabetic", font(12, false, 700));
+        const msg = !done ? CB.kmh(s[1]).toFixed(0) + " km/h" : res.hit ? "충돌 속도 " + CB.kmh(res.vImp).toFixed(0) + " km/h" : "회피, " + res.gapEnd.toFixed(1) + " m 남음";
+        txt(ctx, msg, w - 8, gy - carH - 22, done ? (res.hit ? P.bad : P.ok) : P.text, "right", "alphabetic", font(12, true, 600));
+      });
+    }
+    function drawT(ctx, w, h) {
+      const P = CB.palette();
+      const box = { x: 50, y: 12, w: w - 50 - 14, h: h - 12 - 46 };
+      const tmax = Math.max(1, A.tEnd, H.tEnd) * 1.06, vmax = Math.max(40, Math.ceil(gV() / 20) * 20);
+      const ser = (r) => r.tr.map((p) => [p[0], p[1] * 3.6]);
+      const vl = [];
+      if (A.ev.warn !== null) vl.push({ x: A.ev.warn, color: P.warn, label: "경고" });
+      if (A.ev.part !== null) vl.push({ x: A.ev.part, color: P.accent });
+      if (A.ev.full !== null) vl.push({ x: A.ev.full, color: P.bad });
+      if (isFinite(tp)) vl.push({ x: Math.min(tp, tmax), color: P.dim, dash: [2, 3] });
+      const end = (r, c) => ({ x: r.tEnd, y: r.tr[r.tr.length - 1][1] * 3.6, color: r.hit ? P.bad : c, r: 5, label: r.hit ? "충돌" : "" });
+      CB.chart(ctx, box, { x: [0, tmax], y: [0, vmax], xLabel: "시간 (s)", yLabel: "속도 km/h",
+        series: [{ data: ser(H), color: P.accent2 }, { data: ser(A), color: P.accent, width: 2.6 }], vlines: vl, points: [end(H, P.accent2), end(A, P.accent)] });
+      txt(ctx, "AEB", box.x + box.w - 6, box.y + 4, P.accent, "right", "top", font(11, false, 700));
+      txt(ctx, "사람", box.x + box.w - 36, box.y + 4, P.accent2, "right", "top", font(11, false, 700));
+    }
+    function drawS(ctx, w, h) {
+      const P = CB.palette();
+      const box = { x: 50, y: 12, w: w - 50 - 14, h: h - 12 - 46 };
+      const ymax = Math.max(40, Math.ceil(Math.max.apply(null, SW.a.concat(SW.h).map((p) => p[1])) / 20) * 20);
+      CB.chart(ctx, box, { x: [10, 130], y: [0, ymax], xLabel: "처음 속도 (km/h)", yLabel: "충돌 속도 km/h",
+        series: [{ data: SW.h, color: P.accent2 }, { data: SW.a, color: P.accent, width: 2.6 }], vlines: [{ x: gV(), color: P.dim, label: "현재" }] });
+    }
+    recompute();
+    const cvEl = $("cv-aeb");
+    cv = CB.canvas(cvEl, drawRoad, { aspect: 0.36, minHeight: 170, maxHeight: 230 });
+    cvT = CB.canvas($("cv-aebt"), drawT, { aspect: 0.42, minHeight: 190, maxHeight: 260 });
+    cvS = CB.canvas($("cv-aebs"), drawS, { aspect: 0.42, minHeight: 190, maxHeight: 260 });
+    $("aeb-run").addEventListener("click", () => { tp = 0; running = true; });
+    CB.loop(cvEl, (dt) => {
+      if (!running) return;
+      const tmax = Math.max(A.tEnd, H.tEnd);
+      tp += dt * Math.max(1, tmax / 7);
+      if (tp > tmax + 0.4) { tp = Infinity; running = false; }
+      cv.redraw(); cvT.redraw();
+    });
+  })();
+
+  /* =================================================== Sim 5: 제동 회피 vs 조향 회피 */
+  (function () {
+    const gV = CB.range("bs-v", (v) => v + " km/h", () => update());
+    const gMu = CB.range("bs-mu", (v) => v.toFixed(2), () => update());
+    const gW = CB.range("bs-w", (v) => v.toFixed(1) + " m", () => update());
+    const gDl = CB.range("bs-dl", (v) => v.toFixed(2) + " s", () => update());
+    const dB = (v) => v * gDl() + (v * v) / (2 * gMu() * G);
+    const tS = () => Math.sqrt((2 * gW()) / (gMu() * G));
+    const dS = (v) => v * (gDl() + tS());
+    function drawTop(ctx, w, h) {
+      const P = CB.palette(), v = CB.ms(gV()), db = dB(v), ds = dS(v), wl = gW();
+      const range = Math.max(db, ds) * 1.12 + 6;
+      const carLen = clamp(w * 0.07, 24, 44), sx = (w - 20 - carLen) / range;
+      const sy = (h * 0.3) / 3.5, y1 = h * 0.66, y2 = y1 - 3.5 * sy;
+      const carW = Math.min(1.8 * sy, carLen * 0.5), xo = w - 10 - carLen;
+      ctx.fillStyle = P.surface; ctx.fillRect(0, y2 - 1.75 * sy, w, 7 * sy);
+      seg(ctx, 0, y2 - 1.75 * sy, w, y2 - 1.75 * sy, P.dim, 2); seg(ctx, 0, y1 + 1.75 * sy, w, y1 + 1.75 * sy, P.dim, 2);
+      seg(ctx, 0, (y1 + y2) / 2, w, (y1 + y2) / 2, P.faint, 2, [12, 10]);
+      CB.carTop(ctx, xo + carLen / 2, y1, 0, { len: carLen, wid: carW, color: P.dim });
+      const xb = xo - db * sx, xs = xo - ds * sx;
+      // 조향 회피 경로
+      const path = [[xs, y1]], x0 = xs + v * gDl() * sx, ay = gMu() * G;
+      for (let k = 0; k <= 30; k++) { const t = (tS() * k) / 30; path.push([x0 + v * t * sx, y1 - 0.5 * ay * t * t * sy]); }
+      poly(ctx, path, P.accent2, 2.5);
+      CB.carTop(ctx, xo - carLen / 2, y1 - wl * sy, 0, { len: carLen, wid: carW, color: P.accent2, alpha: 0.35 });
+      seg(ctx, xb, y1 + carW * 0.75, xo, y1 + carW * 0.75, P.accent, 3);
+      CB.carTop(ctx, Math.min(xb, xs) - carLen / 2, y1, 0, { len: carLen, wid: carW, color: P.accent, alpha: 0.9 });
+      seg(ctx, xb, y1 - carW, xb, y1 + carW * 1.4, P.accent, 2.5);
+      seg(ctx, xs, y1 - carW * 1.4, xs, y1 + carW, P.accent2, 2.5);
+      const f = font(12, false, 700);
+      txt(ctx, "마지막 제동 " + db.toFixed(1) + " m", clamp(xb, 4, w - 130), y1 + 1.75 * sy + 16, P.accent, "left", "alphabetic", f);
+      txt(ctx, "마지막 조향 " + ds.toFixed(1) + " m", clamp(xs, 4, w - 130), y2 - 1.75 * sy - 7, P.accent2, "left", "alphabetic", f);
+    }
+    function drawG(ctx, w, h) {
+      const P = CB.palette();
+      const box = { x: 50, y: 12, w: w - 50 - 14, h: h - 12 - 46 };
+      const b = [], s = [];
+      for (let k = 0; k <= 150; k += 2) { const v = CB.ms(k); b.push([k, dB(v)]); s.push([k, dS(v)]); }
+      const ymax = Math.max(60, Math.ceil(Math.max(dB(CB.ms(150)), dS(CB.ms(150))) / 40) * 40);
+      const v = CB.ms(gV());
+      const ch = CB.chart(ctx, box, { x: [0, 150], y: [0, ymax], xLabel: "접근 속도 (km/h)", yLabel: "장애물까지 거리 m",
+        series: [{ data: b, color: P.accent, width: 2.6 }, { data: s, color: P.accent2, width: 2.6 }],
+        vlines: [{ x: gV(), color: P.dim }], points: [{ x: gV(), y: dB(v), color: P.accent }, { x: gV(), y: dS(v), color: P.accent2 }] });
+      ctx.save(); ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); ctx.clip();
+      ctx.fillStyle = P.bad + "2a"; ctx.beginPath(); ctx.moveTo(ch.X(0), ch.Y(0));
+      b.forEach((p, i) => ctx.lineTo(ch.X(p[0]), ch.Y(Math.min(p[1], s[i][1]))));
+      ctx.lineTo(ch.X(150), ch.Y(0)); ctx.closePath(); ctx.fill();
+      ctx.restore();
+      txt(ctx, "제동 한계 ∝ v²", box.x + 8, box.y + 6, P.accent, "left", "top", font(11, false, 700));
+      txt(ctx, "조향 한계 ∝ v", box.x + 8, box.y + 22, P.accent2, "left", "top", font(11, false, 700));
+      txt(ctx, "회피 불가", ch.X(110), ch.Y(0) - 8, P.bad, "center", "alphabetic", font(11, false, 700));
+    }
+    const cv = CB.canvas($("cv-bs"), drawTop, { aspect: 0.3, minHeight: 150, maxHeight: 200 });
+    const cvG = CB.canvas($("cv-bsg"), drawG, { aspect: 0.5, minHeight: 220, maxHeight: 320 });
+    function update() {
+      const v = CB.ms(gV()), db = dB(v), ds = dS(v), vx = 2 * gMu() * G * tS();
+      CB.stat("o-bs-b", db.toFixed(1) + "<small>m</small> · TTC " + (db / v).toFixed(2) + "<small>s</small>");
+      CB.stat("o-bs-s", ds.toFixed(1) + "<small>m</small> · TTC " + (ds / v).toFixed(2) + "<small>s</small>");
+      CB.stat("o-bs-x", CB.kmh(vx).toFixed(0) + "<small>km/h</small>");
+      CB.stat("o-bs-r", db < ds ? "제동" : "조향");
+      cv.redraw(); cvG.redraw();
+    }
+    update();
+  })();
+
+  /* =================================================== Sim 6: 차로 유지 */
+  (function () {
+    const SEG = [[80, 0], [140, 1 / 300], [60, 0], [120, -1 / 200], [80, 0], [160, 1 / 450], [100, -1 / 250], [160, 0]];
+    const STOT = SEG.reduce((s, g) => s + g[0], 0), LANE = 3.5, EDGE = (LANE - CARW) / 2, SPAN = 30;
+    function kRaw(s) { s = ((s % STOT) + STOT) % STOT; for (const [len, k] of SEG) { if (s < len) return k; s -= len; } return 0; }
+    function kappa(s) { let k = 0; for (let i = -3; i <= 3; i++) k += kRaw(s + i * 5); return k / 7; }
+    const gMode = CB.seg("lk-mode", () => { lkaOn = false; });
+    const gV = CB.range("lk-v", (v) => v + " km/h");
+    const gKy = CB.range("lk-ky", (v) => v.toFixed(3) + " rad/m");
+    const gKp = CB.range("lk-kp", (v) => v.toFixed(2));
+    const ff = $("lk-ff");
+    let S, hist = [], recT = 0, wind = 0, lkaOn = false, playing = true, lost = 0;
+    function reset() { S = { t: 0, s: 0, ey: 0, ep: 0, del: 0 }; hist = []; recT = 0; wind = 0; lkaOn = false; lost = 0; }
+    function step(dt) {
+      const v = CB.ms(gV()), k = kappa(S.s), mode = gMode();
+      const full = -gKy() * S.ey - gKp() * S.ep + (ff.checked ? Math.atan(WB * k) : 0);
+      let cmd = 0;
+      if (mode === "lfa") cmd = full;
+      else if (mode === "lka") {
+        if (!lkaOn && Math.abs(S.ey) > 0.55) lkaOn = true;
+        if (lkaOn && Math.abs(S.ey) < 0.15) lkaOn = false;
+        if (lkaOn) cmd = full;
+      }
+      cmd = clamp(cmd, -0.45, 0.45);
+      S.del += clamp((cmd - S.del) / 0.12, -0.5, 0.5) * dt;
+      const sd = (v * Math.cos(S.ep)) / (1 - k * S.ey);
+      S.ey += (v * Math.sin(S.ep) - (wind > 0 ? 0.8 : 0)) * dt;
+      S.ep += ((v * Math.tan(S.del)) / WB - k * sd) * dt;
+      S.s += sd * dt; S.t += dt;
+      if (wind > 0) wind -= dt;
+      if (Math.abs(S.ey) > 4.2 || Math.abs(S.ep) > 0.6) { S.ey = 0; S.ep = 0; S.del = 0; lkaOn = false; lost = 1.5; }
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette();
+      const sc = clamp(w / 52, 6.5, 13), cx = w * 0.24, cy = h / 2, ds = 1;
+      const fwd = [[0, 0, 0]], back = [];
+      let X = 0, Y = 0, th = 0, s = S.s;
+      while (X * sc < w - cx + 30 && fwd.length < 160) { th += kappa(s + ds / 2) * ds; X += Math.cos(th) * ds; Y += Math.sin(th) * ds; s += ds; fwd.push([X, Y, th]); }
+      X = 0; Y = 0; th = 0; s = S.s;
+      while (-X * sc < cx + 30 && back.length < 60) { th -= kappa(s - ds / 2) * ds; X -= Math.cos(th) * ds; Y -= Math.sin(th) * ds; s -= ds; back.push([X, Y, th]); }
+      const cl = back.reverse().concat(fwd);
+      const offs = (o) => cl.map(([x, y, t]) => [cx + (x - Math.sin(t) * o) * sc, cy - (y + Math.cos(t) * o) * sc]);
+      const stroke = (o, color, lw, dash) => {
+        ctx.save(); ctx.lineDashOffset = dash ? ((S.s - back.length * ds) * sc) % (dash[0] + dash[1]) : 0;
+        poly(ctx, offs(o), color, lw, dash); ctx.restore();
+      };
+      stroke(0, P.surface, 3 * LANE * sc);
+      stroke(0, P.accent + "1c", LANE * sc);
+      stroke(1.5 * LANE, P.dim, 2); stroke(-1.5 * LANE, P.dim, 2);
+      const touch = Math.abs(S.ey) > EDGE;
+      stroke(LANE / 2, touch && S.ey > 0 ? P.bad : P.text, 2, [3 * sc, 3 * sc]);
+      stroke(-LANE / 2, touch && S.ey < 0 ? P.bad : P.text, 2, [3 * sc, 3 * sc]);
+      stroke(0, P.faint, 1, [4, 5]);
+      const py = cy - S.ey * sc;
+      if (Math.abs(S.ey) * sc > 2) seg(ctx, cx, cy, cx, py, P.bad, 3);
+      CB.carTop(ctx, cx, py, -S.ep, { len: CARL * sc, wid: CARW * sc, color: touch ? P.bad : P.accent, steer: clamp(-S.del * 8, -0.6, 0.6), wheels: true });
+      if (wind > 0) for (let i = 0; i < 3; i++) { const ax = cx - CARL * sc * 0.4 + i * CARL * sc * 0.4; CB.arrow(ctx, ax, py - CARW * sc - 30, ax, py - CARW * sc - 4, P.accent2, 2.5); }
+      const mode = gMode();
+      const st = lost > 0 ? "차로 이탈 → 중앙에서 다시 시작" : mode === "lka" ? (lkaOn ? "LKA 개입 중" : "LKA 대기") : mode === "lfa" ? "LFA 작동" : touch ? "LDW 경고!" : "보조 없음";
+      txt(ctx, st, 8, 16, lost > 0 || touch ? P.bad : P.text, "left", "alphabetic", font(12, false, 700));
+      if (wind > 0) txt(ctx, "옆바람", cx, py - CARW * sc - 34, P.accent2, "center", "alphabetic", font(11, false, 700));
+    }
+    function drawG(ctx, w, h) {
+      const P = CB.palette();
+      const t1 = Math.max(SPAN, S.t), t0 = t1 - SPAN;
+      const bx = 50, bw = w - bx - 14, ph = (h - 10 - 22 - 44) / 2;
+      const xFmt = (v) => v.toFixed(0);
+      CB.chart(ctx, { x: bx, y: 10, w: bw, h: ph }, { x: [t0, t1], y: [-1.5, 1.5], yTicks: [-1.5, -0.75, 0, 0.75, 1.5], xFmt, yLabel: "e_y (m)",
+        series: [{ data: hist.map((r) => [r[0], r[1]]), color: P.accent, width: 2.2 }],
+        hlines: [{ y: EDGE, color: P.bad, label: "차선 접촉" }, { y: -EDGE, color: P.bad }, { y: 0, color: P.faint }] });
+      const dmax = Math.max(1, Math.ceil(hist.reduce((m, r) => Math.max(m, Math.abs(r[2])), 0)));
+      CB.chart(ctx, { x: bx, y: 10 + ph + 22, w: bw, h: ph }, { x: [t0, t1], y: [-dmax, dmax], xFmt, yLabel: "δ (°)", xLabel: "시간 (s)",
+        series: [{ data: hist.map((r) => [r[0], r[3]]), color: P.dim, width: 1.4, dash: [4, 3] }, { data: hist.map((r) => [r[0], r[2]]), color: P.accent2 }] });
+      txt(ctx, "실제 조향각", bx + 6, 14 + ph + 22, P.accent2, "left", "top", font(11, false, 600));
+      txt(ctx, "커브에 필요한 각 L/R", bx + 80, 14 + ph + 22, P.dim, "left", "top", font(11, false, 600));
+    }
+    reset();
+    const cvEl = $("cv-lk");
+    const cv = CB.canvas(cvEl, draw, { aspect: 0.42, minHeight: 190, maxHeight: 300 });
+    const cvG = CB.canvas($("cv-lkg"), drawG, { aspect: 0.55, minHeight: 250, maxHeight: 320 });
+    $("lk-wind").addEventListener("click", () => { wind = 3; });
+    $("lk-reset").addEventListener("click", reset);
+    $("lk-play").addEventListener("click", (e) => { playing = !playing; e.target.textContent = playing ? "일시정지" : "재생"; });
+    CB.loop(cvEl, (dt) => {
+      if (playing) {
+        const n = Math.max(1, Math.ceil(dt / 0.005));
+        for (let i = 0; i < n; i++) step(dt / n);
+        if (lost > 0) lost -= dt;
+        recT += dt;
+        if (recT >= 0.1) { recT = 0; hist.push([S.t, S.ey, S.del / DEG, Math.atan(WB * kappa(S.s)) / DEG]); if (hist.length > SPAN * 10 + 5) hist.shift(); }
+      }
+      const k = kappa(S.s);
+      CB.stat("o-lk-ey", (S.ey >= 0 ? "+" : "") + S.ey.toFixed(2) + "<small>m</small>");
+      CB.stat("o-lk-ep", (S.ep / DEG).toFixed(2) + "<small>°</small>");
+      CB.stat("o-lk-d", (S.del / DEG).toFixed(2) + "<small>°</small>");
+      CB.stat("o-lk-r", Math.abs(k) < 2e-4 ? "직선" : (k > 0 ? "좌 " : "우 ") + Math.abs(1 / k).toFixed(0) + "<small>m</small>");
+      CB.stat("o-lk-z", (gKp() / (2 * Math.sqrt(gKy() * WB))).toFixed(2));
+      CB.stat("o-lk-st", Math.abs(S.ey) > EDGE ? "차선 접촉" : "차로 안");
+      cv.redraw(); cvG.redraw();
+    });
+  })();
+
+  /* =================================================== Sim 7: 자동 평행 주차 */
+  (function () {
+    const A_F = WB + 0.9, B_R = 0.9, HALF = CARL / 2, AX = CARL / 2 - B_R;
+    let internal = false, u = 0, playing = false, cv = null;
+    const gLen = CB.range("pk-len", (v) => v.toFixed(2) + " m", () => update());
+    const gSt = CB.range("pk-st", (v) => v + "°", () => update());
+    const gGap = CB.range("pk-gap", (v) => v.toFixed(2) + " m", () => update());
+    const gU = CB.range("pk-u", (v) => v.toFixed(0) + " %", (v) => { if (!internal) { u = v / 100; playing = false; update(); } });
+    function geom() {
+      const Ls = gLen(), dmax = gSt() * DEG, R = WB / Math.tan(dmax), D = CARW + gGap();
+      const alpha = Math.acos(clamp(1 - D / (2 * R), -1, 1));
+      const Lmin = B_R + Math.sqrt(A_F * A_F + 2 * R * CARW);
+      return { Ls, dmax, R, D, alpha, Lmin, xr: B_R + clamp((Ls - Lmin) / 2, 0, 0.4) };
+    }
+    function pose(g, uu) {
+      const q = (1 - uu) * 2 * g.alpha;
+      if (q <= g.alpha) return { x: g.xr + g.R * Math.sin(q), y: g.R * (1 - Math.cos(q)), th: q, steer: g.dmax, ph: 2 };
+      const th = 2 * g.alpha - q;
+      const c2x = g.xr + 2 * g.R * Math.sin(g.alpha), c2y = g.R * (1 - 2 * Math.cos(g.alpha));
+      return { x: c2x - g.R * Math.sin(th), y: c2y + g.R * Math.cos(th), th, steer: -g.dmax, ph: 1 };
+    }
+    function corners(p) {
+      const c = Math.cos(p.th), s = Math.sin(p.th), mx = p.x + AX * c, my = p.y + AX * s;
+      return [[HALF, CARW / 2], [HALF, -CARW / 2], [-HALF, -CARW / 2], [-HALF, CARW / 2]].map(([a, b]) => [mx + a * c - b * s, my + a * s + b * c]);
+    }
+    const rect = (x0, x1) => [[x1, CARW / 2], [x1, -CARW / 2], [x0, -CARW / 2], [x0, CARW / 2]];
+    function overlap(A, B) {
+      for (const Q of [A, B]) for (let i = 0; i < 2; i++) {
+        const nx = Q[i + 1][1] - Q[i][1], ny = Q[i][0] - Q[i + 1][0];
+        const pr = (S) => S.map((p) => p[0] * nx + p[1] * ny);
+        const a = pr(A), b = pr(B);
+        if (Math.max.apply(null, a) < Math.min.apply(null, b) || Math.max.apply(null, b) < Math.min.apply(null, a)) return false;
+      }
+      return true;
+    }
+    function hits(g, p) { const c = corners(p); return overlap(c, rect(g.Ls, g.Ls + CARL)) || overlap(c, rect(-CARL, 0)); }
+    function firstHit(g) { for (let k = 0; k <= 200; k++) if (hits(g, pose(g, k / 200))) return k / 200; return null; }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), g = geom(), p = pose(g, u);
+      const xmin = -5.2, xmax = Math.max(g.Ls + 5.2, g.xr + 2 * g.R * Math.sin(g.alpha) + A_F + 0.8), ymin = -1.7, ymax = g.D + 1.6;
+      const sc = Math.min((w - 12) / (xmax - xmin), (h - 12) / (ymax - ymin));
+      const ox = (w - (xmax - xmin) * sc) / 2, oy = (h + (ymax + ymin) * sc) / 2;
+      const X = (x) => ox + (x - xmin) * sc, Y = (y) => oy - y * sc;
+      ctx.fillStyle = P.surface; ctx.fillRect(0, Y(-1.15), w, h - Y(-1.15));
+      seg(ctx, 0, Y(-1.15), w, Y(-1.15), P.dim, 2);
+      const bad = g.Ls < g.Lmin - 1e-6 || firstHit(g) !== null;
+      ctx.save(); ctx.strokeStyle = bad ? P.bad : P.ok; ctx.setLineDash([5, 4]); ctx.lineWidth = 1.5;
+      ctx.strokeRect(X(0), Y(CARW / 2), g.Ls * sc, CARW * sc); ctx.restore();
+      txt(ctx, g.Ls.toFixed(2) + " m", X(g.Ls / 2), Y(-1.15) + 14, bad ? P.bad : P.ok, "center", "alphabetic", font(12, true, 600));
+      const car = (pp, o) => CB.carTop(ctx, X(pp.x + AX * Math.cos(pp.th)), Y(pp.y + AX * Math.sin(pp.th)), -pp.th, Object.assign({ len: CARL * sc, wid: CARW * sc }, o));
+      car({ x: -CARL + B_R, y: 0, th: 0 }, { color: P.dim });
+      car({ x: g.Ls + B_R, y: 0, th: 0 }, { color: P.dim });
+      const path = [], sweep = [];
+      for (let k = 0; k <= 60; k++) { const q = pose(g, k / 60); path.push([X(q.x), Y(q.y)]); }
+      for (let k = 0; k <= 30; k++) {
+        const q = (g.alpha * k) / 30, c = Math.cos(q), s = Math.sin(q), rx = g.xr + g.R * s, ry = g.R * (1 - c);
+        sweep.push([X(rx + A_F * c + (CARW / 2) * s), Y(ry + A_F * s - (CARW / 2) * c)]);
+      }
+      const c1 = [g.xr, g.R], pm = pose(g, 0.5), c2 = [g.xr + 2 * g.R * Math.sin(g.alpha), g.R * (1 - 2 * Math.cos(g.alpha))];
+      [[c1, pose(g, 1)], [c1, pm], [c2, pm], [c2, pose(g, 0)]].forEach(([c, q]) => seg(ctx, X(c[0]), Y(c[1]), X(q.x), Y(q.y), P.faint, 1, [3, 3]));
+      [c1, c2].forEach((c) => { ctx.fillStyle = P.dim; ctx.beginPath(); ctx.arc(X(c[0]), Y(c[1]), 3, 0, Math.PI * 2); ctx.fill(); });
+      poly(ctx, sweep, P.warn, 2, [5, 4]);
+      poly(ctx, path, P.accent, 2.5);
+      car(pose(g, 0), { color: P.accent, alpha: 0.22 });
+      car(pose(g, 1), { color: P.accent, alpha: 0.22 });
+      car(p, { color: hits(g, p) ? P.bad : P.accent, steer: -p.steer, wheels: true });
+      ctx.fillStyle = P.text; ctx.beginPath(); ctx.arc(X(p.x), Y(p.y), 2.5, 0, Math.PI * 2); ctx.fill();
+      if (hits(g, p)) txt(ctx, "충돌!", X(p.x), Y(p.y) - CARW * sc, P.bad, "center", "alphabetic", font(13, false, 700));
+    }
+    cv = CB.canvas($("cv-pk"), draw, { aspect: 0.42, minHeight: 180, maxHeight: 300 });
+    function update() {
+      const g = geom(), p = pose(g, u), m = g.Ls - g.Lmin;
+      CB.stat("o-pk-r", g.R.toFixed(2) + "<small>m</small>");
+      CB.stat("o-pk-a", (g.alpha / DEG).toFixed(1) + "<small>°</small>");
+      CB.stat("o-pk-min", g.Lmin.toFixed(2) + "<small>m</small>");
+      CB.stat("o-pk-m", (m >= 0 ? "+" : "") + m.toFixed(2) + "<small>m</small>");
+      CB.stat("o-pk-ph", m < 0 ? "한 번에 불가" : u <= 0 ? "대기" : u >= 1 ? "완료" : p.ph === 1 ? "① 오른쪽 끝, 후진" : "② 왼쪽 끝, 후진");
+      if (cv) cv.redraw();
+    }
+    update();
+    $("pk-play").addEventListener("click", () => { u = 0; playing = true; });
+    CB.loop($("cv-pk"), (dt) => {
+      if (!playing) return;
+      u = Math.min(1, u + dt / 6);
+      if (u >= 1) playing = false;
+      internal = true; gU.set(u * 100); internal = false;
+      update();
+    });
+  })();
+
+  /* =================================================== Sim 8: 사각지대 */
+  (function () {
+    const EYE = [0.2, 0.37], ML = [0.75, 1.0], MR = [0.75, -1.0], RM = [0.5, 0];
+    const FOVL = 18, FOVR = 26, ROOM = 11, DIRECT = 100, ZX0 = -(CARL / 2 + 7), ZX1 = 0.6, ZY0 = CARW / 2 + 0.5, ZY1 = CARW / 2 + 3.5;
+    const T = { x: -3.0, y: 3.5 };
+    let lay = { sc: 10, ox: 0, oy: 0 }, cv = null;
+    const gRot = CB.range("bd-rot", (v) => v + "°", () => update());
+    const gType = CB.seg("bd-type", () => { fix(); update(); });
+    const gTurn = CB.seg("bd-turn", () => update());
+    const cMir = $("bd-mir"), cRad = $("bd-rad");
+    const size = () => (gType() === "car" ? [CARL, CARW] : [2.1, 0.75]);
+    function pts() {
+      const [l, wd] = size(), out = [];
+      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) out.push([T.x + (i * l) / 2, T.y + (j * wd) / 2]);
+      return out;
+    }
+    const inWedge = (p, M, side, a0, a1) => { const dx = M[0] - p[0]; if (dx <= 0) return false; const a = Math.atan2(side * (p[1] - M[1]), dx) / DEG; return a >= a0 && a <= a1; };
+    function state() {
+      const P = pts(), rot = gRot(), [l, wd] = size();
+      const cnt = (f) => P.filter(f).length;
+      const direct = cnt((p) => Math.abs(Math.atan2(p[1] - EYE[1], p[0] - EYE[0])) / DEG <= DIRECT) >= 3;
+      const side = cnt((p) => inWedge(p, ML, 1, rot, rot + FOVL) || inWedge(p, MR, -1, rot, rot + FOVR)) >= 2;
+      const room = cnt((p) => inWedge(p, RM, 1, -ROOM, ROOM) && p[0] < -CARL / 2) >= 2;
+      const ay = Math.abs(T.y);
+      const bsd = T.x + l / 2 > ZX0 && T.x - l / 2 < ZX1 && ay + wd / 2 > ZY0 && ay - wd / 2 < ZY1;
+      return { direct, side, room, bsd, left: T.y > 0 };
+    }
+    function fix() {
+      const [l, wd] = size();
+      T.x = clamp(T.x, -20, 10); T.y = clamp(T.y, -4.4, 4.4);
+      if (Math.abs(T.x) < (CARL + l) / 2 + 0.3 && Math.abs(T.y) < (CARW + wd) / 2 + 0.3) T.y = (T.y >= 0 ? 1 : -1) * ((CARW + wd) / 2 + 0.3);
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), st = state(), rot = gRot();
+      const sc = Math.min(w / 34, h / 11.2), ox = w / 2 + 5 * sc, oy = h / 2;
+      lay = { sc, ox, oy };
+      const X = (x) => ox + x * sc, Y = (y) => oy - y * sc;
+      ctx.fillStyle = P.surface; ctx.fillRect(0, Y(5.25), w, 10.5 * sc);
+      seg(ctx, 0, Y(5.25), w, Y(5.25), P.dim, 2); seg(ctx, 0, Y(-5.25), w, Y(-5.25), P.dim, 2);
+      seg(ctx, 0, Y(1.75), w, Y(1.75), P.faint, 2, [12, 10]); seg(ctx, 0, Y(-1.75), w, Y(-1.75), P.faint, 2, [12, 10]);
+      if (cRad.checked) {
+        [1, -1].forEach((sd) => {
+          const on = st.bsd && (sd > 0) === st.left;
+          ctx.fillStyle = (on ? P.warn : P.accent2) + (on ? "55" : "26"); ctx.strokeStyle = on ? P.warn : P.accent2; ctx.lineWidth = 1.5;
+          const y0 = sd > 0 ? Y(ZY1) : Y(-ZY0);
+          ctx.fillRect(X(ZX0), y0, (ZX1 - ZX0) * sc, (ZY1 - ZY0) * sc); ctx.strokeRect(X(ZX0), y0, (ZX1 - ZX0) * sc, (ZY1 - ZY0) * sc);
+        });
+      }
+      if (cMir.checked) {
+        const wedge = (M, sd, a0, a1, color) => {
+          ctx.beginPath(); ctx.moveTo(X(M[0]), Y(M[1]));
+          for (let k = 0; k <= 8; k++) { const a = (a0 + ((a1 - a0) * k) / 8) * DEG; ctx.lineTo(X(M[0] - 45 * Math.cos(a)), Y(M[1] + sd * 45 * Math.sin(a))); }
+          ctx.closePath(); ctx.fillStyle = color + "2e"; ctx.fill(); ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.stroke();
+        };
+        wedge(ML, 1, rot, rot + FOVL, P.ok); wedge(MR, -1, rot, rot + FOVR, P.ok); wedge(RM, 1, -ROOM, ROOM, P.ok);
+        [1, -1].forEach((sd) => { const a = DIRECT * DEG; seg(ctx, X(EYE[0]), Y(EYE[1]), X(EYE[0] + 30 * Math.cos(a)), Y(EYE[1] + sd * 30 * Math.sin(a)), P.dim, 1.2, [5, 4]); });
+        txt(ctx, "직접 시야 →", X(EYE[0]) + 8, Y(4.6), P.dim, "left", "middle", font(11, false, 600));
+      }
+      CB.carTop(ctx, X(0), Y(0), 0, { len: CARL * sc, wid: CARW * sc, color: P.accent });
+      ctx.fillStyle = P.text; ctx.beginPath(); ctx.arc(X(EYE[0]), Y(EYE[1]), 2.5, 0, Math.PI * 2); ctx.fill();
+      [[ML, 1], [MR, -1]].forEach(([M, sd]) => {
+        const on = st.bsd && (sd > 0) === st.left;
+        ctx.fillStyle = on ? P.warn : P.dim; ctx.fillRect(X(M[0]) - 2, Y(M[1]) - (sd > 0 ? 5 : 0), 4, 5);
+        const turn = gTurn(), alarm = on && ((turn === "L" && sd > 0) || (turn === "R" && sd < 0));
+        if (on) { ctx.beginPath(); ctx.arc(X(M[0]), Y(M[1] + sd * 0.45), alarm ? 7 : 4.5, 0, Math.PI * 2); ctx.fill(); }
+      });
+      const seen = st.direct || st.side || st.room, [l, wd] = size();
+      CB.carTop(ctx, X(T.x), Y(T.y), 0, { len: l * sc, wid: wd * sc, color: seen ? P.ok : P.bad });
+      txt(ctx, seen ? "보임" : "사각지대", X(T.x), Y(T.y + (T.y >= 0 ? 1 : -1) * (wd / 2 + 0.75)), seen ? P.ok : P.bad, "center", "middle", font(12, false, 700));
+    }
+    cv = CB.canvas($("cv-bd"), draw, { aspect: 0.42, minHeight: 190, maxHeight: 320 });
+    function update() {
+      const st = state(), yn = (b) => (b ? "보임" : "안 보임"), turn = gTurn();
+      const alarm = st.bsd && ((turn === "L" && st.left) || (turn === "R" && !st.left));
+      CB.stat("o-bd-dir", yn(st.direct)); CB.stat("o-bd-side", yn(st.side)); CB.stat("o-bd-room", yn(st.room));
+      CB.stat("o-bd-see", st.direct || st.side || st.room ? "보인다" : "사각지대");
+      CB.stat("o-bd-bsd", alarm ? "경고음 + 점멸" : st.bsd ? "미러 경고등" : "꺼짐");
+      if (cv) cv.redraw();
+    }
+    const move = (p) => { T.x = (p.x - lay.ox) / lay.sc; T.y = (lay.oy - p.y) / lay.sc; fix(); update(); };
+    CB.drag($("cv-bd"), { down: move, move });
+    cMir.addEventListener("change", update); cRad.addEventListener("change", update);
+    update();
+  })();
+})();
+</script>
+</body>
+</html>

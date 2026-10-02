@@ -1,0 +1,1393 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>인지와 측위 · CarBook</title>
+<meta name="description" content="센서 데이터에서 물체를 찾고 추적하며 내 위치를 추정하는 과정을 합성곱, IoU와 NMS, 정밀도·재현율, 칼만 필터, 점유 격자, 파티클 필터, 센서 융합 시뮬레이터로 익힌다.">
+<link rel="canonical" href="https://carbook.euiyun.com/chapters/perception.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="CarBook">
+<meta property="og:title" content="인지와 측위 · CarBook">
+<meta property="og:description" content="센서 데이터에서 물체를 찾고 추적하며 내 위치를 추정하는 과정을 합성곱, IoU와 NMS, 정밀도·재현율, 칼만 필터, 점유 격자, 파티클 필터, 센서 융합 시뮬레이터로 익힌다.">
+<meta property="og:url" content="https://carbook.euiyun.com/chapters/perception.html">
+<meta property="og:image" content="https://carbook.euiyun.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TechArticle","headline":"인지와 측위","name":"인지와 측위 · CarBook","url":"https://carbook.euiyun.com/chapters/perception.html","mainEntityOfPage":"https://carbook.euiyun.com/chapters/perception.html","inLanguage":"ko","isAccessibleForFree":true,"learningResourceType":"interactive textbook chapter","position":19,"image":"https://carbook.euiyun.com/og.png","dateModified":"2026-10-02","isPartOf":{"@type":"Book","@id":"https://carbook.euiyun.com/#book","name":"CarBook — 인터랙티브 자동차 교과서","url":"https://carbook.euiyun.com/"},"publisher":{"@type":"Organization","name":"CarBook","url":"https://carbook.euiyun.com/"},"description":"센서 데이터에서 물체를 찾고 추적하며 내 위치를 추정하는 과정을 합성곱, IoU와 NMS, 정밀도·재현율, 칼만 필터, 점유 격자, 파티클 필터, 센서 융합 시뮬레이터로 익힌다."},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"CarBook","item":"https://carbook.euiyun.com/"},{"@type":"ListItem","position":2,"name":"19 인지와 측위","item":"https://carbook.euiyun.com/chapters/perception.html"}]}]}</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="../css/style.css">
+<script src="../js/common.js"></script>
+<style>
+  .pc-kgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; max-width: 210px; }
+  .pc-kgrid input { font-family: var(--mono); font-size: 14px; width: 100%; min-width: 0; padding: 6px 4px; text-align: center; border-radius: 7px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+  .pc-kgrid input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .pc-calc { padding: 12px 18px; border-top: 1px solid var(--border); font-family: var(--mono); font-size: 12.5px; line-height: 1.7; color: var(--text-dim); overflow-wrap: anywhere; }
+  .pc-calc b { color: var(--text); }
+  .pc-calc .row { display: block; }
+</style>
+</head>
+<body data-chapter="perception">
+<main class="chapter">
+  <header class="chapter-hero">
+    <div class="eyebrow">Chapter 19</div>
+    <h1>인지와 측위</h1>
+    <p class="lead">센서가 내놓는 것은 픽셀 수백만 개, 점 수십만 개, 반사 신호 수백 개다. 그 어디에도 "앞에 보행자가 있다"는 문장은 없다. 인지는 이 숫자 더미에서 물체와 도로를 찾아내고, 그것이 어디에 있으며 어떻게 움직이는지를 불확실성과 함께 추정하는 일이다. 측위는 같은 질문을 자기 자신에게 던진다. 이 장에서는 두 문제를 푸는 핵심 알고리즘을 직접 돌려 본다.</p>
+    <ul class="objectives">
+      <li>인지와 측위가 답해야 하는 네 가지 질문과 처리 흐름을 설명한다.</li>
+      <li>합성곱이 영상에서 특징을 뽑는 방식과 객체 검출의 출력(박스·클래스·신뢰도), IoU, NMS를 이해한다.</li>
+      <li>정밀도와 재현율의 절충, 그리고 놓침과 오검출의 비용이 다르다는 점을 수치로 따진다.</li>
+      <li>포인트 클라우드 클러스터링, BEV 표현, 점유 격자의 로그 오즈 갱신을 계산한다.</li>
+      <li>칼만 필터의 예측–갱신 과정과 공분산 타원의 의미를 설명한다.</li>
+      <li>센서 융합이 불확실성을 줄이는 원리와 좌표 변환, 파티클 필터 측위를 이해한다.</li>
+    </ul>
+  </header>
+
+  <!-- =============================================================== 1 -->
+  <section id="intro">
+    <h2>인지가 답해야 하는 질문</h2>
+    <p><a href="sensors.html">18장</a>에서 본 센서들은 세상을 재기만 한다. 카메라는 밝기를, 라이다는 거리를, 레이더는 거리와 상대 속도를 잰다. 다음 단계인 계획(<a href="planning.html">20장</a>)이 필요로 하는 것은 측정값이 아니라 장면에 대한 서술이다. 그 사이를 잇는 인지<span class="en">(perception)</span>와 측위<span class="en">(localization)</span>는 네 가지 질문에 답한다.</p>
+    <ul>
+      <li><b>무엇이 있는가.</b> 승용차, 트럭, 보행자, 자전거, 신호등, 차선, 연석. 종류에 따라 앞으로 할 수 있는 행동이 다르므로 분류가 필요하다.</li>
+      <li><b>어디에 있는가.</b> 내 차 기준으로 몇 m 앞, 몇 m 옆에, 어느 방향을 향해, 어떤 크기로 있는가.</li>
+      <li><b>어떻게 움직이는가.</b> 속도와 진행 방향. 한 프레임만으로는 알 수 없고 시간에 걸쳐 같은 물체를 따라가야 한다.</li>
+      <li><b>나는 어디에 있는가.</b> 어느 도로의 몇 번째 차로에, 차로 중앙에서 몇 cm 벗어나 있는가.</li>
+    </ul>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 270" role="img" aria-label="인지와 측위의 처리 흐름">
+        <defs><marker id="pc-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker></defs>
+        <rect x="10" y="24" width="132" height="80" rx="10" class="f-surface"/>
+        <text x="76" y="52" class="t" text-anchor="middle" font-weight="700">센서 데이터</text>
+        <text x="76" y="72" class="t-dim" text-anchor="middle">영상·점·반사</text>
+        <text x="76" y="90" class="t-mono" text-anchor="middle">18장</text>
+        <rect x="182" y="24" width="132" height="80" rx="10" class="f-acc-soft"/>
+        <text x="248" y="52" class="t" text-anchor="middle" font-weight="700">검출</text>
+        <text x="248" y="72" class="t-dim" text-anchor="middle">무엇이, 어디에</text>
+        <text x="248" y="90" class="t-mono" text-anchor="middle">프레임마다</text>
+        <rect x="354" y="24" width="132" height="80" rx="10" class="f-acc-soft"/>
+        <text x="420" y="52" class="t" text-anchor="middle" font-weight="700">추적·융합</text>
+        <text x="420" y="72" class="t-dim" text-anchor="middle">어떻게 움직이나</text>
+        <text x="420" y="90" class="t-mono" text-anchor="middle">시간에 걸쳐</text>
+        <rect x="526" y="24" width="224" height="80" rx="10" class="f-acc2-soft"/>
+        <text x="638" y="52" class="t" text-anchor="middle" font-weight="700">주변 모델</text>
+        <text x="638" y="72" class="t-dim" text-anchor="middle">물체 목록 + 위치·속도·불확실성</text>
+        <text x="638" y="90" class="t-mono" text-anchor="middle">→ 20장 예측·계획</text>
+        <rect x="10" y="166" width="132" height="80" rx="10" class="f-surface"/>
+        <text x="76" y="194" class="t" text-anchor="middle" font-weight="700">GNSS·IMU</text>
+        <text x="76" y="214" class="t-dim" text-anchor="middle">휠 속도</text>
+        <text x="76" y="232" class="t-mono" text-anchor="middle">자기 운동</text>
+        <rect x="182" y="166" width="132" height="80" rx="10" class="f-surface"/>
+        <text x="248" y="194" class="t" text-anchor="middle" font-weight="700">지도</text>
+        <text x="248" y="214" class="t-dim" text-anchor="middle">차선·표지·형상</text>
+        <text x="248" y="232" class="t-mono" text-anchor="middle">미리 만든 기억</text>
+        <rect x="354" y="166" width="132" height="80" rx="10" class="f-acc-soft"/>
+        <text x="420" y="194" class="t" text-anchor="middle" font-weight="700">측위</text>
+        <text x="420" y="214" class="t-dim" text-anchor="middle">나는 어디에</text>
+        <text x="420" y="232" class="t-mono" text-anchor="middle">위치 + 자세</text>
+        <g stroke="var(--accent)" stroke-width="2.5" fill="none" marker-end="url(#pc-ah)">
+          <line x1="144" y1="64" x2="178" y2="64"/><line x1="316" y1="64" x2="350" y2="64"/><line x1="488" y1="64" x2="522" y2="64"/>
+          <line x1="144" y1="206" x2="178" y2="206"/><line x1="316" y1="206" x2="350" y2="206"/>
+          <path d="M488 206 H638 V108"/>
+          <path d="M76 106 V136 H420 V162"/>
+        </g>
+        <text x="250" y="130" class="t-dim" text-anchor="middle">관측한 차선·표지를 지도와 맞춘다</text>
+        <text x="570" y="198" class="t-dim" text-anchor="middle">지도 좌표로 옮긴다</text>
+      </svg>
+      <figcaption><b>그림 19-1.</b> 인지와 측위의 흐름. 위쪽은 남을 보는 일, 아래쪽은 나를 아는 일이다. 두 결과가 합쳐져 계획 단계가 쓰는 주변 모델이 된다.</figcaption>
+    </figure>
+
+    <p>이 장 전체를 꿰는 생각은 하나다. <b>인지의 출력은 사실이 아니라 추정이다.</b> "42.3 m 앞에 차가 있다"가 아니라 "약 42 m 앞에, 표준편차 0.5 m 정도의 오차로, 92 % 확률로 차인 물체가 있다"가 올바른 출력이다. 뒤에 나오는 신뢰도, 공분산, 로그 오즈, 입자 분포는 모두 이 불확실성을 숫자로 적는 서로 다른 방법이다.</p>
+  </section>
+
+  <!-- =============================================================== 2 -->
+  <section id="camera">
+    <h2>카메라 인지: 합성곱에서 객체 검출까지</h2>
+    <p>영상은 숫자로 채운 격자다. 격자 한 칸의 숫자는 그 자체로는 아무 뜻이 없고, 이웃한 칸과의 관계에서 뜻이 생긴다. 밝기가 갑자기 바뀌는 곳이 경계선이고, 경계선이 모여 윤곽이 되고, 윤곽이 모여 바퀴나 사람의 다리가 된다. 이 "이웃과의 관계"를 계산하는 가장 기본 연산이 합성곱<span class="en">(convolution)</span>이다.</p>
+    <p>작은 숫자판(커널, 보통 3×3)을 영상 위에 올려놓고, 겹친 칸끼리 곱해 모두 더한 값을 출력의 한 칸에 적는다. 커널을 한 칸씩 옮기며 이것을 전체 영상에 반복한다.</p>
+    <div class="formula">$$y_{i,j} = \sum_{u=-1}^{1}\sum_{v=-1}^{1} k_{u,v}\, x_{i+u,\,j+v} + b$$
+      <div class="where">여기서 \(x\)는 입력 영상, \(k\)는 3×3 커널, \(b\)는 편향, \(y\)는 출력(특징 맵)이다.</div></div>
+    <p>커널의 숫자가 무엇을 찾을지 정한다. 왼쪽 열이 음수, 오른쪽 열이 양수인 커널은 왼쪽이 어둡고 오른쪽이 밝은 곳, 곧 세로 경계에서 큰 값을 낸다. 밝기가 고른 곳에서는 양수와 음수가 상쇄되어 0이 된다. 모든 칸이 1/9인 커널은 주변 평균을 내므로 영상이 흐려진다.</p>
+
+    <div class="sim" id="sim-conv">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>3×3 합성곱 필터</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-conv" style="touch-action:none"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>커널 선택</span><div class="seg" id="cv-preset"><button data-value="sobelx" class="on">세로 경계</button><button data-value="sobely">가로 경계</button><button data-value="blur">블러</button><button data-value="sharp">샤픈</button><button data-value="lap">윤곽</button></div></div>
+          <div class="ctrl"><span>커널 값(직접 고칠 수 있다)</span><div class="pc-kgrid" id="cv-kgrid"></div></div>
+        </div>
+      </div>
+      <div class="pc-calc no-math" id="cv-calc"></div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">커널 합</span><span class="v" id="o-cv-sum">—</span></div>
+        <div class="stat"><span class="k">가리킨 화소 입력</span><span class="v" id="o-cv-in">—</span></div>
+        <div class="stat"><span class="k">가리킨 화소 출력</span><span class="v" id="o-cv-out">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 왼쪽 입력 영상 위에서 포인터를 움직이면 그 위치의 3×3 계산이 아래에 나온다. "세로 경계"와 "가로 경계"를 바꿔 가며 차선과 차의 지붕선 중 어느 쪽이 살아남는지 본다. 커널 합이 0이면 고른 면은 사라지고 경계만 남는다(이때는 절댓값을 표시한다). 가운데 값을 5, 상하좌우를 −1로 두면 샤픈이 된다.</div>
+    </div>
+
+    <h3>커널을 사람이 정하지 않는다: CNN</h3>
+    <p>소벨 커널은 사람이 설계한 것이다. 합성곱 신경망<span class="en">(Convolutional Neural Network, CNN)</span>은 커널의 숫자를 사람이 정하지 않고, 정답이 달린 영상 수백만 장으로부터 학습한다. 한 층에 커널을 수십~수백 개 두어 그만큼의 특징 맵을 만들고, 음수를 0으로 자르는 비선형 함수(ReLU)를 거친 뒤, 그 결과에 다시 합성곱을 적용한다. 중간중간 해상도를 절반으로 줄인다.</p>
+    <p>층이 깊어질수록 한 칸이 바라보는 원본 영상의 범위(수용 영역)가 넓어진다. 그래서 앞쪽 층은 경계와 색 변화 같은 국소 특징에, 뒤쪽 층은 바퀴, 창문, 사람의 상체처럼 넓은 범위를 봐야 알 수 있는 특징에 반응한다. 같은 커널을 영상 전체에 미끄러뜨리므로 차가 화면 어디에 있어도 같은 방식으로 찾아낸다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 260" role="img" aria-label="CNN의 계층 구조와 검출 출력">
+        <defs><marker id="pc-ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker></defs>
+        <rect x="14" y="40" width="110" height="150" rx="4" class="f-surface"/>
+        <text x="69" y="210" class="t" text-anchor="middle">입력 영상</text>
+        <text x="69" y="228" class="t-mono" text-anchor="middle">H × W × 3</text>
+        <g class="f-acc-soft"><rect x="170" y="58" width="80" height="114" rx="3"/><rect x="178" y="66" width="80" height="114" rx="3"/></g>
+        <text x="214" y="210" class="t" text-anchor="middle">경계·색</text>
+        <text x="214" y="228" class="t-mono" text-anchor="middle">1/4 해상도</text>
+        <g class="f-acc-soft"><rect x="300" y="76" width="56" height="78" rx="3"/><rect x="308" y="84" width="56" height="78" rx="3"/><rect x="316" y="92" width="56" height="78" rx="3"/></g>
+        <text x="336" y="210" class="t" text-anchor="middle">모서리·질감</text>
+        <text x="336" y="228" class="t-mono" text-anchor="middle">1/8</text>
+        <g class="f-acc-soft"><rect x="416" y="92" width="36" height="50" rx="3"/><rect x="424" y="100" width="36" height="50" rx="3"/><rect x="432" y="108" width="36" height="50" rx="3"/><rect x="440" y="116" width="36" height="50" rx="3"/></g>
+        <text x="446" y="210" class="t" text-anchor="middle">바퀴·창·다리</text>
+        <text x="446" y="228" class="t-mono" text-anchor="middle">1/16 ~ 1/32</text>
+        <rect x="536" y="40" width="210" height="44" rx="8" class="f-acc2-soft"/>
+        <text x="641" y="67" class="t" text-anchor="middle">박스 (x, y, w, h)</text>
+        <rect x="536" y="94" width="210" height="44" rx="8" class="f-acc2-soft"/>
+        <text x="641" y="121" class="t" text-anchor="middle">클래스 (차·사람·자전거)</text>
+        <rect x="536" y="148" width="210" height="44" rx="8" class="f-acc2-soft"/>
+        <text x="641" y="175" class="t" text-anchor="middle">신뢰도 0 ~ 1</text>
+        <text x="641" y="218" class="t-dim" text-anchor="middle">검출 헤드의 출력</text>
+        <g stroke="var(--accent)" stroke-width="2.5" marker-end="url(#pc-ah3)">
+          <line x1="128" y1="115" x2="164" y2="115"/><line x1="262" y1="118" x2="294" y2="118"/><line x1="376" y1="124" x2="410" y2="124"/><line x1="480" y1="126" x2="530" y2="116"/>
+        </g>
+        <text x="380" y="24" class="t-acc" text-anchor="middle">해상도는 줄고, 채널 수와 한 칸이 보는 범위는 늘어난다</text>
+      </svg>
+      <figcaption><b>그림 19-2.</b> 검출용 CNN의 구조. 앞쪽 층의 특징 맵은 크고 단순하며, 뒤쪽은 작고 추상적이다. 마지막의 검출 헤드가 특징 맵 각 위치에서 박스와 클래스, 신뢰도를 내놓는다.</figcaption>
+    </figure>
+
+    <h3>객체 검출: 박스, 클래스, 신뢰도</h3>
+    <p>객체 검출<span class="en">(object detection)</span>의 출력은 물체마다 세 가지다. 물체를 둘러싼 직사각형인 바운딩 박스, 종류(클래스), 그리고 그 판단을 얼마나 믿는지를 나타내는 0~1 사이의 신뢰도<span class="en">(confidence score)</span>다. 검출이 맞았는지 따지려면 예측 박스가 정답 박스와 얼마나 겹치는지를 재야 한다. 이 척도가 IoU<span class="en">(Intersection over Union)</span>다.</p>
+    <div class="formula">$$\mathrm{IoU} = \frac{|A \cap B|}{|A \cup B|} = \frac{|A \cap B|}{|A| + |B| - |A \cap B|}$$
+      <div class="where">여기서 \(A\)는 예측 박스, \(B\)는 정답 박스, \(|\cdot|\)는 넓이다. 완전히 일치하면 1, 전혀 겹치지 않으면 0이다.</div></div>
+    <div class="callout tip">
+      <strong>계산 예: 20픽셀 어긋난 박스</strong>
+      <p>폭 100, 높이 50픽셀인 정답 박스가 있고, 예측 박스는 같은 크기인데 옆으로 20픽셀 밀렸다. 교집합은 \(80 \times 50 = 4{,}000\), 합집합은 \(5{,}000 + 5{,}000 - 4{,}000 = 6{,}000\)이므로 IoU는 약 0.67이다. 폭의 20 %만 어긋났는데 IoU는 3분의 1이 깎인다. 흔히 쓰는 합격 기준인 0.5는 생각보다 느슨하지 않다.</p>
+    </div>
+    <p>검출기는 한 물체에 대해 조금씩 다른 박스를 여러 개 내놓는 경우가 많다. 특징 맵의 이웃한 위치들이 모두 같은 차를 보고 반응하기 때문이다. 이를 정리하는 후처리가 비최대 억제<span class="en">(Non-Maximum Suppression, NMS)</span>다. 신뢰도가 가장 높은 박스를 채택하고, 그 박스와 IoU가 임계값을 넘는 나머지를 같은 물체로 보아 지운다. 남은 박스 가운데 다시 최고 신뢰도를 골라 같은 일을 반복한다.</p>
+
+    <div class="sim" id="sim-iou">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>IoU와 비최대 억제(NMS)</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-iou" style="touch-action:none"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>모드</span><div class="seg" id="iu-mode"><button data-value="iou" class="on">IoU</button><button data-value="nms">NMS</button></div></div>
+          <div id="iu-nmsctl">
+            <label class="ctrl"><span>NMS IoU 임계값 <output id="iu-thr-out"></output></span><input type="range" id="iu-thr" min="0.05" max="0.95" step="0.05" value="0.5"></label>
+            <label class="ctrl"><span>신뢰도 임계값 <output id="iu-sc-out"></output></span><input type="range" id="iu-sc" min="0" max="0.9" step="0.05" value="0.3"></label>
+            <button class="btn" id="iu-regen">후보 다시 만들기</button>
+          </div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k" id="k-iu-1">교집합</span><span class="v" id="o-iu-1">—</span></div>
+        <div class="stat"><span class="k" id="k-iu-2">합집합</span><span class="v" id="o-iu-2">—</span></div>
+        <div class="stat"><span class="k" id="k-iu-3">IoU</span><span class="v" id="o-iu-3">—</span></div>
+        <div class="stat"><span class="k" id="k-iu-4">판정</span><span class="v" id="o-iu-4">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: IoU 모드에서 박스 안쪽을 끌면 이동, 오른쪽 아래 손잡이를 끌면 크기가 바뀐다. 예측 박스를 정답보다 훨씬 크게 키워 정답을 완전히 덮어도 IoU가 낮다는 것을 확인한다. NMS 모드에는 서로 겹쳐 보이는 차 두 대가 있다. 임계값을 0.2까지 낮추면 뒤차의 박스까지 지워지고, 0.9로 올리면 한 차에 박스가 여러 개 남는다.</div>
+    </div>
+
+    <p>NMS 임계값은 혼잡한 장면에서 특히 까다롭다. 나란히 선 보행자나 앞뒤로 겹쳐 보이는 차들은 실제로 다른 물체인데도 박스가 많이 겹친다. 그래서 최근 검출기 가운데에는 물체 하나에 예측 하나만 나오도록 학습해 NMS 자체를 없앤 구조도 많다.</p>
+
+    <h3>화소마다 답하기: 분할과 차선</h3>
+    <p>박스는 차나 사람처럼 덩어리로 셀 수 있는 물체에는 잘 맞지만, 도로 면, 인도, 차선처럼 모양이 정해지지 않은 것은 담지 못한다. 의미 분할<span class="en">(semantic segmentation)</span>은 모든 화소에 클래스를 하나씩 붙인다. 출력은 입력과 같은 크기의 라벨 지도이고, "주행 가능한 영역이 어디까지인가"를 직접 알려 준다. 같은 클래스 안에서 개체까지 구분하면 인스턴스 분할이라 한다.</p>
+    <p>차선 검출은 분할의 특수한 경우로 볼 수 있다. 다만 계획 단계가 필요로 하는 것은 화소 덩어리가 아니라 곡선이므로, 차선 화소를 찾은 뒤 3차 다항식 같은 곡선에 맞추거나 처음부터 곡선의 계수나 점열을 출력하도록 학습한다. <a href="adas.html">17장</a>의 차로 유지 보조가 쓰는 입력이 바로 이 곡선이다. 차선은 닳았거나, 빗물에 반사되거나, 공사 구간에서 이전 선과 겹쳐 보일 때 어려워진다.</p>
+  </section>
+
+  <!-- =============================================================== 3 -->
+  <section id="metrics">
+    <h2>얼마나 잘 보는가: 정밀도와 재현율</h2>
+    <p>검출기의 출력을 정답과 비교하면 세 가지 경우가 나온다. 실제 물체를 맞게 찾은 것은 참 양성(TP), 없는 것을 있다고 한 것은 거짓 양성(FP, 오검출), 있는 것을 놓친 것은 거짓 음성(FN, 미검출)이다. 이 셋으로 두 지표를 만든다.</p>
+    <div class="formula">$$\mathrm{Precision} = \frac{TP}{TP + FP}, \qquad \mathrm{Recall} = \frac{TP}{TP + FN}$$
+      <div class="where">정밀도는 "검출이라고 내놓은 것 중 진짜의 비율", 재현율은 "실제 물체 중 찾아낸 비율"이다.</div></div>
+    <p>둘은 서로 당긴다. 신뢰도 임계값을 낮추면 애매한 후보까지 검출로 인정하므로 놓치는 물체가 줄어 재현율이 오르지만, 오검출도 함께 늘어 정밀도가 떨어진다. 임계값을 0에서 1까지 움직이며 두 값을 찍으면 정밀도–재현율(PR) 곡선이 되고, 그 아래 넓이가 평균 정밀도<span class="en">(Average Precision, AP)</span>다. 클래스별 AP를 평균한 값이 mAP이며, 검출기 성능을 한 숫자로 비교할 때 가장 널리 쓴다. IoU 합격 기준을 0.5 하나로 두기도 하고 0.5부터 0.95까지 여러 기준의 평균을 쓰기도 한다. 주행용 3D 데이터셋에서는 IoU 대신 위에서 본 중심 거리로 합격을 정하는 경우도 있다.</p>
+
+    <div class="sim" id="sim-pr">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>신뢰도 임계값과 정밀도–재현율</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-pr"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>신뢰도 임계값 <output id="pr-t-out"></output></span><input type="range" id="pr-t" min="0.02" max="0.98" step="0.01" value="0.5"></label>
+          <label class="ctrl"><span>모델의 분별력 <output id="pr-d-out"></output></span><input type="range" id="pr-d" min="0" max="4" step="0.1" value="2"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">TP</span><span class="v" id="o-pr-tp">—</span></div>
+        <div class="stat"><span class="k">FP (오검출)</span><span class="v" id="o-pr-fp">—</span></div>
+        <div class="stat"><span class="k">FN (미검출)</span><span class="v" id="o-pr-fn">—</span></div>
+        <div class="stat"><span class="k">정밀도</span><span class="v" id="o-pr-p">—</span></div>
+        <div class="stat"><span class="k">재현율</span><span class="v" id="o-pr-r">—</span></div>
+        <div class="stat"><span class="k">AP</span><span class="v" id="o-pr-ap">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 실제 물체 120개와 물체가 아닌 후보 160개의 점수 분포다. 임계값 오른쪽에 있는 것만 검출로 인정된다. 임계값을 왼쪽으로 옮기며 미검출이 5개 이하가 되는 지점을 찾고, 그때 오검출이 몇 개인지 본다. 분별력을 올리면 두 분포가 갈라지고 PR 곡선이 오른쪽 위 모서리로 붙는다. 분별력 0은 찍기와 같다.</div>
+    </div>
+
+    <h3>놓침과 오검출은 값이 다르다</h3>
+    <p>mAP는 FN과 FP를 대등하게 다루지만 도로에서는 그렇지 않다. 진행 경로 위의 보행자를 놓치면 충돌이고, 없는 보행자를 있다고 하면 불필요한 급제동이다. 앞의 것이 훨씬 무겁다. 그렇다고 오검출이 공짜는 아니다. 고속도로에서 이유 없는 급제동은 후방 추돌을 부르고, 잦은 헛제동은 운전자가 기능을 꺼 버리게 만든다. <a href="adas.html">17장</a>의 AEB가 경고, 부분 제동, 완전 제동을 단계적으로 쓰는 것은 확신이 낮을 때 값싼 행동부터 하기 위해서다.</p>
+    <p>평균 지표가 가리는 것도 있다. 차 바로 앞 10 m의 보행자와 150 m 밖 반대 차로의 차는 중요도가 다르다. 그래서 실제 개발에서는 거리 구간별, 클래스별, 날씨별로 재현율을 따로 보고, 내 차 경로에 가까운 물체에 가중을 둔다.</p>
+    <div class="callout tip">
+      <strong>계산 예: 재현율 99 %는 충분한가</strong>
+      <p>프레임마다 독립이라고 가정하면, 보행자 한 명을 한 프레임에서 놓칠 확률이 1 %일 때 연속 5프레임을 모두 놓칠 확률은 \(0.01^5 = 10^{-10}\)이다. 실제로는 그렇게 되지 않는다. 미검출은 역광, 가려짐, 드문 옷차림처럼 원인이 있어서 생기고, 그 원인은 다음 프레임에도 그대로 있다. 프레임 간 상관이 높으면 연속 미검출 확률은 1 %에 가깝게 남는다. 그래서 서로 다른 원리의 센서를 겹치고, 프레임을 넘어 물체를 이어 붙이는 추적이 필요하다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 4 -->
+  <section id="lidar3d">
+    <h2>3차원으로: 포인트 클라우드, BEV, 점유 격자</h2>
+    <p>영상 속 박스는 화면 좌표일 뿐이다. 차를 몰려면 물체가 도로 위 어디에 있는지, 곧 3차원 위치와 크기, 방향이 필요하다. 라이다는 거리를 직접 재므로 출발점이 유리하다. 고전적인 처리 순서는 세 단계다.</p>
+    <ol>
+      <li><b>지면 제거.</b> 포인트의 절반 가까이는 도로 면에서 온다. 평면을 맞추거나 인접 광선 사이의 높이 변화를 따져 지면 점을 떼어 낸다.</li>
+      <li><b>클러스터링.</b> 남은 점 가운데 서로 가까운 것끼리 묶는다. 어느 점에서 일정 거리 안에 있는 점을 같은 무리에 넣고, 새로 들어온 점에서 다시 같은 일을 반복한다.</li>
+      <li><b>박스 맞춤과 분류.</b> 무리마다 직육면체를 맞춘다. 차는 보이는 두 면이 L자를 이루므로 L자에 맞는 방향을 찾는다. 크기와 점 분포로 종류를 가린다.</li>
+    </ol>
+    <p>클러스터링의 유일한 매개변수는 거리 임계값인데, 한 값으로 모든 경우를 만족시킬 수 없다. 라이다의 점 간격은 거리에 비례해 벌어진다. 각 분해능 0.2°면 50 m에서 이웃 점 사이가 약 17 cm, 100 m에서 35 cm다. 임계값이 작으면 먼 차 한 대가 여러 조각으로 쪼개지고, 크면 가까이 선 두 사람이 한 물체로 합쳐진다.</p>
+
+    <div class="sim" id="sim-cl">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>라이다 포인트 클러스터링</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-cl" style="touch-action:none"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>거리 임계값 <output id="cl-eps-out"></output></span><input type="range" id="cl-eps" min="0.1" max="3" step="0.05" value="0.6"></label>
+          <label class="ctrl"><span>라이다 각 분해능 <output id="cl-res-out"></output></span><input type="range" id="cl-res" min="0.2" max="2.5" step="0.1" value="0.5"></label>
+          <button class="btn" id="cl-reset">물체 위치 되돌리기</button>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">포인트 수</span><span class="v" id="o-cl-pts">—</span></div>
+        <div class="stat"><span class="k">클러스터 / 실제 물체</span><span class="v" id="o-cl-n">—</span></div>
+        <div class="stat"><span class="k">상태</span><span class="v" id="o-cl-res">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 아래 중앙의 라이다가 부채꼴로 광선을 쏘아 물체 표면에 점을 찍는다(지면은 이미 제거한 상태). 물체는 끌어서 옮길 수 있다. 임계값을 0.2 m로 낮추면 먼 차가 조각나고, 1.5 m로 올리면 붙어 선 보행자 두 명이 한 덩어리가 된다. 보행자를 차 옆으로 끌어다 놓으면 차에 흡수된다. 각 분해능을 2°로 낮추면 같은 임계값으로도 먼 물체가 쪼개진다.</div>
+    </div>
+
+    <p>지금의 주류는 이 단계들을 신경망 하나로 대신한다. 공간을 작은 기둥이나 정육면체(복셀)로 나누어 그 안의 점을 요약하고, 위에서 내려다본 격자에 2D CNN을 적용해 3D 박스를 직접 출력한다. 그래도 규칙 기반 클러스터링은 버려지지 않았다. 학습 데이터에 없던 낯선 물체도 "점이 모여 있으면 무언가 있다"는 이유만으로 잡아내므로, 학습 기반 검출이 놓친 것을 받아 주는 안전망으로 쓰인다.</p>
+
+    <h3>카메라로 깊이를 얻는 법</h3>
+    <p>카메라 영상에는 거리가 없다. 깊이를 되찾는 방법은 몇 가지다. 스테레오 시차(<a href="sensors.html">18장</a>), 물체가 지면에 닿는 화소 위치와 카메라 높이로 푸는 기하, 차의 크기에 대한 사전 지식, 그리고 화소마다 깊이를 직접 예측하도록 학습한 신경망이다. 여러 시점의 영상을 시간에 걸쳐 모으면 움직임 시차도 쓸 수 있다. 어느 방법이든 거리 오차가 거리와 함께 빠르게 커진다는 점은 같다.</p>
+
+    <h3>조감도(BEV) 표현</h3>
+    <p>영상 평면에서는 먼 물체가 작고, 물체끼리 가리고, 카메라마다 좌표가 따로다. 계획은 도로 평면 위에서 이루어진다. 그래서 여러 카메라의 특징을 위에서 내려다본 하나의 격자, 곧 조감도<span class="en">(Bird's-Eye View, BEV)</span>로 옮겨 놓고 그 위에서 검출과 분할을 한다. BEV에서는 물체의 크기가 거리에 따라 변하지 않고, 라이다와 레이더의 데이터도 같은 격자에 올릴 수 있으며, 출력이 그대로 계획의 입력 좌표가 된다. 어려운 부분은 영상 특징을 BEV로 올리는 변환이다. 화소마다 깊이 분포를 예측해 뿌리거나, BEV의 각 칸이 영상의 어느 부분을 볼지 주의(attention) 연산으로 학습하게 한다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 280" role="img" aria-label="카메라 영상과 BEV 표현의 비교">
+        <rect x="20" y="30" width="330" height="200" rx="6" class="f-surface"/>
+        <line x1="20" y1="110" x2="350" y2="110" class="s-axis"/>
+        <path d="M60 230 L170 110 L200 110 L310 230 Z" class="f-elev" stroke="var(--border)"/>
+        <line x1="185" y1="110" x2="185" y2="230" class="s-line" stroke-dasharray="10 8"/>
+        <rect x="205" y="150" width="70" height="52" class="s-acc" fill="none" stroke-width="2.5"/>
+        <text x="240" y="144" class="t-acc" text-anchor="middle">가까운 차</text>
+        <rect x="176" y="112" width="16" height="12" class="s-acc" fill="none" stroke-width="2"/>
+        <text x="130" y="100" class="t-acc" text-anchor="middle">먼 차: 몇 화소</text>
+        <line x1="150" y1="104" x2="174" y2="114" class="s-acc"/>
+        <text x="185" y="252" class="t" text-anchor="middle">영상 평면</text>
+        <text x="185" y="270" class="t-dim" text-anchor="middle">거리에 따라 크기가 달라지고 가려진다</text>
+        <rect x="410" y="30" width="330" height="200" rx="6" class="f-surface"/>
+        <g class="s-axis" stroke-width="0.7">
+          <line x1="410" y1="70" x2="740" y2="70"/><line x1="410" y1="110" x2="740" y2="110"/><line x1="410" y1="150" x2="740" y2="150"/><line x1="410" y1="190" x2="740" y2="190"/>
+          <line x1="465" y1="30" x2="465" y2="230"/><line x1="520" y1="30" x2="520" y2="230"/><line x1="575" y1="30" x2="575" y2="230"/><line x1="630" y1="30" x2="630" y2="230"/><line x1="685" y1="30" x2="685" y2="230"/>
+        </g>
+        <line x1="410" y1="110" x2="740" y2="110" class="s-line" stroke-dasharray="12 8"/>
+        <rect x="430" y="122" width="44" height="18" rx="4" class="f-acc"/>
+        <text x="452" y="160" class="t-acc" text-anchor="middle">내 차</text>
+        <rect x="528" y="122" width="44" height="18" rx="3" class="s-acc" fill="none" stroke-width="2.5"/>
+        <rect x="676" y="122" width="44" height="18" rx="3" class="s-acc" fill="none" stroke-width="2.5"/>
+        <rect x="592" y="80" width="44" height="18" rx="3" class="s-line" fill="none" stroke-width="2"/>
+        <text x="614" y="62" class="t-dim" text-anchor="middle">옆 차로</text>
+        <text x="575" y="252" class="t" text-anchor="middle">BEV 격자</text>
+        <text x="575" y="270" class="t-dim" text-anchor="middle">크기가 일정하고 계획과 좌표가 같다</text>
+      </svg>
+      <figcaption><b>그림 19-3.</b> 같은 장면의 두 표현. 영상에서는 먼 차가 몇 화소에 불과하지만 BEV에서는 모든 차가 실제 크기의 사각형이다.</figcaption>
+    </figure>
+
+    <h3>점유 격자: 이름을 몰라도 피할 수 있게</h3>
+    <p>검출은 "이것은 차다"라고 이름을 붙일 수 있을 때만 작동한다. 쓰러진 나무, 떨어진 화물, 처음 보는 모양의 공사 장비에는 이름이 없다. 점유 격자<span class="en">(occupancy grid)</span>는 질문을 바꾼다. 공간을 작은 칸으로 나누고, 칸마다 "여기가 무언가로 차 있을 확률"만 적는다.</p>
+    <p>광선 하나가 어떤 칸에서 반사되어 돌아왔다면, 그 칸은 차 있을 가능성이 높고 센서와 그 칸 사이의 칸들은 비어 있을 가능성이 높다. 측정 한 번은 믿을 수 없으므로 여러 번의 증거를 쌓아야 한다. 확률을 그대로 곱하면 계산이 번거롭고 0이나 1 근처에서 수치가 불안정하므로, 확률을 로그 오즈<span class="en">(log-odds)</span>로 바꿔 덧셈으로 갱신한다.</p>
+    <div class="formula">$$L = \ln\frac{p}{1-p}, \qquad L_t = L_{t-1} + \ln\frac{p(m \mid z_t)}{1 - p(m \mid z_t)} - L_0$$
+      <div class="where">여기서 \(p\)는 칸이 점유되었을 확률, \(p(m \mid z_t)\)는 이번 측정만 보았을 때의 점유 확률(역 센서 모델), \(L_0\)는 사전 로그 오즈다. 사전 확률이 0.5면 \(L_0 = 0\)이다.</div></div>
+    <div class="callout tip">
+      <strong>계산 예: 세 번 맞으면 얼마나 확신하는가</strong>
+      <p>반사가 온 칸의 점유 확률을 0.7로 잡으면 한 번 맞을 때마다 \(\ln(0.7/0.3) \approx +0.85\)가 더해진다. 0에서 출발해 세 번 맞으면 \(L = 2.54\), 확률로 되돌리면 \(1/(1+e^{-2.54}) \approx 0.93\)이다. 광선이 지나간 칸은 0.4로 잡아 \(\ln(0.4/0.6) \approx -0.41\)씩 뺀다. 한 번 잘못 찍힌 점은 그 뒤 광선이 두 번만 통과해도 상쇄된다. 로그 오즈에는 보통 상한과 하한을 두어, 주차했던 차가 떠난 것 같은 변화를 빨리 따라가게 한다.</p>
+    </div>
+
+    <div class="sim" id="sim-og">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>점유 격자 지도 만들기</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-og" style="touch-action:none"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>거리 측정 잡음 <output id="og-n-out"></output></span><input type="range" id="og-n" min="0" max="0.8" step="0.05" value="0.1"></label>
+          <label class="ctrl"><span>센서 최대 거리 <output id="og-r-out"></output></span><input type="range" id="og-r" min="3" max="14" step="0.5" value="7"></label>
+          <label class="check"><input type="checkbox" id="og-truth"> 실제 장애물 겹쳐 보기</label>
+          <button class="btn" id="og-reset">지도 초기화</button>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">판정된 칸</span><span class="v" id="o-og-known">—</span></div>
+        <div class="stat"><span class="k">틀린 칸</span><span class="v" id="o-og-err">—</span></div>
+        <div class="stat"><span class="k">스캔 횟수</span><span class="v" id="o-og-scan">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 차를 끌어 움직이면 360° 광선이 실제 벽에 부딪힌 거리로 격자를 갱신한다. 회색은 모름(p = 0.5), 밝은 쪽은 빈 칸, 진한 쪽은 점유된 칸이다. 벽 뒤는 광선이 닿지 않아 끝까지 회색으로 남는다. 잡음을 0.5 m 이상으로 올리면 벽이 두꺼워지고 틀린 칸이 늘지만, 한자리에 머물러 측정을 쌓으면 다시 또렷해진다. 한 칸은 0.5 m다.</div>
+    </div>
+    <p>최근에는 이 격자를 3차원 복셀로 넓히고, 칸마다 점유 여부와 함께 의미 클래스와 속도까지 신경망이 예측하게 한다. 카메라만으로 이런 3D 점유 지도를 만드는 방식이 널리 연구되고 양산에도 쓰인다.</p>
+  </section>
+
+  <!-- =============================================================== 5 -->
+  <section id="tracking">
+    <h2>추적: 프레임을 이어 속도를 얻는다</h2>
+    <p>검출은 프레임마다 따로 이루어진다. 이번 프레임의 박스 7개와 지난 프레임의 박스 7개 사이에는 아무 연결이 없다. 추적<span class="en">(tracking)</span>은 이들을 이어 물체마다 고유 번호를 붙이고 궤적을 만든다. 추적이 있어야 속도를 알 수 있고, 한두 프레임 검출이 끊겨도 물체를 잃지 않으며, 한 프레임짜리 오검출을 걸러낼 수 있다.</p>
+    <p>추적은 두 문제로 나뉜다. 하나는 <b>데이터 연관</b>이다. 새 검출 각각이 기존 궤적 가운데 어느 것에 해당하는지 짝을 짓는다. 각 궤적이 지금쯤 있을 위치를 예측하고, 예측과 검출 사이의 거리를 비용으로 하여 전체 비용이 최소가 되는 짝을 찾는다(헝가리안 알고리즘). 거리는 단순한 유클리드 거리가 아니라 불확실성으로 나눈 마할라노비스 거리를 쓰고, 일정 값을 넘는 짝은 아예 허용하지 않는다. 짝을 못 찾은 검출은 새 궤적의 후보가 되고, 여러 프레임 동안 짝이 없는 궤적은 지운다.</p>
+    <p>다른 하나는 <b>상태 추정</b>이다. 짝지어진 측정에는 잡음이 있다. 측정을 그대로 믿으면 궤적이 떨리고, 속도는 위치 차이를 시간으로 나눈 것이라 더 심하게 떨린다. 여기에 쓰는 표준 도구가 칼만 필터다.</p>
+
+    <h3>칼만 필터: 예측하고, 고친다</h3>
+    <p>칼만 필터<span class="en">(Kalman filter)</span>는 두 가지 정보를 섞는다. 하나는 운동 모델이다. "물체는 방금 속도 그대로 조금 더 갔을 것이다." 다른 하나는 측정이다. 둘 다 틀릴 수 있으므로 각각의 불확실성에 따라 가중 평균을 낸다. 상태 \(\mathbf{x}\)(위치와 속도)와 그 불확실성인 공분산 \(\mathbf{P}\)를 함께 들고 다니며 두 단계를 되풀이한다.</p>
+    <div class="formula">$$\textbf{predict:}\quad \hat{\mathbf{x}}^- = \mathbf{F}\hat{\mathbf{x}}, \qquad \mathbf{P}^- = \mathbf{F}\mathbf{P}\mathbf{F}^{\mathsf T} + \mathbf{Q}$$
+      $$\textbf{update:}\quad \mathbf{K} = \mathbf{P}^-\mathbf{H}^{\mathsf T}\left(\mathbf{H}\mathbf{P}^-\mathbf{H}^{\mathsf T} + \mathbf{R}\right)^{-1},\quad \hat{\mathbf{x}} = \hat{\mathbf{x}}^- + \mathbf{K}\left(\mathbf{z} - \mathbf{H}\hat{\mathbf{x}}^-\right),\quad \mathbf{P} = (\mathbf{I} - \mathbf{K}\mathbf{H})\mathbf{P}^-$$
+      <div class="where">여기서 \(\mathbf{F}\)는 운동 모델, \(\mathbf{Q}\)는 모델이 틀리는 정도(프로세스 잡음), \(\mathbf{H}\)는 상태에서 측정을 뽑는 행렬, \(\mathbf{R}\)은 측정 잡음, \(\mathbf{z}\)는 측정, \(\mathbf{K}\)는 칼만 이득이다.</div></div>
+    <p>가장 단순한 운동 모델은 등속<span class="en">(constant velocity)</span>이다. 상태를 \([x,\ y,\ v_x,\ v_y]\)로 두면 \(\mathbf{F}\)는 "위치에 속도 × 시간을 더한다"는 뜻의 행렬이고, 측정은 위치만 보므로 \(\mathbf{H}\)는 앞의 두 성분만 뽑는다. 속도는 한 번도 직접 재지 않지만, 위치 측정이 예측과 어긋나는 방향을 보고 필터가 속도를 고쳐 나간다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 270" role="img" aria-label="칼만 필터의 예측과 갱신">
+        <defs><marker id="pc-ah4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker></defs>
+        <line x1="30" y1="200" x2="730" y2="200" class="s-axis"/>
+        <text x="730" y="222" class="t-dim" text-anchor="end">위치</text>
+        <path d="M60 200 C120 200 130 90 160 90 C190 90 200 200 260 200" fill="none" class="s-line" stroke-width="2"/>
+        <text x="160" y="78" class="t" text-anchor="middle">직전 추정</text>
+        <path d="M240 200 C340 200 360 140 410 140 C460 140 480 200 580 200" fill="none" stroke="var(--warn)" stroke-width="2.5" stroke-dasharray="7 5"/>
+        <text x="372" y="128" class="t" text-anchor="middle" fill="var(--warn)">① 예측: 옮겨지고 퍼진다</text>
+        <path d="M430 200 C500 200 520 110 550 110 C580 110 600 200 670 200" fill="none" stroke="var(--accent-2)" stroke-width="2.5"/>
+        <text x="610" y="98" class="t" text-anchor="middle" fill="var(--accent-2)">측정</text>
+        <path d="M430 200 C480 200 494 40 512 40 C530 40 544 200 594 200" class="f-acc-soft" stroke="var(--accent)" stroke-width="2.5"/>
+        <text x="512" y="28" class="t-acc" text-anchor="middle">② 갱신: 둘 사이, 더 좁게</text>
+        <g stroke="var(--accent)" stroke-width="2" marker-end="url(#pc-ah4)"><line x1="180" y1="170" x2="372" y2="170"/></g>
+        <text x="276" y="162" class="t-mono" text-anchor="middle">v · Δt</text>
+        <text x="380" y="252" class="t-dim" text-anchor="middle">예측의 분산이 클수록(이득 K가 클수록) 측정 쪽으로 더 많이 끌려간다</text>
+      </svg>
+      <figcaption><b>그림 19-4.</b> 1차원으로 본 칼만 필터 한 주기. 예측 단계에서 분포는 이동하면서 넓어지고, 갱신 단계에서 측정과 곱해져 둘 중 어느 것보다도 좁아진다.</figcaption>
+    </figure>
+
+    <div class="callout tip">
+      <strong>계산 예: 이득은 불확실성의 비율이다</strong>
+      <p>1차원에서 예측의 표준편차가 2 m(분산 4), 측정의 표준편차가 1 m(분산 1)라고 하자. 칼만 이득은 \(K = 4/(4+1) = 0.8\)이다. 예측이 40 m, 측정이 42 m면 추정은 \(40 + 0.8 \times 2 = 41.6\) m로, 더 믿을 만한 측정 쪽에 가깝다. 갱신 뒤 분산은 \((1-0.8) \times 4 = 0.8\), 표준편차 약 0.89 m다. 측정 하나만 쓴 것(1 m)보다 좋아졌다.</p>
+    </div>
+
+    <div class="sim" id="sim-kf">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>등속 칼만 필터로 추적하기</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-kf" style="touch-action:none"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>물체의 움직임</span><div class="seg" id="kf-mode"><button data-value="auto" class="on">자동 경로</button><button data-value="drag">직접 끌기</button></div></div>
+          <label class="ctrl"><span>측정 잡음 σ<sub>z</sub> (R) <output id="kf-r-out"></output></span><input type="range" id="kf-r" min="0.1" max="4" step="0.1" value="1.2"></label>
+          <label class="ctrl"><span>가속 잡음 σ<sub>a</sub> (Q) <output id="kf-q-out"></output></span><input type="range" id="kf-q" min="0.05" max="10" step="0.05" value="1.5"></label>
+          <label class="check"><input type="checkbox" id="kf-drop"> 측정 끊김(가려짐)</label>
+          <button class="btn" id="kf-reset">초기화</button>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">측정 오차(RMS)</span><span class="v" id="o-kf-em">—</span></div>
+        <div class="stat"><span class="k">필터 오차(RMS)</span><span class="v" id="o-kf-ee">—</span></div>
+        <div class="stat"><span class="k">위치 이득 K</span><span class="v" id="o-kf-k">—</span></div>
+        <div class="stat"><span class="k">위치 σ / 추정 속도</span><span class="v" id="o-kf-sig">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 회색 선이 실제 궤적, 주황색 점이 10 Hz 측정, 굵은 선과 타원이 필터의 추정과 95 % 불확실성이다. "측정 끊김"을 켜면 필터는 예측만으로 직진하고 타원이 매 순간 커진다. 물체가 그 사이 방향을 틀면 추정이 벗어나지만, 측정이 돌아오면 큰 타원 덕분에 이득이 커서 금방 따라붙는다. σ<sub>a</sub>를 0.05로 줄이면 궤적은 매끈하지만 곡선에서 바깥으로 밀리고, 10으로 올리면 측정을 거의 그대로 따라가 떨린다.</div>
+    </div>
+
+    <p>등속 모델은 단순한 만큼 한계가 뚜렷하다. 물체가 모델과 다르게 움직이는 정도를 \(\mathbf{Q}\) 하나로 뭉뚱그리기 때문이다. 실제 추적기는 등속, 등가속, 선회 모델을 여러 개 동시에 돌리며 가장 잘 맞는 것에 무게를 싣는다. 또 레이더처럼 거리와 각도로 측정하는 센서는 측정과 상태의 관계가 비선형이어서, 매 순간 선형으로 근사하는 확장 칼만 필터(EKF)나 대표점 몇 개를 실제 함수에 통과시키는 무향 칼만 필터(UKF)를 쓴다.</p>
+  </section>
+
+  <!-- =============================================================== 6 -->
+  <section id="fusion">
+    <h2>센서 융합과 좌표 변환</h2>
+    <p><a href="sensors.html">18장</a>에서 보았듯 센서마다 잘하는 것이 다르다. 카메라는 각도 분해능이 뛰어나 물체가 어느 방향에 있는지는 정밀하게 알지만 거리는 어림한다. 레이더는 거리와 상대 속도를 정밀하게 재지만 각도는 뭉툭하다. 두 측정을 합치면 양쪽의 좋은 쪽만 남는다. 이것이 우연이 아니라 수학적으로 보장된다는 점이 융합의 핵심이다.</p>
+    <p>두 측정을 각각 평균 \(\mathbf{z}_1, \mathbf{z}_2\)와 공분산 \(\mathbf{P}_1, \mathbf{P}_2\)를 갖는 가우시안으로 보면, 둘을 곱한 결과도 가우시안이다.</p>
+    <div class="formula">$$\mathbf{P} = \left(\mathbf{P}_1^{-1} + \mathbf{P}_2^{-1}\right)^{-1}, \qquad \hat{\mathbf{x}} = \mathbf{P}\left(\mathbf{P}_1^{-1}\mathbf{z}_1 + \mathbf{P}_2^{-1}\mathbf{z}_2\right)$$
+      <div class="where">공분산의 역행렬은 "정보량"이다. 정보는 더해지고, 추정값은 정보량으로 가중한 평균이다. 1차원이면 \(\sigma^2 = \sigma_1^2\sigma_2^2/(\sigma_1^2+\sigma_2^2)\)로, 항상 둘 중 작은 쪽보다도 작다.</div></div>
+
+    <div class="sim" id="sim-fu">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>카메라와 레이더의 불확실성 융합</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-fu" style="touch-action:none"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>카메라 거리 오차 <output id="fu-c-out"></output></span><input type="range" id="fu-c" min="2" max="20" step="1" value="10"></label>
+          <label class="ctrl"><span>레이더 각도 오차 <output id="fu-a-out"></output></span><input type="range" id="fu-a" min="0.5" max="6" step="0.1" value="3"></label>
+          <button class="btn" id="fu-new">새 측정 뽑기</button>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">카메라 σ (거리 × 횡)</span><span class="v" id="o-fu-c">—</span></div>
+        <div class="stat"><span class="k">레이더 σ (거리 × 횡)</span><span class="v" id="o-fu-r">—</span></div>
+        <div class="stat"><span class="k">융합 σ (장축 × 단축)</span><span class="v" id="o-fu-f">—</span></div>
+        <div class="stat"><span class="k">타원 넓이 (좋은 쪽 대비)</span><span class="v" id="o-fu-area">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 표적(십자)을 끌어 거리와 방향을 바꾼다. 카메라 타원은 시선 방향으로 길고 레이더 타원은 그 직각으로 길다. 둘이 겹치는 작은 영역이 융합 결과이며 확대 창에서 볼 수 있다. 표적을 멀리 보낼수록 두 타원 모두 커지지만 융합 타원은 훨씬 느리게 커진다. 고정값으로 카메라 각도 오차 0.2°, 레이더 거리 오차 0.25 m를 썼다.</div>
+    </div>
+
+    <div class="callout tip">
+      <strong>계산 예: 60 m 앞의 차</strong>
+      <p>카메라의 거리 오차가 10 %면 60 m에서 \(\sigma \approx 6\) m, 횡 방향은 \(60 \times \tan 0.2^\circ \approx 0.21\) m다. 레이더는 거리 0.25 m, 횡 방향 \(60 \times \tan 3^\circ \approx 3.1\) m다. 거리 방향을 합치면 \(\sqrt{6^2 \cdot 0.25^2/(6^2+0.25^2)} \approx 0.25\) m, 횡 방향은 \(\sqrt{0.21^2 \cdot 3.1^2/(0.21^2+3.1^2)} \approx 0.21\) m다. 각 센서가 6 m와 3 m씩 모르던 것을 합치니 양쪽 다 0.3 m 안으로 들어온다.</p>
+    </div>
+
+    <h3>어느 단계에서 합칠 것인가</h3>
+    <p>위 계산은 각 센서가 검출을 끝낸 뒤 결과끼리 합치는 방식이다. 합치는 시점은 더 앞으로 당길 수 있고, 시점마다 얻는 것과 잃는 것이 다르다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>방식</th><th>합치는 대상</th><th>장점</th><th>약점</th></tr></thead>
+      <tbody>
+        <tr><td><b>초기 융합</b></td><td>원시 데이터(화소에 라이다 깊이를 붙이는 식)</td><td>정보 손실이 없다. 한 센서로는 약한 증거도 합쳐서 살린다.</td><td>정밀한 캘리브레이션과 시간 동기가 필수. 센서 하나가 바뀌면 전체를 다시 학습한다.</td></tr>
+        <tr><td><b>중기 융합</b></td><td>신경망 중간의 특징 맵(주로 BEV 격자 위에서)</td><td>센서별 표현 차이를 흡수하면서 풍부한 정보를 쓴다. 현재 학습 기반 인지의 주류.</td><td>무엇이 왜 검출되었는지 들여다보기 어렵다. 대량의 동기화된 학습 데이터가 필요하다.</td></tr>
+        <tr><td><b>후기 융합</b></td><td>센서별 검출 결과(물체 목록)</td><td>구조가 단순하고 센서별로 독립 검증이 된다. 한 센서가 죽어도 나머지가 돈다.</td><td>각 센서가 따로 버린 약한 증거는 되살릴 수 없다. 센서끼리 결과가 다를 때 누구를 믿을지 정해야 한다.</td></tr>
+      </tbody>
+    </table></div>
+    <p>후기 융합의 독립성은 안전 설계에서 값지다. 카메라 경로와 레이더·라이다 경로가 서로 다른 원리로 같은 물체를 확인하면, 한쪽의 체계적인 실패가 다른 쪽에서 드러난다. 이 이중화는 <a href="autonomy.html">21장</a>에서 다시 다룬다.</p>
+
+    <h3>좌표계: 센서에서 차량으로, 차량에서 지도로</h3>
+    <p>융합이 성립하려면 모든 측정이 같은 좌표계에 있어야 한다. 카메라가 본 점은 카메라 렌즈 중심을 원점으로 하고, 라이다가 본 점은 라이다 중심을 원점으로 한다. 이들을 차량 좌표계(보통 뒤 차축 중심이 원점, x가 전방, y가 좌측, z가 위)로 옮기고, 다시 차의 위치와 자세를 써서 지도 좌표계로 옮긴다. 각 변환은 회전과 평행 이동이며, 동차 좌표를 쓰면 행렬 곱 하나가 된다.</p>
+    <div class="formula">$$\mathbf{p}_{map} = \mathbf{T}_{map \leftarrow veh}\,\mathbf{T}_{veh \leftarrow sen}\,\mathbf{p}_{sen}, \qquad \mathbf{T} = \begin{bmatrix}\cos\psi & -\sin\psi & t_x\\ \sin\psi & \cos\psi & t_y\\ 0 & 0 & 1\end{bmatrix}$$
+      <div class="where">평면(2D)의 경우다. \(\psi\)는 회전각, \((t_x, t_y)\)는 원점의 이동이다. \(\mathbf{T}_{veh \leftarrow sen}\)은 센서 장착 위치와 각도(외부 파라미터)로 정해지는 고정값이고, \(\mathbf{T}_{map \leftarrow veh}\)는 측위가 매 순간 추정하는 값이다.</div></div>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 300" role="img" aria-label="센서, 차량, 지도 좌표계">
+        <defs>
+          <marker id="pc-ax" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--text-dim)"/></marker>
+          <marker id="pc-ah5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker>
+        </defs>
+        <g stroke="var(--text-dim)" stroke-width="2" marker-end="url(#pc-ax)"><line x1="50" y1="260" x2="150" y2="260"/><line x1="50" y1="260" x2="50" y2="160"/></g>
+        <text x="156" y="278" class="t-dim">동(E)</text><text x="34" y="152" class="t-dim">북(N)</text>
+        <text x="56" y="286" class="t" font-weight="700">지도 좌표계</text>
+        <g transform="translate(330 190) rotate(-25)">
+          <rect x="-60" y="-34" width="170" height="68" rx="16" class="f-acc-soft" stroke="var(--accent)" stroke-width="1.5"/>
+          <g stroke="var(--accent)" stroke-width="2.5" marker-end="url(#pc-ah5)"><line x1="0" y1="0" x2="74" y2="0"/><line x1="0" y1="0" x2="0" y2="-62"/></g>
+          <circle cx="0" cy="0" r="4.5" class="f-acc"/>
+          <text x="80" y="-8" class="t-acc">x (전방)</text>
+          <text x="-52" y="-66" class="t-acc">y (좌측)</text>
+          <rect x="100" y="-9" width="14" height="18" rx="3" fill="var(--accent-2)"/>
+          <g stroke="var(--accent-2)" stroke-width="2" stroke-dasharray="6 4"><line x1="114" y1="0" x2="300" y2="-58"/></g>
+          <circle cx="300" cy="-58" r="7" fill="var(--warn)"/>
+          <text x="196" y="-44" class="t-mono" text-anchor="middle">p_sen</text>
+        </g>
+        <text x="648" y="54" class="t" fill="var(--warn)" text-anchor="middle">검출된 물체</text>
+        <text x="476" y="182" class="t" fill="var(--accent-2)">센서 좌표계</text>
+        <text x="476" y="200" class="t-dim">(장착 위치·각도는 고정)</text>
+        <text x="270" y="246" class="t-acc">차량 좌표계 (뒤 차축 중심)</text>
+        <g stroke="var(--text-dim)" stroke-width="1.5" stroke-dasharray="5 4"><line x1="50" y1="260" x2="326" y2="192"/></g>
+        <text x="150" y="212" class="t-dim">차의 위치 (t_x, t_y)와 방위각 ψ</text>
+        <text x="150" y="230" class="t-mono">= 측위의 출력</text>
+      </svg>
+      <figcaption><b>그림 19-5.</b> 좌표계의 사슬. 센서가 본 점은 장착 파라미터로 차량 좌표계에, 측위 결과로 지도 좌표계에 옮겨진다. 어느 고리가 틀려도 물체가 엉뚱한 곳에 놓인다.</figcaption>
+    </figure>
+
+    <div class="callout warn">
+      <strong>작은 각도 오차의 값</strong>
+      <p>카메라 장착 각도가 0.5° 틀어져 있으면 100 m 앞에서 \(100 \times \tan 0.5^\circ \approx 0.87\) m 어긋난다. 차로 폭이 3.5 m 안팎이므로 앞차가 내 차로에 있는지 옆 차로에 있는지 헷갈릴 수 있는 크기다. 시간도 좌표다. 상대 속도 30 m/s인 물체를 두 센서가 20 ms 차이로 찍으면 0.6 m 떨어진 곳에서 본 셈이 된다. 그래서 모든 측정에 정밀한 시각을 찍고 같은 시각으로 보정한 뒤 합친다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 7 -->
+  <section id="localization">
+    <h2>측위: 나는 어디에 있는가</h2>
+    <p>내비게이션에는 5 m 오차도 충분하지만, 차로 안에서 스스로 달리려면 횡 방향으로 10~20 cm 수준이 필요하다. 어느 차로에 있는지 틀리면 지도에서 읽어 온 신호등과 정지선, 제한 속도가 모두 남의 차로 것이 된다. 한 가지 수단으로는 이 정밀도를 늘 얻을 수 없다.</p>
+    <ul>
+      <li><b>GNSS.</b> 절대 위치를 주지만 열린 하늘에서도 수 m 오차가 보통이고, 고층 건물 사이에서는 반사된 신호(다중 경로) 때문에 수십 m까지 튄다. 터널과 지하에서는 아예 끊긴다. RTK 보정을 받으면 cm 수준이 되지만 보정 신호와 위성 가시성이 함께 필요하다.</li>
+      <li><b>오도메트리.</b> 휠 속도와 IMU를 적분해 "방금보다 얼마나 움직였는가"를 높은 주기로 매끄럽게 알려 준다. 대신 오차가 쌓인다(드리프트). 방위각이 조금만 틀려도 그 방향으로 계속 달리므로 횡 방향 오차가 거리에 비례해 커진다.</li>
+      <li><b>지도 대조.</b> 지금 센서로 보이는 것을 미리 만든 지도와 맞춰 본다. 지도가 정확한 만큼 절대 위치를 cm 수준으로 얻지만, 지도에 없는 곳이나 풍경이 바뀐 곳에서는 쓸 수 없다.</li>
+    </ul>
+    <div class="callout tip">
+      <strong>계산 예: 오도메트리는 얼마나 빨리 틀어지는가</strong>
+      <p>타이어 공기압이 낮아 유효 반지름이 0.5 % 작아졌다면 1 km를 달렸을 때 종 방향으로 5 m 틀린다. 방위각 추정이 0.5° 틀린 채로 100 m를 가면 횡 방향으로 \(100 \times \sin 0.5^\circ \approx 0.87\) m 벗어난다. 터널 1 km를 오도메트리만으로 지나면 차로 하나쯤은 쉽게 어긋난다. 드리프트 없는 절대 기준으로 주기적으로 고쳐야 하는 이유다.</p>
+    </div>
+
+    <h3>정밀 지도와 지도 매칭</h3>
+    <p>정밀 지도<span class="en">(HD map)</span>는 차로 중심선과 경계선, 정지선, 신호등과 표지판의 3차원 위치, 연석과 가드레일 같은 구조물을 cm~dm 정확도로 담는다. 측위에서는 "보이는 것"과 "지도에 있는 것"을 겹쳐 가장 잘 맞는 위치와 방위를 찾는다. 카메라가 검출한 차선과 표지판을 지도의 것과 맞추거나, 라이다 포인트 클라우드를 지도의 점 구름과 맞춘다.</p>
+    <p>점 구름끼리 맞추는 대표적인 방법이 ICP<span class="en">(Iterative Closest Point)</span>다. 지금 스캔의 각 점에 대해 지도에서 가장 가까운 점을 짝으로 잡고, 짝끼리의 거리 제곱 합이 최소가 되는 회전과 이동을 구해 스캔을 옮긴다. 옮긴 뒤 짝을 다시 잡고 같은 일을 수렴할 때까지 반복한다. 초기 위치가 크게 틀리면 엉뚱한 짝에 끌려가므로 오도메트리가 주는 초기값이 중요하다.</p>
+
+    <h3>파티클 필터: 가설을 뿌리고 걸러낸다</h3>
+    <p>칼만 필터는 "내 위치는 여기 근처"라는 봉우리 하나짜리 분포만 표현한다. 시동을 막 걸었거나 터널에서 나왔을 때는 "이 교차로일 수도, 저 교차로일 수도 있다"처럼 후보가 여럿이다. 파티클 필터<span class="en">(particle filter)</span>는 분포를 수백~수천 개의 점(입자)으로 나타낸다. 입자 하나하나가 "차가 여기 있다"는 가설이다.</p>
+    <ol>
+      <li><b>이동.</b> 오도메트리가 알려 준 만큼 모든 입자를 옮긴다. 오도메트리 오차만큼 무작위 흔들림을 더한다.</li>
+      <li><b>가중.</b> 입자마다 "차가 정말 여기 있다면 센서에 무엇이 보여야 하는가"를 지도에서 계산해 실제 관측과 비교한다. 잘 맞을수록 높은 가중치를 준다.</li>
+      <li><b>재추출.</b> 가중치에 비례해 입자를 다시 뽑는다. 맞는 가설은 여러 개로 복제되고 틀린 가설은 사라진다.</li>
+    </ol>
+    <div class="formula">$$w_i \propto \prod_{k} \exp\!\left(-\frac{\left(z_k - \hat{z}_k(\mathbf{x}_i)\right)^2}{2\sigma^2}\right), \qquad N_{eff} = \frac{1}{\sum_i w_i^2}$$
+      <div class="where">여기서 \(z_k\)는 \(k\)번째 관측(랜드마크까지의 거리 등), \(\hat{z}_k(\mathbf{x}_i)\)는 입자 \(i\)의 위치에서 예상되는 관측, \(\sigma\)는 센서 잡음이다. \(N_{eff}\)는 정규화한 가중치로 계산한 유효 입자 수로, 이 값이 작으면 소수의 입자만 살아 있다는 뜻이다.</div></div>
+
+    <div class="sim" id="sim-pf">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>파티클 필터 측위</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-pf"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>입자 수 <output id="pf-n-out"></output></span><input type="range" id="pf-n" min="50" max="1500" step="50" value="600"></label>
+          <label class="ctrl"><span>거리 센서 잡음 <output id="pf-s-out"></output></span><input type="range" id="pf-s" min="0.2" max="4" step="0.1" value="1"></label>
+          <div class="ctrl-row"><button class="btn primary" id="pf-step">한 단계</button><button class="btn" id="pf-auto">자동 실행</button></div>
+          <button class="btn" id="pf-reset">입자 다시 뿌리기</button>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">추정 오차</span><span class="v" id="o-pf-err">—</span></div>
+        <div class="stat"><span class="k">입자 퍼짐(σ)</span><span class="v" id="o-pf-sd">—</span></div>
+        <div class="stat"><span class="k">유효 입자 수</span><span class="v" id="o-pf-neff">—</span></div>
+        <div class="stat"><span class="k">단계</span><span class="v" id="o-pf-k">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 차는 순환 도로를 돌며 20 m 안의 랜드마크(삼각형)까지 거리만 잰다. 어느 랜드마크인지는 모른다. "한 단계"를 누를 때마다 차가 2 m 가고 입자가 이동·가중·재추출된다. 처음 몇 단계에서는 거리가 맞는 고리 모양으로 입자가 남고, 몇 군데 후보로 줄었다가 하나로 모인다. 입자를 50개로 줄이고 다시 뿌리면 정답 근처에 입자가 하나도 없어 엉뚱한 곳으로 수렴하는 경우가 생긴다.</div>
+    </div>
+
+    <h3>SLAM과 지도 없는 주행</h3>
+    <p>지도가 없으면 지도를 만들면서 그 안에서 위치를 잡아야 한다. 이것이 SLAM<span class="en">(Simultaneous Localization and Mapping)</span>이다. 위치를 알아야 지도를 그리고 지도가 있어야 위치를 아는 닭과 달걀의 문제지만, 연속한 스캔끼리 맞춰 이동량을 구하고 이를 이어 붙이면 양쪽이 함께 자라난다. 이어 붙인 오차는 쌓이므로, 전에 왔던 곳에 다시 왔음을 알아차려(루프 폐쇄) 궤적 전체를 한꺼번에 바로잡는다. 정밀 지도 자체가 측량 차량이 모은 데이터를 이런 방식으로 정합해 만든 결과물이다.</p>
+    <p>정밀 지도에 얼마나 기댈지는 설계 철학이 갈리는 지점이다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th></th><th>정밀 지도 의존</th><th>맵리스(경량 지도)</th></tr></thead>
+      <tbody>
+        <tr><td>지도의 역할</td><td>센서가 닿지 않는 곳까지 미리 아는 기억. 차선·신호·정지선을 지도에서 읽는다.</td><td>내비게이션 수준의 경로 안내만. 차선과 교차로 구조는 그 자리에서 인지한다.</td></tr>
+        <tr><td>강점</td><td>가려진 곳과 복잡한 교차로에서 안정적. 인지가 풀 문제가 줄어든다.</td><td>지도를 만들지 않은 도로에서도 동작. 넓은 지역으로 확장하기 쉽다.</td></tr>
+        <tr><td>약점</td><td>구축과 갱신 비용이 크다. 공사로 도로가 바뀌면 지도가 틀린 정보가 된다.</td><td>실시간 인지가 모든 것을 감당해야 한다. 시야 밖 정보가 없다.</td></tr>
+        <tr><td>주된 쓰임</td><td>정해진 구역을 도는 무인 택시</td><td>일반 승용차의 운전자 보조</td></tr>
+      </tbody>
+    </table></div>
+    <p>실제 시스템은 양극단 사이에 있다. 지도를 쓰더라도 지도와 지금 보이는 것이 다르면 보이는 것을 우선하고, 지도를 쓰지 않더라도 여러 차가 지나며 모은 차로 구조를 가벼운 사전 정보로 쓴다.</p>
+  </section>
+
+  <!-- =============================================================== 8 -->
+  <section id="longtail">
+    <h2>불확실성, 롱테일, 그리고 데이터</h2>
+    <p>인지의 어려움은 평균적인 장면에 있지 않다. 맑은 날 고속도로의 승용차는 이미 사람보다 잘 본다. 문제는 드물게 나타나는 수많은 경우다. 유모차를 미는 사람, 화물칸에 자전거를 실은 트럭, 버스 광고판 속의 사람 얼굴, 도로에 누운 사람, 탈을 쓴 행인, 뒤집힌 차. 하나하나는 수백만 km에 한 번 나올까 말까 하지만 종류가 끝없이 많아 모두 합치면 무시할 수 없다. 발생 빈도 분포의 긴 꼬리에 해당한다고 해서 롱테일<span class="en">(long tail)</span> 문제라 부른다.</p>
+    <p>학습 기반 인지는 본 것을 잘한다. 따라서 성능은 모델 구조만큼이나 데이터가 정한다. 여기서 세 가지 일이 중요하다.</p>
+    <ul>
+      <li><b>라벨링.</b> 영상의 박스, 포인트 클라우드의 3D 박스, 화소별 클래스를 정답으로 달아야 한다. 사람이 하면 느리고 비싸므로, 시간 제약 없이 과거와 미래 프레임을 모두 쓰는 크고 느린 모델로 먼저 자동 라벨을 만들고 사람은 검수만 하는 방식이 일반적이다.</li>
+      <li><b>데이터 고르기.</b> 주행 데이터의 대부분은 이미 잘하는 평범한 장면이다. 모델이 확신하지 못한 장면, 센서끼리 결과가 달랐던 장면, 운전자가 개입한 장면을 골라내 학습에 넣어야 꼬리가 줄어든다.</li>
+      <li><b>시뮬레이션과 합성.</b> 현실에서 모으기 위험하거나 드문 장면은 만들어 낸다. 다만 합성 영상과 실제 영상의 차이가 성능 차이로 이어지지 않는지 따로 확인해야 한다.</li>
+    </ul>
+    <p>모르는 것을 모른다고 말하는 능력도 인지의 일부다. 신경망의 신뢰도 점수는 훈련 때 보지 못한 입력에서 근거 없이 높게 나오는 경향이 있다. 그래서 점수가 실제 정답률과 일치하도록 보정하고, 점유 격자처럼 이름을 붙이지 않고도 "무언가 있다"를 알려 주는 경로를 함께 두며, 센서 오염이나 역광처럼 입력 자체가 나빠진 상황을 따로 감지한다. 인지가 불확실성을 정직하게 넘겨주어야 계획 단계가 속도를 줄이거나 거리를 벌리는 식으로 대응할 수 있다. 이 뒷이야기는 <a href="planning.html">20장</a>과 <a href="autonomy.html">21장</a>에서 이어진다.</p>
+    <div class="callout deep">
+      <strong>검출–추적–예측을 하나로</strong>
+      <p>이 장은 검출, 추적, 융합, 측위를 따로 설명했지만, 단계를 나누면 앞 단계가 버린 정보를 뒤 단계가 쓸 수 없다. 검출기가 신뢰도 0.3이라 버린 흐릿한 물체가 다섯 프레임 연속 같은 자리에 있었다면 그것은 진짜일 가능성이 높다. 그래서 여러 프레임의 BEV 특징을 시간 축으로 쌓아 검출과 추적, 나아가 미래 궤적 예측까지 한 신경망에서 함께 학습하는 구조가 늘고 있다. 단계가 합쳐져도 이 장의 개념은 그대로 남는다. 좌표 변환은 특징을 BEV에 올릴 때, 연관은 궤적 질의가 프레임을 넘나들 때, 불확실성은 출력 분포의 형태로 다시 나타난다.</p>
+    </div>
+  </section>
+
+  <section class="keypoints" id="summary">
+    <h2>핵심 정리</h2>
+    <ol>
+      <li>인지는 무엇이, 어디에, 어떻게 움직이는지를, 측위는 내가 어디에 있는지를 추정한다. 출력은 사실이 아니라 불확실성이 붙은 추정이다.</li>
+      <li>합성곱은 커널과 이웃 화소의 곱을 더하는 연산이다. CNN은 커널을 데이터에서 학습하고, 층이 깊을수록 넓은 범위의 추상적인 특징을 본다.</li>
+      <li>객체 검출은 박스·클래스·신뢰도를 낸다. IoU는 교집합을 합집합으로 나눈 겹침 척도이고, NMS는 같은 물체의 중복 박스를 신뢰도 순으로 정리한다.</li>
+      <li>임계값을 낮추면 재현율이 오르고 정밀도가 내린다. 도로에서는 미검출과 오검출의 비용이 다르며, 프레임 간 오류는 독립이 아니다.</li>
+      <li>포인트 클라우드는 지면 제거, 클러스터링, 박스 맞춤으로 물체가 된다. 점유 격자는 로그 오즈를 더해 가며 이름 모를 장애물까지 표현한다.</li>
+      <li>칼만 필터는 운동 모델로 예측하고 측정으로 갱신한다. 이득은 예측과 측정의 불확실성 비율로 정해지고, 측정이 끊기면 공분산이 커진다.</li>
+      <li>서로 다른 방향으로 불확실한 측정을 융합하면 정보(공분산의 역)가 더해져 어느 쪽보다도 좁은 추정이 된다. 그 전제는 정확한 좌표 변환과 시간 동기다.</li>
+      <li>측위는 절대 기준(GNSS, 지도 대조)과 상대 이동(오도메트리)을 섞는다. 파티클 필터는 여러 가설을 입자로 유지하다가 관측과 맞지 않는 것을 걸러낸다.</li>
+    </ol>
+  </section>
+
+  <section class="quiz-sec" id="quiz">
+    <h2>확인 퀴즈</h2>
+    <div class="quiz">
+      <div class="quiz-q"><p>1. 모든 값의 합이 0인 3×3 커널(예: 소벨)을 밝기가 완전히 고른 영역에 적용하면 출력은?</p><div class="opts">
+        <button class="opt">입력 밝기와 같다</button>
+        <button class="opt" data-correct>0이다</button>
+        <button class="opt">입력 밝기의 9배다</button>
+        <button class="opt">커널에 따라 무작위로 달라진다</button>
+      </div><div class="quiz-exp">모든 화소가 같은 값 c면 출력은 c × (커널 합) = 0이다. 그래서 합이 0인 커널은 고른 면을 지우고 밝기가 변하는 경계만 남긴다. 합이 1인 커널(블러, 샤픈)은 평균 밝기를 유지한다.</div></div>
+
+      <div class="quiz-q"><p>2. 정답 박스가 40 × 40이고, 예측 박스가 정답을 한가운데에 품은 80 × 80이다. IoU는?</p><div class="opts">
+        <button class="opt">1.0</button>
+        <button class="opt">0.5</button>
+        <button class="opt" data-correct>0.25</button>
+        <button class="opt">0.75</button>
+      </div><div class="quiz-exp">교집합은 정답 박스 전체인 1,600, 합집합은 예측 박스 전체인 6,400이므로 IoU = 0.25다. 정답을 완전히 덮었어도 박스가 지나치게 크면 IoU가 낮다. IoU는 놓친 부분과 넘친 부분을 모두 벌한다.</div></div>
+
+      <div class="quiz-q"><p>3. 검출기의 신뢰도 임계값을 0.6에서 0.3으로 낮췄다. 일반적으로 일어나는 변화는?</p><div class="opts">
+        <button class="opt">정밀도와 재현율이 모두 오른다</button>
+        <button class="opt">정밀도는 오르고 재현율은 내린다</button>
+        <button class="opt" data-correct>재현율은 오르고 정밀도는 내린다</button>
+        <button class="opt">둘 다 변하지 않고 AP만 오른다</button>
+      </div><div class="quiz-exp">낮은 점수의 후보까지 검출로 인정하므로 놓치던 실제 물체가 잡혀 재현율이 오른다(적어도 내려가지는 않는다). 동시에 물체가 아닌 후보도 더 많이 통과해 정밀도가 내려가는 것이 보통이다. AP는 임계값 전체에 걸친 곡선의 넓이라 임계값 하나를 바꾼다고 변하지 않는다.</div></div>
+
+      <div class="quiz-q"><p>4. 추적 중인 차가 트럭 뒤로 가려져 1초 동안 측정이 없었다. 그동안 칼만 필터의 상태는?</p><div class="opts">
+        <button class="opt">추정 위치가 마지막 측정 지점에 멈추고 공분산은 그대로다</button>
+        <button class="opt" data-correct>추정 위치는 마지막 속도로 계속 나아가고 공분산은 커진다</button>
+        <button class="opt">추정 위치와 공분산이 모두 0으로 초기화된다</button>
+        <button class="opt">공분산이 줄어들어 더 확신하게 된다</button>
+      </div><div class="quiz-exp">갱신 없이 예측만 반복하면 상태는 운동 모델(등속)대로 전진하고, 공분산에는 매 단계 Q가 더해져 불확실성이 자란다. 측정이 돌아오면 커진 공분산 때문에 이득이 커서 측정을 강하게 믿고 빠르게 수렴한다.</div></div>
+
+      <div class="quiz-q"><p>5. 점유 격자에서 사전 확률 0.5인 칸에 "점유 0.7"에 해당하는 측정이 두 번, "점유 0.4"(빈 칸 쪽)에 해당하는 측정이 한 번 들어왔다. 로그 오즈 합과 가장 가까운 것은? (ln(0.7/0.3) ≈ 0.85, ln(0.4/0.6) ≈ −0.41)</p><div class="opts">
+        <button class="opt">0.44</button>
+        <button class="opt" data-correct>1.29</button>
+        <button class="opt">2.11</button>
+        <button class="opt">−0.41</button>
+      </div><div class="quiz-exp">0.85 + 0.85 − 0.41 = 1.29다. 확률로 바꾸면 1/(1 + e^−1.29) ≈ 0.78이다. 로그 오즈 표현에서는 증거가 덧셈으로 쌓이므로 측정 순서와 무관하게 같은 결과가 나온다.</div></div>
+
+      <div class="quiz-q"><p>6. 카메라와 레이더의 측정을 융합했을 때 어느 한쪽보다도 훨씬 정밀해지는 가장 큰 이유는?</p><div class="opts">
+        <button class="opt">측정 횟수가 두 배가 되어 평균의 오차가 절반이 되기 때문에</button>
+        <button class="opt">레이더가 카메라의 영상을 선명하게 해 주기 때문에</button>
+        <button class="opt" data-correct>두 센서의 불확실성이 서로 다른 방향으로 길어서, 한쪽이 모르는 방향을 다른 쪽이 알기 때문에</button>
+        <button class="opt">융합하면 두 센서의 잡음이 서로 상쇄되어 0이 되기 때문에</button>
+      </div><div class="quiz-exp">카메라는 각도(횡 방향)에 정밀하고 거리에 둔하며, 레이더는 반대다. 공분산의 역(정보)을 더하면 각 방향에서 더 정밀한 쪽이 지배한다. 같은 방향으로 똑같이 불확실한 두 측정이라면 표준편차가 1/√2로 줄 뿐이다. 잡음이 0이 되지는 않는다.</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const F = CB.fmt, clamp = CB.clamp;
+
+  function rng(seed) {
+    return function () {
+      seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const mul = (A, B) => A.map((r) => B[0].map((_, j) => r.reduce((s, v, k) => s + v * B[k][j], 0)));
+  const tr = (A) => A[0].map((_, j) => A.map((r) => r[j]));
+  const add = (A, B) => A.map((r, i) => r.map((v, j) => v + B[i][j]));
+  const sub = (A, B) => A.map((r, i) => r.map((v, j) => v - B[i][j]));
+  const inv2 = (M) => {
+    const d = M[0][0] * M[1][1] - M[0][1] * M[1][0];
+    return [[M[1][1] / d, -M[0][1] / d], [-M[1][0] / d, M[0][0] / d]];
+  };
+  /** 2×2 공분산 [[a,b],[b,c]]의 고유값과 장축 각도 */
+  function eig2(a, b, c) {
+    const m = (a + c) / 2, d = Math.sqrt(((a - c) / 2) ** 2 + b * b);
+    return { l1: m + d, l2: Math.max(m - d, 0), ang: 0.5 * Math.atan2(2 * b, a - c) };
+  }
+  const K95 = 2.448; // 2자유도 카이제곱 95 %의 제곱근
+  /** 캔버스 좌표계의 공분산(px²)으로 타원을 그린다 */
+  function covEllipse(ctx, cx, cy, a, b, c, color, fillAlpha, width) {
+    const e = eig2(a, b, c);
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, Math.max(0.5, K95 * Math.sqrt(e.l1)), Math.max(0.5, K95 * Math.sqrt(e.l2)), e.ang, 0, Math.PI * 2);
+    ctx.fillStyle = color; ctx.globalAlpha = fillAlpha; ctx.fill();
+    ctx.globalAlpha = 1; ctx.strokeStyle = color; ctx.lineWidth = width || 2; ctx.stroke();
+    ctx.restore();
+  }
+  function font(ctx, px, mono) {
+    ctx.font = px + "px " + getComputedStyle(document.body).getPropertyValue(mono ? "--mono" : "--font");
+  }
+
+  /* ================================================================ 1. 합성곱 */
+  (function () {
+    const W = 56, H = 36, HZ = 13;
+    const img = new Float32Array(W * H), out = new Float32Array(W * H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let v;
+      if (y < HZ) v = 0.8 - 0.014 * y;
+      else {
+        const t = (y - HZ) / (H - 1 - HZ), hw = 3 + 23 * t, dx = Math.abs(x - 27.5);
+        v = dx < hw ? 0.34 : 0.52;
+        if (Math.abs(dx - hw) < 0.5 + 0.7 * t) v = 0.95;
+        if (dx < 0.5 + 0.7 * t && Math.floor(5 / (t + 0.12)) % 2 === 0) v = 0.95;
+      }
+      img[y * W + x] = v;
+    }
+    const rect = (x0, y0, x1, y1, v) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) img[y * W + x] = v; };
+    rect(31, 17, 41, 23, 0.12);   // 차체
+    rect(33, 13, 39, 16, 0.2);    // 캐빈
+    rect(34, 14, 38, 15, 0.62);   // 뒷유리
+    rect(31, 19, 32, 20, 0.9); rect(40, 19, 41, 20, 0.9); // 후미등
+    rect(32, 24, 33, 24, 0.03); rect(39, 24, 40, 24, 0.03); // 바퀴
+
+    const PRE = {
+      sobelx: [-1, 0, 1, -2, 0, 2, -1, 0, 1],
+      sobely: [-1, -2, -1, 0, 0, 0, 1, 2, 1],
+      blur: [1, 1, 1, 1, 1, 1, 1, 1, 1].map((v) => v / 9),
+      sharp: [0, -1, 0, -1, 5, -1, 0, -1, 0],
+      lap: [-1, -1, -1, -1, 8, -1, -1, -1, -1],
+    };
+    const grid = $("cv-kgrid"), inputs = [];
+    for (let i = 0; i < 9; i++) {
+      const el = document.createElement("input");
+      el.type = "number"; el.step = "0.5"; el.setAttribute("aria-label", "커널 " + (i + 1));
+      el.addEventListener("input", () => { compute(); cv.redraw(); });
+      grid.appendChild(el); inputs.push(el);
+    }
+    let K = PRE.sobelx.slice(), zeroSum = true, sel = { x: 36, y: 16 }, geo = null;
+    const px = (x, y) => img[clamp(y, 0, H - 1) * W + clamp(x, 0, W - 1)];
+    const show = (v) => (zeroSum ? clamp(Math.abs(v), 0, 1) : clamp(v, 0, 1));
+
+    function compute() {
+      K = inputs.map((el) => Number(el.value) || 0);
+      const s = K.reduce((a, b) => a + b, 0);
+      zeroSum = Math.abs(s) < 0.02;
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        let acc = 0;
+        for (let v = -1; v <= 1; v++) for (let u = -1; u <= 1; u++) acc += K[(v + 1) * 3 + (u + 1)] * px(x + u, y + v);
+        out[y * W + x] = acc;
+      }
+      CB.stat("o-cv-sum", F(Math.abs(s) < 1e-9 ? 0 : s, 3));
+      info();
+    }
+    function info() {
+      const kf = (v) => (v < 0 ? "(" + F(v, 2) + ")" : F(v, 2));
+      let html = "<b>(" + sel.x + ", " + sel.y + ") 위치의 계산</b> — 화소 × 커널";
+      for (let v = -1; v <= 1; v++) {
+        const parts = [];
+        for (let u = -1; u <= 1; u++) parts.push(px(sel.x + u, sel.y + v).toFixed(2) + "×" + kf(K[(v + 1) * 3 + (u + 1)]));
+        html += '<span class="row">' + parts.join(" + ") + "</span>";
+      }
+      const o = out[sel.y * W + sel.x];
+      html += '<span class="row"><b>합 = ' + o.toFixed(3) + "</b>" + (zeroSum ? " → 표시 |" + o.toFixed(2) + "|" : "") + "</span>";
+      $("cv-calc").innerHTML = html;
+      CB.stat("o-cv-in", img[sel.y * W + sel.x].toFixed(2));
+      CB.stat("o-cv-out", o.toFixed(3));
+    }
+    function setPreset(name) { PRE[name].forEach((v, i) => (inputs[i].value = Number(v.toFixed(3)))); compute(); }
+
+    const canvas = $("cv-conv");
+    const cv = CB.canvas(canvas, (ctx, w, h) => {
+      const P = CB.palette(), gap = 10, top = 22;
+      const cs = Math.min((w - gap) / 2 / W, (h - top - 4) / H);
+      const iw = cs * W, ih = cs * H, x0 = (w - 2 * iw - gap) / 2, x1 = x0 + iw + gap;
+      geo = { cs, x0, x1, top, iw, ih };
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        let g = Math.round(img[y * W + x] * 255);
+        ctx.fillStyle = "rgb(" + g + "," + g + "," + g + ")";
+        ctx.fillRect(x0 + x * cs, top + y * cs, cs + 0.6, cs + 0.6);
+        g = Math.round(show(out[y * W + x]) * 255);
+        ctx.fillStyle = "rgb(" + g + "," + g + "," + g + ")";
+        ctx.fillRect(x1 + x * cs, top + y * cs, cs + 0.6, cs + 0.6);
+      }
+      font(ctx, 12); ctx.fillStyle = P.dim; ctx.textBaseline = "middle"; ctx.textAlign = "left";
+      ctx.fillText("입력", x0, 11); ctx.fillText(zeroSum ? "출력 (절댓값)" : "출력", x1, 11);
+      ctx.strokeStyle = P.accent; ctx.lineWidth = 2;
+      ctx.strokeRect(x0 + (sel.x - 1) * cs, top + (sel.y - 1) * cs, cs * 3, cs * 3);
+      ctx.strokeRect(x1 + sel.x * cs - 1, top + sel.y * cs - 1, cs + 2, cs + 2);
+    }, { aspect: 0.37, minHeight: 150 });
+
+    function pick(e) {
+      if (!geo) return;
+      const r = canvas.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+      const bx = mx >= geo.x1 ? geo.x1 : geo.x0;
+      const x = Math.floor((mx - bx) / geo.cs), y = Math.floor((my - geo.top) / geo.cs);
+      if (x < 0 || x >= W || y < 0 || y >= H) return;
+      sel = { x, y }; info(); cv.redraw();
+    }
+    canvas.addEventListener("pointermove", pick);
+    canvas.addEventListener("pointerdown", pick);
+    CB.seg("cv-preset", setPreset);
+    setPreset("sobelx"); cv.redraw();
+  })();
+
+  /* ================================================================ 2. IoU / NMS */
+  (function () {
+    const WW = 100, WH = 60;
+    const gt = { x: 28, y: 14, w: 36, h: 28 }, pr = { x: 40, y: 21, w: 36, h: 28 };
+    const objs = [{ x: 14, y: 14, w: 34, h: 26, name: "앞차" }, { x: 28, y: 20, w: 34, h: 26, name: "뒤차" }];
+    let cands = [], view = { s: 1, ox: 0, oy: 0 }, grab = null;
+    const inter = (a, b) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+    const iou = (a, b) => { const i = inter(a, b); return i / (a.w * a.h + b.w * b.h - i); };
+
+    function regen() {
+      cands = [];
+      objs.forEach((o, k) => {
+        for (let i = 0; i < 5; i++) {
+          const j = () => (Math.random() - 0.5) * 6;
+          cands.push({ x: o.x + j(), y: o.y + j(), w: o.w + j(), h: o.h + j(), score: (k === 0 ? 0.97 : 0.9) - i * 0.09 - Math.random() * 0.05, obj: k });
+        }
+      });
+      cands.push({ x: 70, y: 8, w: 16, h: 14, score: 0.18 + Math.random() * 0.2, obj: -1 });
+      cands.push({ x: 4, y: 42, w: 20, h: 12, score: 0.12 + Math.random() * 0.2, obj: -1 });
+    }
+    function nms() {
+      const thr = gThr(), sc = gSc();
+      cands.forEach((c) => (c.state = c.score < sc ? "low" : "sup"));
+      const live = cands.filter((c) => c.state !== "low").sort((a, b) => b.score - a.score);
+      const kept = [];
+      live.forEach((c) => { if (kept.every((k) => iou(k, c) <= thr)) { c.state = "keep"; kept.push(c); } });
+      return kept;
+    }
+    function stats() {
+      const isNms = mode() === "nms";
+      $("iu-nmsctl").style.display = isNms ? "" : "none";
+      if (isNms) {
+        const kept = nms();
+        const realKept = new Set(kept.filter((c) => c.obj >= 0).map((c) => c.obj)).size;
+        $("k-iu-1").textContent = "후보 박스"; $("k-iu-2").textContent = "점수 미달"; $("k-iu-3").textContent = "살아남은 박스"; $("k-iu-4").textContent = "결과";
+        CB.stat("o-iu-1", cands.length + "개");
+        CB.stat("o-iu-2", cands.filter((c) => c.state === "low").length + "개");
+        CB.stat("o-iu-3", kept.length + "개");
+        const extra = kept.length - realKept;
+        CB.stat("o-iu-4", realKept < 2 ? "차 한 대를 놓침" : extra > 0 ? "중복·오검출 " + extra + "개" : "차 2대 정확");
+      } else {
+        const i = inter(gt, pr), u = gt.w * gt.h + pr.w * pr.h - i, v = i / u;
+        $("k-iu-1").textContent = "교집합"; $("k-iu-2").textContent = "합집합"; $("k-iu-3").textContent = "IoU"; $("k-iu-4").textContent = "판정 (기준 0.5)";
+        CB.stat("o-iu-1", F(i, 3)); CB.stat("o-iu-2", F(u, 4)); CB.stat("o-iu-3", v.toFixed(3));
+        CB.stat("o-iu-4", v >= 0.5 ? "TP (맞음)" : "FP (틀림)");
+      }
+    }
+    const canvas = $("cv-iou");
+    const cv = CB.canvas(canvas, (ctx, w, h) => {
+      const P = CB.palette(), s = Math.min(w / WW, h / WH), ox = (w - WW * s) / 2, oy = (h - WH * s) / 2;
+      view = { s, ox, oy };
+      const R = (b) => [ox + b.x * s, oy + b.y * s, b.w * s, b.h * s];
+      font(ctx, 12); ctx.textBaseline = "bottom"; ctx.textAlign = "left";
+      if (mode() === "iou") {
+        const ix = Math.max(gt.x, pr.x), iy = Math.max(gt.y, pr.y), ix2 = Math.min(gt.x + gt.w, pr.x + pr.w), iy2 = Math.min(gt.y + gt.h, pr.y + pr.h);
+        ctx.globalAlpha = 0.12; ctx.fillStyle = P.dim; ctx.fillRect(...R(gt)); ctx.fillRect(...R(pr)); ctx.globalAlpha = 1;
+        if (ix2 > ix && iy2 > iy) { ctx.globalAlpha = 0.45; ctx.fillStyle = P.warn; ctx.fillRect(ox + ix * s, oy + iy * s, (ix2 - ix) * s, (iy2 - iy) * s); ctx.globalAlpha = 1; }
+        [[gt, P.ok, "정답"], [pr, P.accent, "예측"]].forEach(([b, col, name]) => {
+          ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.strokeRect(...R(b));
+          ctx.fillStyle = col; ctx.fillRect(ox + (b.x + b.w) * s - 6, oy + (b.y + b.h) * s - 6, 12, 12);
+          ctx.fillText(name, ox + b.x * s + 2, oy + b.y * s - 3);
+        });
+      } else {
+        objs.forEach((o) => {
+          ctx.globalAlpha = 0.5; ctx.fillStyle = P.surface; ctx.fillRect(...R(o)); ctx.globalAlpha = 1;
+          ctx.strokeStyle = P.border; ctx.lineWidth = 1; ctx.strokeRect(...R(o));
+        });
+        const order = { low: 0, sup: 1, keep: 2 };
+        cands.slice().sort((a, b) => order[a.state] - order[b.state]).forEach((c) => {
+          const keep = c.state === "keep";
+          ctx.strokeStyle = keep ? P.accent : c.state === "low" ? P.faint : P.dim;
+          ctx.lineWidth = keep ? 2.5 : 1; ctx.setLineDash(keep ? [] : [4, 4]);
+          ctx.globalAlpha = keep ? 1 : 0.7; ctx.strokeRect(...R(c)); ctx.setLineDash([]);
+          if (keep) { ctx.fillStyle = P.accent; ctx.fillText(c.score.toFixed(2), ox + c.x * s + 2, oy + c.y * s - 3); }
+          ctx.globalAlpha = 1;
+        });
+        ctx.fillStyle = P.dim; ctx.textBaseline = "top";
+        ctx.fillText("실선: 채택 / 점선: 억제되거나 점수 미달", ox + 6, oy + 6);
+      }
+    }, { aspect: 0.6, maxHeight: 400 });
+
+    const refresh = () => { stats(); cv.redraw(); };
+    const mode = CB.seg("iu-mode", refresh);
+    const gThr = CB.range("iu-thr", (v) => v.toFixed(2), refresh);
+    const gSc = CB.range("iu-sc", (v) => v.toFixed(2), refresh);
+    $("iu-regen").addEventListener("click", () => { regen(); refresh(); });
+    CB.drag(canvas, {
+      down(p) {
+        if (mode() !== "iou") return false;
+        const x = (p.x - view.ox) / view.s, y = (p.y - view.oy) / view.s, hr = Math.max(4, 16 / view.s);
+        grab = null;
+        for (const b of [pr, gt]) {
+          if (Math.abs(x - (b.x + b.w)) < hr && Math.abs(y - (b.y + b.h)) < hr) { grab = { b, kind: "size" }; break; }
+        }
+        if (!grab) for (const b of [pr, gt]) {
+          if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) { grab = { b, kind: "move", dx: x - b.x, dy: y - b.y }; break; }
+        }
+        return !!grab;
+      },
+      move(p) {
+        const x = (p.x - view.ox) / view.s, y = (p.y - view.oy) / view.s, b = grab.b;
+        if (grab.kind === "size") { b.w = clamp(x - b.x, 6, WW - b.x); b.h = clamp(y - b.y, 6, WH - b.y); }
+        else { b.x = clamp(x - grab.dx, 0, WW - b.w); b.y = clamp(y - grab.dy, 0, WH - b.h); }
+        refresh();
+      },
+    });
+    regen(); refresh();
+  })();
+
+  /* ================================================================ 3. 정밀도–재현율 */
+  (function () {
+    const r = rng(11), NP = 120, NN = 160, zp = [], zn = [];
+    const gauss = () => { let u = 0; while (u === 0) u = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r()); };
+    for (let i = 0; i < NP; i++) zp.push(gauss());
+    for (let i = 0; i < NN; i++) zn.push(gauss());
+    const sig = (z) => 1 / (1 + Math.exp(-z));
+    let sp = [], sn = [], curve = [], ap = 0, cur = { tp: 0, fp: 0, fn: 0, p: 1, r: 0 };
+    const count = (t) => {
+      const tp = sp.filter((s) => s >= t).length, fp = sn.filter((s) => s >= t).length;
+      return { tp, fp, fn: NP - tp, p: tp + fp ? tp / (tp + fp) : 1, r: tp / NP };
+    };
+    function build() {
+      const d = gD();
+      sp = zp.map((z) => sig(1.2 * (z + d / 2)));
+      sn = zn.map((z) => sig(1.2 * (z - d / 2)));
+      curve = [];
+      for (let t = 1; t >= -0.0001; t -= 0.005) { const c = count(t); curve.push([c.r, c.p]); }
+      const env = curve.map((c) => c[1]);
+      for (let i = env.length - 2; i >= 0; i--) env[i] = Math.max(env[i], env[i + 1]);
+      ap = 0;
+      for (let i = 1; i < curve.length; i++) ap += (curve[i][0] - curve[i - 1][0]) * env[i];
+      update();
+    }
+    function update() {
+      cur = count(gT());
+      CB.stat("o-pr-tp", String(cur.tp)); CB.stat("o-pr-fp", String(cur.fp)); CB.stat("o-pr-fn", String(cur.fn));
+      CB.stat("o-pr-p", (cur.p * 100).toFixed(1) + " %"); CB.stat("o-pr-r", (cur.r * 100).toFixed(1) + " %");
+      CB.stat("o-pr-ap", ap.toFixed(3));
+      cv.redraw();
+    }
+    const cv = CB.canvas($("cv-pr"), (ctx, w, h) => {
+      const P = CB.palette(), wide = w >= 560;
+      const b1 = wide ? { x: 46, y: 26, w: w / 2 - 66, h: h - 26 - 48 } : { x: 46, y: 26, w: w - 62, h: h / 2 - 26 - 46 };
+      const b2 = wide ? { x: w / 2 + 46, y: 26, w: w / 2 - 62, h: h - 26 - 48 } : { x: 46, y: h / 2 + 22, w: w - 62, h: h / 2 - 22 - 48 };
+      const NB = 20, hp = new Array(NB).fill(0), hn = new Array(NB).fill(0);
+      sp.forEach((s) => hp[Math.min(NB - 1, Math.floor(s * NB))]++);
+      sn.forEach((s) => hn[Math.min(NB - 1, Math.floor(s * NB))]++);
+      const ymax = Math.max(10, ...hp, ...hn) * 1.12, t = gT();
+      const c1 = CB.chart(ctx, b1, { x: [0, 1], y: [0, ymax], xLabel: "신뢰도 점수", series: [], bands: [{ x0: t, x1: 1, color: "rgba(127,127,127,0.12)" }], vlines: [{ x: t, color: P.text, dash: [5, 4], width: 1.6 }] });
+      const bw = (c1.X(1 / NB) - c1.X(0)) / 2 - 0.5, y0 = c1.Y(0);
+      ctx.save(); ctx.globalAlpha = 0.8;
+      for (let i = 0; i < NB; i++) {
+        const x = c1.X(i / NB);
+        ctx.fillStyle = P.bad; ctx.fillRect(x + 0.5, c1.Y(hn[i]), bw, y0 - c1.Y(hn[i]));
+        ctx.fillStyle = P.ok; ctx.fillRect(x + 0.5 + bw, c1.Y(hp[i]), bw, y0 - c1.Y(hp[i]));
+      }
+      ctx.restore();
+      font(ctx, 12); ctx.textBaseline = "middle"; ctx.textAlign = "left";
+      ctx.fillStyle = P.ok; ctx.fillRect(b1.x, 9, 10, 10); ctx.fillStyle = P.dim; ctx.fillText("실제 물체", b1.x + 14, 14);
+      ctx.fillStyle = P.bad; ctx.fillRect(b1.x + 78, 9, 10, 10); ctx.fillStyle = P.dim; ctx.fillText("물체 아님", b1.x + 92, 14);
+      CB.chart(ctx, b2, { x: [0, 1], y: [0, 1.02], xLabel: "재현율", series: [{ data: curve, color: P.accent, width: 2.2 }], points: [{ x: cur.r, y: cur.p, color: P.warn, r: 5.5 }], yFmt: (v) => v.toFixed(1) });
+      ctx.fillStyle = P.dim; ctx.fillText("정밀도 (PR 곡선)", b2.x, b2.y - 12);
+    }, { aspect: 0.5, minHeight: 380, maxHeight: 400 });
+    const gT = CB.range("pr-t", (v) => v.toFixed(2), update);
+    const gD = CB.range("pr-d", (v) => v.toFixed(1), build);
+    build();
+  })();
+
+  /* ================================================================ 4. 칼만 필터 */
+  (function () {
+    const WW = 60, WH = 36, DT = 0.1;
+    const Fm = [[1, 0, DT, 0], [0, 1, 0, DT], [0, 0, 1, 0], [0, 0, 0, 1]];
+    const Hm = [[1, 0, 0, 0], [0, 1, 0, 0]], I4 = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]];
+    let x, P, truth, tsim, acc = 0, trailT, trailE, meas, eM, eE, gain = 0, view = { s: 1, ox: 0, oy: 0 }, dragging = false;
+    const path = (t) => ({ x: 30 + 22 * Math.sin(0.33 * t), y: 18 + 11 * Math.sin(0.66 * t) });
+    function reset() {
+      tsim = 0; truth = mode && mode() === "drag" && truth ? truth : path(0);
+      x = [[truth.x], [truth.y], [0], [0]];
+      P = [[9, 0, 0, 0], [0, 9, 0, 0], [0, 0, 25, 0], [0, 0, 0, 25]];
+      trailT = []; trailE = []; meas = []; eM = []; eE = [];
+    }
+    function step() {
+      tsim += DT;
+      if (mode() === "auto") truth = path(tsim);
+      const sz = gR(), q = gQ() ** 2, d4 = DT ** 4 / 4, d3 = DT ** 3 / 2, d2 = DT * DT;
+      const Q = [[d4 * q, 0, d3 * q, 0], [0, d4 * q, 0, d3 * q], [d3 * q, 0, d2 * q, 0], [0, d3 * q, 0, d2 * q]];
+      x = mul(Fm, x);
+      P = add(mul(mul(Fm, P), tr(Fm)), Q);
+      if (!$("kf-drop").checked) {
+        const z = [[truth.x + sz * CB.randn()], [truth.y + sz * CB.randn()]];
+        const S = add(mul(mul(Hm, P), tr(Hm)), [[sz * sz, 0], [0, sz * sz]]);
+        const K = mul(mul(P, tr(Hm)), inv2(S));
+        x = add(x, mul(K, sub(z, mul(Hm, x))));
+        P = mul(sub(I4, mul(K, Hm)), P);
+        gain = K[0][0];
+        meas.push({ x: z[0][0], y: z[1][0] }); if (meas.length > 70) meas.shift();
+        eM.push((z[0][0] - truth.x) ** 2 + (z[1][0] - truth.y) ** 2); if (eM.length > 150) eM.shift();
+      } else gain = 0;
+      eE.push((x[0][0] - truth.x) ** 2 + (x[1][0] - truth.y) ** 2); if (eE.length > 150) eE.shift();
+      trailT.push({ x: truth.x, y: truth.y }); trailE.push({ x: x[0][0], y: x[1][0] });
+      if (trailT.length > 190) { trailT.shift(); trailE.shift(); }
+    }
+    const rms = (a) => (a.length ? Math.sqrt(a.reduce((s, v) => s + v, 0) / a.length) : NaN);
+    function stats() {
+      CB.stat("o-kf-em", eM.length ? rms(eM).toFixed(2) + " m" : "—");
+      CB.stat("o-kf-ee", eE.length ? rms(eE).toFixed(2) + " m" : "—");
+      CB.stat("o-kf-k", $("kf-drop").checked ? "측정 없음" : gain.toFixed(2));
+      const e = eig2(P[0][0], P[0][1], P[1][1]), v = Math.hypot(x[2][0], x[3][0]);
+      CB.stat("o-kf-sig", Math.sqrt(e.l1).toFixed(2) + " m <small>/ " + v.toFixed(1) + " m/s</small>");
+    }
+    const canvas = $("cv-kf");
+    const cv = CB.canvas(canvas, (ctx, w, h) => {
+      const Pl = CB.palette(), s = Math.min(w / WW, h / WH), ox = (w - WW * s) / 2, oy = (h - WH * s) / 2;
+      view = { s, ox, oy };
+      const X = (v) => ox + v * s, Y = (v) => oy + v * s;
+      ctx.strokeStyle = Pl.grid; ctx.lineWidth = 1;
+      for (let g = 0; g <= WW; g += 10) { ctx.beginPath(); ctx.moveTo(X(g), Y(0)); ctx.lineTo(X(g), Y(WH)); ctx.stroke(); }
+      for (let g = 0; g <= WH; g += 10) { ctx.beginPath(); ctx.moveTo(X(0), Y(g)); ctx.lineTo(X(WW), Y(g)); ctx.stroke(); }
+      font(ctx, 11, true); ctx.fillStyle = Pl.faint; ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText("격자 10 m", X(0) + 4, Y(0) + 4);
+      const line = (pts, col, wd) => { ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.beginPath(); pts.forEach((p, i) => (i ? ctx.lineTo(X(p.x), Y(p.y)) : ctx.moveTo(X(p.x), Y(p.y)))); ctx.stroke(); };
+      line(trailT, Pl.dim, 1.5);
+      ctx.fillStyle = Pl.warn; ctx.globalAlpha = 0.75;
+      meas.forEach((m) => { ctx.beginPath(); ctx.arc(X(m.x), Y(m.y), 2.2, 0, Math.PI * 2); ctx.fill(); });
+      ctx.globalAlpha = 1;
+      line(trailE, Pl.accent, 2.5);
+      const ex = X(x[0][0]), ey = Y(x[1][0]);
+      covEllipse(ctx, ex, ey, P[0][0] * s * s, P[0][1] * s * s, P[1][1] * s * s, Pl.accent, 0.16, 1.8);
+      CB.arrow(ctx, ex, ey, ex + x[2][0] * s, ey + x[3][0] * s, Pl.accent2, 2);
+      ctx.fillStyle = Pl.accent; ctx.beginPath(); ctx.arc(ex, ey, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = Pl.text; ctx.beginPath(); ctx.arc(X(truth.x), Y(truth.y), 5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = Pl.bg; ctx.lineWidth = 1.5; ctx.stroke();
+      if ($("kf-drop").checked) { font(ctx, 13); ctx.fillStyle = Pl.bad; ctx.textAlign = "right"; ctx.fillText("측정 없음: 예측만 진행", X(WW) - 6, Y(0) + 5); }
+    }, { aspect: 0.6, maxHeight: 420 });
+    const mode = CB.seg("kf-mode", () => { if (mode() === "auto") tsim = 0; });
+    const gR = CB.range("kf-r", (v) => v.toFixed(1) + " m");
+    const gQ = CB.range("kf-q", (v) => v.toFixed(2) + " m/s²");
+    $("kf-reset").addEventListener("click", () => { reset(); stats(); cv.redraw(); });
+    CB.drag(canvas, {
+      down(p) { if (mode() !== "drag") mode.set("drag"); dragging = true; this.move(p); },
+      move(p) { truth = { x: clamp((p.x - view.ox) / view.s, 0, WW), y: clamp((p.y - view.oy) / view.s, 0, WH) }; },
+      up() { dragging = false; },
+    });
+    reset();
+    CB.loop(canvas, (dt) => {
+      acc += dt;
+      let n = 0;
+      while (acc >= DT && n < 4) { step(); acc -= DT; n++; }
+      if (n) { stats(); cv.redraw(); }
+    });
+  })();
+
+  /* ================================================================ 5. 점유 격자 */
+  (function () {
+    const GW = 48, GH = 28, CELL = 0.5, LO = 0.85, LF = -0.41, LMAX = 5, NR = 90;
+    const truth = new Uint8Array(GW * GH), L = new Float32Array(GW * GH);
+    const box = (x0, y0, x1, y1) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) truth[y * GW + x] = 1; };
+    box(0, 0, GW - 1, 0); box(0, GH - 1, GW - 1, GH - 1); box(0, 0, 0, GH - 1); box(GW - 1, 0, GW - 1, GH - 1);
+    box(13, 1, 13, 9); box(13, 16, 13, 26); box(21, 8, 30, 8); box(22, 17, 24, 21); box(35, 4, 38, 7); box(36, 16, 44, 16); box(30, 22, 30, 26);
+    let sx = 6.5, sy = 14.5, rays = [], scans = 0, acc = 0, cs = 8, ox = 0, oy = 0;
+    const occ = (cx, cy) => cx < 0 || cy < 0 || cx >= GW || cy >= GH || truth[cy * GW + cx] === 1;
+
+    function scan() {
+      const maxR = gR() / CELL, sg = gN() / CELL;
+      rays = [];
+      for (let i = 0; i < NR; i++) {
+        const a = (i / NR) * Math.PI * 2 + scans * 0.013, c = Math.cos(a), s = Math.sin(a);
+        let r = 0, hit = false;
+        while (r < maxR) { r += 0.2; if (occ(Math.floor(sx + c * r), Math.floor(sy + s * r))) { hit = true; break; } }
+        const rm = hit ? Math.max(0.3, r + sg * CB.randn()) : maxR;
+        let last = -1;
+        for (let q = 0; q < rm - 0.7; q += 0.3) {
+          const cx = Math.floor(sx + c * q), cy = Math.floor(sy + s * q);
+          if (cx < 0 || cy < 0 || cx >= GW || cy >= GH) break;
+          const idx = cy * GW + cx;
+          if (idx !== last) { L[idx] = Math.max(-LMAX, L[idx] + LF); last = idx; }
+        }
+        if (hit) {
+          const cx = Math.floor(sx + c * rm), cy = Math.floor(sy + s * rm);
+          if (cx >= 0 && cy >= 0 && cx < GW && cy < GH) L[cy * GW + cx] = Math.min(LMAX, L[cy * GW + cx] + LO);
+        }
+        rays.push([sx + c * rm, sy + s * rm, hit]);
+      }
+      scans++;
+    }
+    function stats() {
+      let known = 0, err = 0;
+      for (let i = 0; i < L.length; i++) if (Math.abs(L[i]) > 1) { known++; if ((L[i] > 0) !== (truth[i] === 1)) err++; }
+      CB.stat("o-og-known", ((known / L.length) * 100).toFixed(0) + " %");
+      CB.stat("o-og-err", err + "칸");
+      CB.stat("o-og-scan", String(scans));
+    }
+    const canvas = $("cv-og");
+    const cv = CB.canvas(canvas, (ctx, w, h) => {
+      const P = CB.palette();
+      cs = Math.min(w / GW, h / GH); ox = (w - GW * cs) / 2; oy = (h - GH * cs) / 2;
+      ctx.fillStyle = P.text;
+      for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+        const p = 1 / (1 + Math.exp(-L[y * GW + x]));
+        ctx.globalAlpha = 0.04 + p * 0.9;
+        ctx.fillRect(ox + x * cs, oy + y * cs, cs + 0.5, cs + 0.5);
+      }
+      ctx.globalAlpha = 1;
+      if ($("og-truth").checked) {
+        ctx.fillStyle = P.bad; ctx.globalAlpha = 0.45;
+        for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) if (truth[y * GW + x]) ctx.fillRect(ox + x * cs + cs * 0.25, oy + y * cs + cs * 0.25, cs * 0.5, cs * 0.5);
+        ctx.globalAlpha = 1;
+      }
+      ctx.strokeStyle = P.accent; ctx.lineWidth = 1; ctx.globalAlpha = 0.28;
+      ctx.beginPath();
+      rays.forEach(([ex, ey]) => { ctx.moveTo(ox + sx * cs, oy + sy * cs); ctx.lineTo(ox + ex * cs, oy + ey * cs); });
+      ctx.stroke(); ctx.globalAlpha = 1;
+      ctx.fillStyle = P.accent2;
+      rays.forEach(([ex, ey, hit]) => { if (hit) ctx.fillRect(ox + ex * cs - 1.2, oy + ey * cs - 1.2, 2.4, 2.4); });
+      CB.carTop(ctx, ox + sx * cs, oy + sy * cs, 0, { len: Math.max(18, cs * 3.4) });
+    }, { aspect: GH / GW, maxHeight: 440 });
+    const gN = CB.range("og-n", (v) => v.toFixed(2) + " m");
+    const gR = CB.range("og-r", (v) => v.toFixed(1) + " m");
+    $("og-truth").addEventListener("change", () => cv.redraw());
+    $("og-reset").addEventListener("click", () => { L.fill(0); scans = 0; rays = []; stats(); cv.redraw(); });
+    CB.drag(canvas, {
+      down(p) { this.move(p); },
+      move(p) {
+        const nx = clamp((p.x - ox) / cs, 1.2, GW - 1.2), ny = clamp((p.y - oy) / cs, 1.2, GH - 1.2);
+        if (!occ(Math.floor(nx), Math.floor(ny))) { sx = nx; sy = ny; }
+      },
+    });
+    CB.loop(canvas, (dt) => {
+      acc += dt;
+      if (acc < 0.09) return;
+      acc = 0; scan(); stats(); cv.redraw();
+    });
+  })();
+
+  /* ================================================================ 6. 파티클 필터 */
+  (function () {
+    const WW = 80, WH = 44, RX = 28, RY = 13, CX = 40, CY = 22, MAXR = 20, STEP = 2;
+    const LM = [[10, 7], [27, 3], [48, 4], [70, 9], [75, 25], [65, 40], [43, 41], [19, 38], [5, 27], [29, 23], [53, 21], [41, 13]];
+    let th = 0, parts = [], est = { x: CX, y: CY }, k = 0, neff = 0, sd = 0, seen = [], acc = 0;
+    const pos = (t) => ({ x: CX + RX * Math.cos(t), y: CY + RY * Math.sin(t) });
+    function spread() {
+      const n = gN();
+      parts = [];
+      for (let i = 0; i < n; i++) parts.push({ x: Math.random() * WW, y: Math.random() * WH, w: 1 / n });
+      k = 0; summarize();
+    }
+    function summarize() {
+      let mx = 0, my = 0, sw = 0, s2 = 0;
+      parts.forEach((p) => { mx += p.x * p.w; my += p.y * p.w; sw += p.w; s2 += p.w * p.w; });
+      mx /= sw; my /= sw;
+      let v = 0; parts.forEach((p) => (v += (p.w / sw) * ((p.x - mx) ** 2 + (p.y - my) ** 2)));
+      est = { x: mx, y: my }; sd = Math.sqrt(v); neff = (sw * sw) / s2;
+      const c = pos(th);
+      seen = LM.filter((l) => Math.hypot(l[0] - c.x, l[1] - c.y) <= MAXR);
+      CB.stat("o-pf-err", Math.hypot(mx - c.x, my - c.y).toFixed(1) + " m");
+      CB.stat("o-pf-sd", sd.toFixed(1) + " m");
+      CB.stat("o-pf-neff", Math.round(neff) + " <small>/ " + parts.length + "</small>");
+      CB.stat("o-pf-k", String(k));
+    }
+    function step() {
+      const a = pos(th);
+      th += STEP / Math.hypot(RX * Math.sin(th), RY * Math.cos(th));
+      const b = pos(th), dx = b.x - a.x, dy = b.y - a.y, sg = gS(), se = Math.max(sg, 0.6) * 1.5;
+      const z = LM.map((l) => Math.hypot(l[0] - b.x, l[1] - b.y)).filter((d) => d <= MAXR).map((d) => d + sg * CB.randn());
+      let sw = 0;
+      parts.forEach((p) => {
+        p.x += dx + 0.25 * CB.randn(); p.y += dy + 0.25 * CB.randn();
+        const d = LM.map((l) => Math.hypot(l[0] - p.x, l[1] - p.y));
+        let w = Math.exp(-0.7 * Math.abs(d.filter((v) => v <= MAXR).length - z.length));
+        z.forEach((zk) => {
+          let best = Infinity;
+          d.forEach((v) => { const e = Math.abs(v - zk); if (e < best) best = e; });
+          w *= Math.exp(-(best * best) / (2 * se * se)) + 1e-4;
+        });
+        if (p.x < 0 || p.y < 0 || p.x > WW || p.y > WH) w *= 1e-3;
+        p.w = w; sw += w;
+      });
+      parts.forEach((p) => (p.w /= sw));
+      k++; summarize();
+      const n = parts.length, next = [], st = 1 / n;
+      let u = Math.random() * st, c = parts[0].w, i = 0;
+      for (let j = 0; j < n; j++) {
+        while (u > c && i < n - 1) { i++; c += parts[i].w; }
+        next.push({ x: parts[i].x + 0.2 * CB.randn(), y: parts[i].y + 0.2 * CB.randn(), w: st });
+        u += st;
+      }
+      parts = next;
+      cv.redraw();
+    }
+    const canvas = $("cv-pf");
+    const cv = CB.canvas(canvas, (ctx, w, h) => {
+      const P = CB.palette(), s = Math.min(w / WW, h / WH), ox = (w - WW * s) / 2, oy = (h - WH * s) / 2;
+      const X = (v) => ox + v * s, Y = (v) => oy + v * s;
+      ctx.strokeStyle = P.surface; ctx.lineWidth = 7 * s; ctx.beginPath(); ctx.ellipse(X(CX), Y(CY), RX * s, RY * s, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = P.border; ctx.lineWidth = 1; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.ellipse(X(CX), Y(CY), RX * s, RY * s, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      const c = pos(th);
+      ctx.strokeStyle = P.warn; ctx.globalAlpha = 0.35; ctx.setLineDash([3, 4]);
+      seen.forEach((l) => { ctx.beginPath(); ctx.moveTo(X(c.x), Y(c.y)); ctx.lineTo(X(l[0]), Y(l[1])); ctx.stroke(); });
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+      LM.forEach((l) => {
+        const on = seen.indexOf(l) >= 0, r = on ? 6 : 5;
+        ctx.fillStyle = on ? P.warn : P.dim;
+        ctx.beginPath(); ctx.moveTo(X(l[0]), Y(l[1]) - r); ctx.lineTo(X(l[0]) + r, Y(l[1]) + r * 0.8); ctx.lineTo(X(l[0]) - r, Y(l[1]) + r * 0.8); ctx.closePath(); ctx.fill();
+      });
+      ctx.fillStyle = P.accent; ctx.globalAlpha = parts.length > 600 ? 0.35 : 0.55;
+      parts.forEach((p) => ctx.fillRect(X(p.x) - 1.2, Y(p.y) - 1.2, 2.4, 2.4));
+      ctx.globalAlpha = 1;
+      const hd = Math.atan2(RY * Math.cos(th), -RX * Math.sin(th));
+      CB.carTop(ctx, X(c.x), Y(c.y), hd, { len: Math.max(16, 4.5 * s), color: P.text });
+      ctx.strokeStyle = P.ok; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(X(est.x), Y(est.y), 8, 0, Math.PI * 2); ctx.moveTo(X(est.x) - 12, Y(est.y)); ctx.lineTo(X(est.x) + 12, Y(est.y)); ctx.moveTo(X(est.x), Y(est.y) - 12); ctx.lineTo(X(est.x), Y(est.y) + 12); ctx.stroke();
+      font(ctx, 12); ctx.fillStyle = P.dim; ctx.textAlign = "left"; ctx.textBaseline = "top";
+      ctx.fillText("점: 입자 / 원+십자: 추정 위치", ox + 6, oy + 5);
+    }, { aspect: WH / WW, maxHeight: 420 });
+    const gN = CB.range("pf-n", (v) => String(v), () => { spread(); cv.redraw(); });
+    const gS = CB.range("pf-s", (v) => v.toFixed(1) + " m");
+    const loop = CB.loop(canvas, (dt) => { acc += dt; if (acc >= 0.22) { acc = 0; step(); } });
+    loop.stop();
+    const btn = $("pf-auto");
+    btn.addEventListener("click", () => { btn.textContent = loop.toggle() ? "정지" : "자동 실행"; });
+    $("pf-step").addEventListener("click", step);
+    $("pf-reset").addEventListener("click", () => { spread(); cv.redraw(); });
+    spread(); cv.redraw();
+  })();
+
+  /* ================================================================ 7. 클러스터링 */
+  (function () {
+    const XR = 16, YR = 22, RMAX = 30;
+    const init = () => [
+      { kind: "rect", cx: -6, cy: 11, l: 4.5, w: 1.8, yaw: Math.PI / 2 },
+      { kind: "rect", cx: 3.5, cy: 17, l: 4.5, w: 1.8, yaw: 1.35 },
+      { kind: "rect", cx: 11.5, cy: 9, l: 11, w: 0.3, yaw: Math.PI / 2 },
+      { kind: "circ", cx: -1.6, cy: 7.5, r: 0.3 },
+      { kind: "circ", cx: -0.7, cy: 7.8, r: 0.3 },
+      { kind: "circ", cx: 6, cy: 6, r: 0.3 },
+    ];
+    let objs = init(), pts = [], clusters = [], view = { s: 1, w: 0, h: 0 }, grab = null;
+    function poly(o) {
+      if (o.kind === "circ") { const a = []; for (let i = 0; i < 10; i++) a.push([o.cx + o.r * Math.cos(i * Math.PI / 5), o.cy + o.r * Math.sin(i * Math.PI / 5)]); return a; }
+      const c = Math.cos(o.yaw), s = Math.sin(o.yaw);
+      return [[1, 1], [1, -1], [-1, -1], [-1, 1]].map(([a, b]) => [o.cx + (a * o.l / 2) * c - (b * o.w / 2) * s, o.cy + (a * o.l / 2) * s + (b * o.w / 2) * c]);
+    }
+    function compute() {
+      const res = gRes() * Math.PI / 180, eps = gEps(), rnd = rng(5);
+      const segs = [];
+      objs.forEach((o) => { const p = poly(o); p.forEach((a, i) => segs.push([a, p[(i + 1) % p.length]])); });
+      pts = [];
+      for (let ang = 12 * Math.PI / 180; ang <= 168 * Math.PI / 180; ang += res) {
+        const dx = Math.cos(ang), dy = Math.sin(ang);
+        let best = RMAX;
+        segs.forEach(([a, b]) => {
+          const ex = b[0] - a[0], ey = b[1] - a[1], den = dx * ey - dy * ex;
+          if (Math.abs(den) < 1e-9) return;
+          const t = (a[0] * ey - a[1] * ex) / den, u = (a[0] * dy - a[1] * dx) / den;
+          if (t > 0.2 && u >= 0 && u <= 1 && t < best) best = t;
+        });
+        if (best < RMAX) { const r = best + 0.03 * (rnd() - 0.5) * 2; pts.push({ x: dx * r, y: dy * r, c: -1 }); }
+      }
+      clusters = [];
+      const e2 = eps * eps;
+      pts.forEach((p, i) => {
+        if (p.c >= 0) return;
+        const id = clusters.length, members = [i], queue = [i];
+        p.c = id;
+        while (queue.length) {
+          const a = pts[queue.pop()];
+          pts.forEach((b, j) => { if (b.c < 0 && (a.x - b.x) ** 2 + (a.y - b.y) ** 2 <= e2) { b.c = id; members.push(j); queue.push(j); } });
+        }
+        clusters.push(members);
+      });
+      const real = clusters.filter((m) => m.length >= 2).length;
+      CB.stat("o-cl-pts", String(pts.length));
+      CB.stat("o-cl-n", real + " <small>/ " + objs.length + "</small>");
+      CB.stat("o-cl-res", real > objs.length ? "과분할(쪼개짐)" : real < objs.length ? "병합(합쳐짐)" : "개수 일치");
+      cv.redraw();
+    }
+    const canvas = $("cv-cl");
+    const cv = CB.canvas(canvas, (ctx, w, h) => {
+      const P = CB.palette(), s = Math.min(w / (2 * XR), (h - 14) / YR);
+      view = { s, w, h };
+      const X = (v) => w / 2 + v * s, Y = (v) => h - 8 - v * s;
+      const cols = [P.accent, P.accent2, P.ok, P.warn, P.bad, P.blue, P.green, P.red];
+      ctx.strokeStyle = P.grid; ctx.lineWidth = 1;
+      for (let r = 5; r <= 25; r += 5) { ctx.beginPath(); ctx.arc(X(0), Y(0), r * s, Math.PI, Math.PI * 2); ctx.stroke(); }
+      font(ctx, 11, true); ctx.fillStyle = P.faint; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+      for (let r = 5; r <= 20; r += 5) ctx.fillText(r + " m", X(0), Y(r) - 2);
+      objs.forEach((o) => {
+        const p = poly(o);
+        ctx.beginPath(); p.forEach((q, i) => (i ? ctx.lineTo(X(q[0]), Y(q[1])) : ctx.moveTo(X(q[0]), Y(q[1])))); ctx.closePath();
+        ctx.globalAlpha = 0.5; ctx.fillStyle = P.surface; ctx.fill(); ctx.globalAlpha = 1;
+        ctx.strokeStyle = P.border; ctx.lineWidth = 1; ctx.stroke();
+      });
+      let ci = 0;
+      clusters.forEach((m) => {
+        const single = m.length < 2, col = single ? P.faint : cols[ci++ % cols.length];
+        let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+        ctx.fillStyle = col;
+        m.forEach((i) => {
+          const p = pts[i];
+          x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y);
+          ctx.beginPath(); ctx.arc(X(p.x), Y(p.y), 2, 0, Math.PI * 2); ctx.fill();
+        });
+        if (single) return;
+        ctx.strokeStyle = col; ctx.lineWidth = 1.6;
+        ctx.strokeRect(X(x0) - 4, Y(y1) - 4, (x1 - x0) * s + 8, (y1 - y0) * s + 8);
+        ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.fillText(m.length + "점", X(x0) - 4, Y(y1) - 6);
+      });
+      ctx.fillStyle = P.text; ctx.beginPath(); ctx.arc(X(0), Y(0), 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = P.dim; ctx.textAlign = "left"; ctx.textBaseline = "bottom"; font(ctx, 12); ctx.fillText("라이다", X(0) + 9, Y(0) + 2);
+    }, { aspect: 0.7, maxHeight: 440 });
+    const gEps = CB.range("cl-eps", (v) => v.toFixed(2) + " m", compute);
+    const gRes = CB.range("cl-res", (v) => v.toFixed(1) + "°", compute);
+    $("cl-reset").addEventListener("click", () => { objs = init(); compute(); });
+    const toW = (p) => ({ x: (p.x - view.w / 2) / view.s, y: (view.h - 8 - p.y) / view.s });
+    CB.drag(canvas, {
+      down(p) {
+        const q = toW(p);
+        let best = null, bd = 1e9;
+        objs.forEach((o) => { const d = Math.hypot(q.x - o.cx, q.y - o.cy), lim = o.kind === "circ" ? 1.4 : Math.max(2, o.l / 2); if (d < lim && d < bd) { bd = d; best = o; } });
+        if (!best) return false;
+        grab = { o: best, dx: q.x - best.cx, dy: q.y - best.cy };
+      },
+      move(p) {
+        const q = toW(p);
+        grab.o.cx = clamp(q.x - grab.dx, -XR + 1, XR - 1); grab.o.cy = clamp(q.y - grab.dy, 2.5, YR - 1);
+        compute();
+      },
+    });
+    compute();
+  })();
+
+  /* ================================================================ 8. 융합 */
+  (function () {
+    const YMAX = 90, XH = 34, SC_ANG = 0.2 * Math.PI / 180, SR_RNG = 0.25;
+    let tgt = { x: 8, y: 58 }, nz = [0, 0, 0, 0], view = { s: 1, cx: 0, by: 0 }, res = null;
+    const roll = () => { nz = [CB.randn(), CB.randn(), CB.randn(), CB.randn()].map((v) => clamp(v, -1.8, 1.8)); };
+    function compute() {
+      const r = Math.hypot(tgt.x, tgt.y), u = [tgt.x / r, tgt.y / r], t = [u[1], -u[0]];
+      const cR = (gC() / 100) * r, cT = r * Math.tan(SC_ANG), rR = SR_RNG, rT = r * Math.tan(gA() * Math.PI / 180);
+      const cov = (sr, st) => [[sr * sr * u[0] * u[0] + st * st * t[0] * t[0], sr * sr * u[0] * u[1] + st * st * t[0] * t[1]], [sr * sr * u[0] * u[1] + st * st * t[0] * t[1], sr * sr * u[1] * u[1] + st * st * t[1] * t[1]]];
+      const Pc = cov(cR, cT), Pr = cov(rR, rT);
+      const zc = [[tgt.x + cR * nz[0] * u[0] + cT * nz[1] * t[0]], [tgt.y + cR * nz[0] * u[1] + cT * nz[1] * t[1]]];
+      const zr = [[tgt.x + rR * nz[2] * u[0] + rT * nz[3] * t[0]], [tgt.y + rR * nz[2] * u[1] + rT * nz[3] * t[1]]];
+      const Ic = inv2(Pc), Ir = inv2(Pr), Pf = inv2(add(Ic, Ir));
+      const xf = mul(Pf, add(mul(Ic, zc), mul(Ir, zr)));
+      const ef = eig2(Pf[0][0], Pf[0][1], Pf[1][1]);
+      res = { Pc, Pr, Pf, zc, zr, xf, ext: Math.max(cR, rT, cT, rR) };
+      const m = (v) => (v < 1 ? v.toFixed(2) : v.toFixed(1));
+      CB.stat("o-fu-c", m(cR) + " × " + m(cT) + " m");
+      CB.stat("o-fu-r", m(rR) + " × " + m(rT) + " m");
+      CB.stat("o-fu-f", m(Math.sqrt(ef.l1)) + " × " + m(Math.sqrt(ef.l2)) + " m");
+      const area = Math.sqrt(ef.l1 * ef.l2) / Math.min(cR * cT, rR * rT);
+      CB.stat("o-fu-area", (area * 100).toFixed(0) + " % <small>거리 " + r.toFixed(0) + " m</small>");
+      cv.redraw();
+    }
+    const canvas = $("cv-fu");
+    const cv = CB.canvas(canvas, (ctx, w, h) => {
+      if (!res) return;
+      const P = CB.palette(), wide = w >= 560;
+      const mw = wide ? w * 0.6 : w, mh = wide ? h : h * 0.56;
+      const s = Math.min(mw / (2 * XH), (mh - 22) / YMAX), cx = mw / 2, by = mh - 12;
+      view = { s, cx, by };
+      const draw = (X, Y, sc, big) => {
+        const ell = (C, z, col) => {
+          covEllipse(ctx, X(z[0][0]), Y(z[1][0]), C[0][0] * sc * sc, -C[0][1] * sc * sc, C[1][1] * sc * sc, col, 0.16, big ? 2 : 1.6);
+          ctx.fillStyle = col; ctx.beginPath(); ctx.arc(X(z[0][0]), Y(z[1][0]), big ? 3.5 : 2.5, 0, Math.PI * 2); ctx.fill();
+        };
+        ell(res.Pc, res.zc, P.accent); ell(res.Pr, res.zr, P.accent2); ell(res.Pf, res.xf, P.ok);
+        const tx = X(tgt.x), ty = Y(tgt.y), a = big ? 8 : 6;
+        ctx.strokeStyle = P.text; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(tx - a, ty); ctx.lineTo(tx + a, ty); ctx.moveTo(tx, ty - a); ctx.lineTo(tx, ty + a); ctx.stroke();
+      };
+      const X = (v) => cx + v * s, Y = (v) => by - v * s;
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, mw, mh); ctx.clip();
+      ctx.strokeStyle = P.grid; ctx.lineWidth = 1;
+      font(ctx, 11, true); ctx.fillStyle = P.faint; ctx.textAlign = "left"; ctx.textBaseline = "bottom";
+      for (let r = 20; r <= 80; r += 20) { ctx.beginPath(); ctx.arc(X(0), Y(0), r * s, Math.PI, Math.PI * 2); ctx.stroke(); ctx.fillText(r + " m", X(0) + 3, Y(r) - 2); }
+      ctx.strokeStyle = P.faint; ctx.setLineDash([4, 5]); ctx.beginPath(); ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(tgt.x), Y(tgt.y)); ctx.stroke(); ctx.setLineDash([]);
+      CB.carTop(ctx, X(0), Y(0) + 2, -Math.PI / 2, { len: Math.max(16, 4.5 * s) });
+      draw(X, Y, s, false);
+      ctx.restore();
+      const size = wide ? Math.min(w * 0.36, h - 56) : Math.min(w - 40, h * 0.44 - 44);
+      const ix = wide ? w * 0.6 + (w * 0.4 - size) / 2 : (w - size) / 2, iy = wide ? 30 : mh + 24;
+      ctx.fillStyle = P.surface; ctx.fillRect(ix, iy, size, size);
+      ctx.strokeStyle = P.border; ctx.lineWidth = 1; ctx.strokeRect(ix, iy, size, size);
+      const half = Math.max(1.5, res.ext * K95 * 1.15), zs = size / (2 * half);
+      ctx.save(); ctx.beginPath(); ctx.rect(ix, iy, size, size); ctx.clip();
+      draw((v) => ix + size / 2 + (v - tgt.x) * zs, (v) => iy + size / 2 - (v - tgt.y) * zs, zs, true);
+      ctx.restore();
+      font(ctx, 12); ctx.textBaseline = "bottom"; ctx.textAlign = "left"; ctx.fillStyle = P.dim;
+      ctx.fillText("확대 (한 변 " + (2 * half).toFixed(0) + " m)", ix, iy - 5);
+      ctx.textBaseline = "top";
+      const ly = iy + size + 8;
+      [["카메라", P.accent], ["레이더", P.accent2], ["융합", P.ok]].forEach(([name, col], i) => {
+        const lx = ix + i * (size / 3);
+        ctx.fillStyle = col; ctx.fillRect(lx, ly + 2, 10, 10); ctx.fillStyle = P.dim; ctx.fillText(name, lx + 14, ly);
+      });
+    }, { aspect: 0.56, minHeight: 400, maxHeight: 430 });
+    const gC = CB.range("fu-c", (v) => v + " %", compute);
+    const gA = CB.range("fu-a", (v) => v.toFixed(1) + "°", compute);
+    $("fu-new").addEventListener("click", () => { roll(); compute(); });
+    CB.drag(canvas, {
+      down(p) { this.move(p); },
+      move(p) {
+        tgt = { x: clamp((p.x - view.cx) / view.s, -XH + 6, XH - 6), y: clamp((view.by - p.y) / view.s, 12, YMAX - 6) };
+        compute();
+      },
+    });
+    roll(); compute();
+  })();
+})();
+</script>
+</body>
+</html>

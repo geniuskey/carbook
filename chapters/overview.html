@@ -1,0 +1,1364 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>자동차의 전체 그림 · CarBook</title>
+<meta name="description" content="자동차가 에너지를 저장하고 동력으로 바꿔 바퀴와 노면까지 전달하는 전체 구조를 3D 투시도, 동력 흐름, 구동 레이아웃, 치수, 에너지 흐름 시뮬레이터로 훑는다.">
+<link rel="canonical" href="https://carbook.euiyun.com/chapters/overview.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="CarBook">
+<meta property="og:title" content="자동차의 전체 그림 · CarBook">
+<meta property="og:description" content="자동차가 에너지를 저장하고 동력으로 바꿔 바퀴와 노면까지 전달하는 전체 구조를 3D 투시도, 동력 흐름, 구동 레이아웃, 치수, 에너지 흐름 시뮬레이터로 훑는다.">
+<meta property="og:url" content="https://carbook.euiyun.com/chapters/overview.html">
+<meta property="og:image" content="https://carbook.euiyun.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TechArticle","headline":"자동차의 전체 그림","name":"자동차의 전체 그림 · CarBook","url":"https://carbook.euiyun.com/chapters/overview.html","mainEntityOfPage":"https://carbook.euiyun.com/chapters/overview.html","inLanguage":"ko","isAccessibleForFree":true,"learningResourceType":"interactive textbook chapter","position":1,"image":"https://carbook.euiyun.com/og.png","dateModified":"2026-10-02","isPartOf":{"@type":"Book","@id":"https://carbook.euiyun.com/#book","name":"CarBook — 인터랙티브 자동차 교과서","url":"https://carbook.euiyun.com/"},"publisher":{"@type":"Organization","name":"CarBook","url":"https://carbook.euiyun.com/"},"description":"자동차가 에너지를 저장하고 동력으로 바꿔 바퀴와 노면까지 전달하는 전체 구조를 3D 투시도, 동력 흐름, 구동 레이아웃, 치수, 에너지 흐름 시뮬레이터로 훑는다."},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"CarBook","item":"https://carbook.euiyun.com/"},{"@type":"ListItem","position":2,"name":"01 자동차의 전체 그림","item":"https://carbook.euiyun.com/chapters/overview.html"}]}]}</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="../css/style.css">
+<script src="../js/common.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+  .x3-info { padding: 12px 18px; border-top: 1px solid var(--border); font-size: 14.5px; line-height: 1.6; color: var(--text-dim); min-height: 4.6em; }
+  .x3-info b { color: var(--text); margin-right: 6px; }
+  .uc-grid { display: grid; gap: 12px; padding: 16px 18px; border-top: 1px solid var(--border); }
+  .uc-row { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; }
+  .uc-row > b { grid-column: 1 / -1; font-size: 13px; color: var(--text-dim); font-weight: 600; }
+  .uc-row label { display: grid; gap: 3px; font-size: 12px; color: var(--text-dim); min-width: 0; }
+  .uc-row input { font-family: var(--mono); font-size: 14px; width: 100%; min-width: 0; padding: 7px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+  .uc-row input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .ov-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ov-chips a { font-size: 13px; padding: 2px 9px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); }
+</style>
+</head>
+<body data-chapter="overview">
+<main class="chapter">
+  <header class="chapter-hero">
+    <div class="eyebrow">Chapter 01</div>
+    <h1>자동차의 전체 그림</h1>
+    <p class="lead">자동차는 약 3만 개의 부품으로 이루어져 있지만, 하는 일은 한 문장으로 줄일 수 있다. 싣고 다니는 에너지를 회전하는 힘으로 바꾸어 네 개의 타이어를 통해 노면을 밀어내는 것이다. 이 장은 세부로 들어가기 전에 차 한 대를 통째로 훑는다. 어떤 부품이 어디에 있고, 힘이 어떤 길로 흐르며, 제원표의 숫자가 무엇을 뜻하는지를 손으로 만져 가며 익힌다.</p>
+    <ul class="objectives">
+      <li>에너지 저장 → 동력 변환 → 전달 → 접지로 이어지는 자동차의 기본 구조를 설명한다.</li>
+      <li>파워트레인·섀시·차체·전장의 네 시스템과 주요 부품의 위치를 3D로 파악한다.</li>
+      <li>기어비와 종감속비가 엔진의 회전수와 토크를 바퀴에서 어떻게 바꾸는지 계산한다.</li>
+      <li>FF·FR·MR·RR·AWD 레이아웃의 무게 배분과 구동 접지력의 차이를 이해한다.</li>
+      <li>휠베이스, 오버행, 최저 지상고 같은 치수와 출력·토크·연비 단위를 읽는다.</li>
+      <li>내연기관차와 전기차에서 에너지가 어디로 빠져나가는지 비교한다.</li>
+    </ul>
+  </header>
+
+  <!-- =============================================================== 1 -->
+  <section id="what">
+    <h2>자동차는 무엇을 하는 기계인가</h2>
+    <p>자동차를 가장 단순하게 보면 네 단계로 된 에너지 사슬이다. 먼저 에너지를 <b>저장</b>한다(연료 탱크 또는 배터리). 그 에너지를 회전 운동으로 <b>변환</b>한다(엔진 또는 모터). 회전을 필요한 속도와 힘으로 바꿔 바퀴까지 <b>전달</b>한다(변속기와 구동축). 마지막으로 타이어가 노면을 뒤로 밀고, 그 반작용으로 차가 앞으로 나아간다(<b>접지</b>). 달리는 것뿐 아니라 서고(브레이크) 도는 것(조향)도 결국 타이어와 노면 사이의 힘으로 이루어진다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 230" role="img" aria-label="에너지 저장에서 노면까지의 사슬">
+        <defs><marker id="ov-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker>
+        <marker id="ov-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--red)"/></marker></defs>
+        <g>
+          <rect x="14" y="40" width="150" height="84" rx="10" class="f-acc2-soft"/>
+          <text x="89" y="70" class="t" text-anchor="middle" font-weight="700">① 저장</text>
+          <text x="89" y="92" class="t-dim" text-anchor="middle">연료 탱크 · 배터리</text>
+          <text x="89" y="110" class="t-mono" text-anchor="middle">화학 에너지</text>
+          <rect x="208" y="40" width="150" height="84" rx="10" class="f-acc-soft"/>
+          <text x="283" y="70" class="t" text-anchor="middle" font-weight="700">② 변환</text>
+          <text x="283" y="92" class="t-dim" text-anchor="middle">엔진 · 모터</text>
+          <text x="283" y="110" class="t-mono" text-anchor="middle">토크 × 회전수</text>
+          <rect x="402" y="40" width="150" height="84" rx="10" class="f-surface"/>
+          <text x="477" y="70" class="t" text-anchor="middle" font-weight="700">③ 전달</text>
+          <text x="477" y="92" class="t-dim" text-anchor="middle">변속기 · 구동축</text>
+          <text x="477" y="110" class="t-mono" text-anchor="middle">감속 = 토크 증폭</text>
+          <rect x="596" y="40" width="150" height="84" rx="10" class="f-surface"/>
+          <text x="671" y="70" class="t" text-anchor="middle" font-weight="700">④ 접지</text>
+          <text x="671" y="92" class="t-dim" text-anchor="middle">타이어 ↔ 노면</text>
+          <text x="671" y="110" class="t-mono" text-anchor="middle">구동력 F</text>
+        </g>
+        <g stroke="var(--accent)" stroke-width="2.5" marker-end="url(#ov-ah)">
+          <line x1="166" y1="82" x2="204" y2="82"/><line x1="360" y1="82" x2="398" y2="82"/><line x1="554" y1="82" x2="592" y2="82"/>
+        </g>
+        <g stroke="var(--red)" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ov-ah2)">
+          <line x1="283" y1="126" x2="283" y2="170"/><line x1="477" y1="126" x2="477" y2="170"/><line x1="671" y1="126" x2="671" y2="170"/>
+        </g>
+        <text x="283" y="190" class="t-dim" text-anchor="middle">열 손실 (배기·냉각)</text>
+        <text x="477" y="190" class="t-dim" text-anchor="middle">마찰 손실</text>
+        <text x="671" y="190" class="t-dim" text-anchor="middle">공기·구름 저항, 제동열</text>
+        <text x="380" y="220" class="t-acc" text-anchor="middle">모든 에너지는 결국 열이 되어 대기로 흩어진다</text>
+      </svg>
+      <figcaption><b>그림 1-1.</b> 자동차의 에너지 사슬. 단계마다 손실이 있고, 바퀴까지 도달한 에너지도 주행 저항과 브레이크에서 열로 바뀐다.</figcaption>
+    </figure>
+
+    <p>이 사슬을 기준으로 책 전체가 짜여 있다. 차가 달리려면 이겨야 하는 힘은 <a href="dynamics.html">2장</a>에서, 엔진이 연료를 토크로 바꾸는 원리는 <a href="engine.html">3장</a>과 <a href="combustion.html">4장</a>에서, 변속기와 구동계는 <a href="transmission.html">5장</a>·<a href="driveline.html">6장</a>에서, 모든 힘이 만들어지는 접지면은 <a href="tire.html">7장</a>에서 다룬다.</p>
+
+    <p>저장 단계에서 연료와 배터리의 차이는 크다. 휘발유는 1 kg에 약 12 kWh(약 44 MJ), 1 L에 약 8.9 kWh의 에너지를 담는다. 리튬 이온 배터리 팩은 대표적으로 1 kg에 0.15~0.18 kWh 수준이다. 무게당 에너지로는 수십 배 차이지만, 변환 효율이 반대로 크게 차이 나서 실제 주행 거리의 격차는 그보다 훨씬 작다.</p>
+    <div class="callout tip">
+      <strong>계산 예: 연료 50 L와 배터리 77 kWh</strong>
+      <p>휘발유 50 L의 에너지는 \(50 \times 8.9 \approx 445\) kWh다. 이 가운데 바퀴에 닿는 비율을 20 %로 잡으면 약 89 kWh가 실제로 차를 민다. 77 kWh 배터리는 바퀴까지 약 85 %가 전달되어 약 65 kWh다. 저장한 에너지는 약 6배 차이지만 쓸 수 있는 에너지는 1.4배 차이에 그친다. 대신 연료 50 L는 약 37 kg, 77 kWh 배터리 팩은 대표적으로 450~500 kg이다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 2 -->
+  <section id="history">
+    <h2>140년의 짧은 역사</h2>
+    <p>자동차의 기본 구조는 놀랄 만큼 일찍 정해졌고, 이후의 역사는 같은 사슬의 각 단계를 더 정밀하게 다듬어 온 과정이다. 다섯 번의 큰 전환만 짚어 둔다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 250" role="img" aria-label="자동차 역사 연표">
+        <line x1="30" y1="125" x2="730" y2="125" class="s-axis" stroke-width="2"/>
+        <g>
+          <circle cx="70" cy="125" r="7" class="f-acc"/>
+          <text x="70" y="98" class="t-acc" text-anchor="middle">1886</text>
+          <text x="70" y="62" class="t" text-anchor="middle">벤츠 특허</text>
+          <text x="70" y="80" class="t-dim" text-anchor="middle">자동차</text>
+          <circle cx="215" cy="125" r="7" class="f-acc"/>
+          <text x="215" y="152" class="t-acc" text-anchor="middle">1908~1913</text>
+          <text x="215" y="172" class="t" text-anchor="middle">모델 T와</text>
+          <text x="215" y="190" class="t-dim" text-anchor="middle">이동식 조립 라인</text>
+          <circle cx="370" cy="125" r="7" class="f-acc"/>
+          <text x="370" y="98" class="t-acc" text-anchor="middle">1970~90년대</text>
+          <text x="370" y="62" class="t" text-anchor="middle">전자 제어</text>
+          <text x="370" y="80" class="t-dim" text-anchor="middle">연료 분사·ABS·CAN</text>
+          <circle cx="530" cy="125" r="7" class="f-acc"/>
+          <text x="530" y="152" class="t-acc" text-anchor="middle">1997~2010년대</text>
+          <text x="530" y="172" class="t" text-anchor="middle">전동화</text>
+          <text x="530" y="190" class="t-dim" text-anchor="middle">하이브리드·리튬 이온 EV</text>
+          <circle cx="680" cy="125" r="7" class="f-acc"/>
+          <text x="680" y="98" class="t-acc" text-anchor="middle">2010년대~</text>
+          <text x="680" y="62" class="t" text-anchor="middle">자율주행</text>
+          <text x="680" y="80" class="t-dim" text-anchor="middle">ADAS·SDV</text>
+        </g>
+        <g class="t-mono" text-anchor="middle">
+          <text x="70" y="152">0.75 ps, 약 16 km/h</text>
+          <text x="215" y="98">조립 12 h → 1.5 h</text>
+          <text x="370" y="152">ECU 수십 개</text>
+          <text x="530" y="98">모터 + 배터리</text>
+          <text x="680" y="152">센서 + 컴퓨터</text>
+        </g>
+        <text x="380" y="236" class="t-dim" text-anchor="middle">기계 → 대량생산 → 전자 → 전기 → 소프트웨어</text>
+      </svg>
+      <figcaption><b>그림 1-2.</b> 자동차의 다섯 전환점. 각 단계는 앞 단계를 대체한 것이 아니라 그 위에 쌓였다.</figcaption>
+    </figure>
+
+    <ul>
+      <li><b>1886년, 벤츠 특허 자동차.</b> 카를 벤츠가 단기통 4행정 가솔린 엔진(약 0.95 L, 약 0.75 ps)을 얹은 3륜차로 특허를 받았다. 최고 속도는 시속 16 km 정도였지만 엔진, 점화 장치, 냉각, 디퍼렌셜, 조향이 이미 한 차에 들어 있었다.</li>
+      <li><b>1908~1913년, 모델 T와 대량생산.</b> 포드는 부품을 표준화하고 1913년 이동식 조립 라인을 도입해 섀시 조립 시간을 약 12시간 반에서 1시간 반 수준으로 줄였다. 자동차가 소수의 기계에서 누구나 사는 제품으로 바뀌었다.</li>
+      <li><b>1970~1990년대, 전자 제어.</b> 배출가스 규제가 계기였다. 기화기가 전자 제어 연료 분사로 바뀌고, 엔진 제어 컴퓨터<span class="en">(ECU)</span>가 점화와 연료를 계산하기 시작했다. 이어 ABS, 에어백, ESC가 들어오고, 늘어난 ECU를 잇는 CAN 통신이 표준이 되었다(<a href="electrical.html">13장</a>).</li>
+      <li><b>1997년 이후, 전동화.</b> 양산 하이브리드가 등장해 엔진과 모터를 함께 쓰는 길을 열었고(<a href="hybrid.html">14장</a>), 2010년 전후로 리튬 이온 배터리를 쓴 전기차가 본격적으로 팔리기 시작했다(<a href="motor.html">15장</a>, <a href="battery.html">16장</a>).</li>
+      <li><b>2010년대 이후, 자율주행.</b> 카메라·레이더·라이다와 고성능 컴퓨터가 운전자의 인지와 판단을 보조하거나 대신한다(<a href="adas.html">17장</a>~<a href="autonomy.html">21장</a>). 차의 기능이 소프트웨어 업데이트로 바뀌는 소프트웨어 정의 차량<span class="en">(Software-Defined Vehicle, SDV)</span>도 같은 흐름이다.</li>
+    </ul>
+  </section>
+
+  <!-- =============================================================== 3 -->
+  <section id="systems">
+    <h2>네 개의 시스템</h2>
+    <p>자동차 공학은 차를 보통 네 덩어리로 나눈다. 회사의 조직도, 설계 도면, 정비 지침서가 모두 이 구분을 따른다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>시스템</th><th>하는 일</th><th>주요 부품</th><th>관련 장</th></tr></thead>
+      <tbody>
+        <tr><td><b>파워트레인</b><br><span class="en">Powertrain</span></td><td>에너지를 구동력으로 바꿔 바퀴에 전달</td><td>엔진, 흡배기, 변속기, 구동축, 디퍼렌셜 / 모터, 인버터, 배터리</td><td><div class="ov-chips"><a href="engine.html">03</a><a href="combustion.html">04</a><a href="transmission.html">05</a><a href="driveline.html">06</a><a href="hybrid.html">14</a><a href="motor.html">15</a><a href="battery.html">16</a></div></td></tr>
+        <tr><td><b>섀시</b><br><span class="en">Chassis</span></td><td>차를 지지하고, 세우고, 방향을 바꿈</td><td>타이어, 브레이크, 서스펜션, 조향 장치</td><td><div class="ov-chips"><a href="tire.html">07</a><a href="brake.html">08</a><a href="suspension.html">09</a><a href="steering.html">10</a></div></td></tr>
+        <tr><td><b>차체</b><br><span class="en">Body</span></td><td>사람과 짐을 담고, 충돌에서 보호하고, 공기를 가름</td><td>모노코크 골격, 외판, 도어, 유리, 시트, 에어백</td><td><div class="ov-chips"><a href="body.html">11</a><a href="aero.html">12</a></div></td></tr>
+        <tr><td><b>전장</b><br><span class="en">Electrical / Electronics</span></td><td>전력을 공급하고, 측정하고, 계산하고, 통신</td><td>12 V 배터리, 배선, ECU, 센서, 액추에이터, 차량 네트워크</td><td><div class="ov-chips"><a href="electrical.html">13</a><a href="adas.html">17</a><a href="sensors.html">18</a><a href="perception.html">19</a><a href="planning.html">20</a><a href="autonomy.html">21</a></div></td></tr>
+      </tbody>
+    </table></div>
+    <p>글로 읽는 것보다 한 번 들여다보는 편이 빠르다. 아래 3D 모델은 차체를 반투명하게 만들어 안에 든 부품을 단순한 도형으로 보여 준다. 구동 방식을 바꿔 가며 어떤 부품이 생기고 사라지는지, 어디로 옮겨 가는지 살펴보자.</p>
+
+    <div class="sim" id="sim-xray">
+      <div class="sim-head"><span class="sim-tag three">3D</span><h3>투시 자동차: 부품은 어디에 있는가</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view three" id="x3-view"><span class="hint">드래그 회전 · 휠/핀치 확대</span></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>구동 방식</span><div class="seg" id="x3-type"><button data-value="fr" class="on">내연기관 FR</button><button data-value="ff">내연기관 FF</button><button data-value="ev">전기차</button></div></div>
+          <label class="ctrl"><span>차체 불투명도 <output id="x3-op-out"></output></span><input type="range" id="x3-op" min="0" max="100" value="20" step="1"></label>
+          <div class="ctrl"><span>부품 강조</span><div class="seg" id="x3-parts"></div></div>
+          <label class="check"><input type="checkbox" id="x3-labels" checked> 모든 부품 이름 표시</label>
+          <label class="check"><input type="checkbox" id="x3-run" checked> 구동축 회전</label>
+        </div>
+      </div>
+      <div class="x3-info" id="x3-info"></div>
+      <div class="sim-note">해볼 것: FR에서 '프로펠러 샤프트'를 고른 뒤 FF로 바꾸면 그 부품이 사라지고 바닥 터널이 필요 없어진다. 전기차로 바꾸면 엔진·변속기·배기관·연료 탱크가 없어지고 바닥 전체가 배터리가 된다. 불투명도를 100 %로 올리면 평소 보던 겉모습이다. 회전 속도는 보기 좋게 늦춘 것이며, 축 사이의 회전비(종감속비 약 3.5, 전기차 감속비 약 9)만 실제와 같다.</div>
+    </div>
+
+    <p>세 구성 모두에 공통으로 남는 부품에 주목하자. 서스펜션, 브레이크, 조향 장치, 12 V 배터리는 구동 방식이 바뀌어도 거의 그대로다. 섀시와 전장은 파워트레인이 무엇이든 필요한 기능이기 때문이다.</p>
+  </section>
+
+  <!-- =============================================================== 4 -->
+  <section id="powerflow">
+    <h2>힘이 흐르는 길</h2>
+    <p>엔진에서 나온 회전은 그대로 바퀴에 연결할 수 없다. 엔진은 대략 분당 1,000~6,500회전(rpm) 범위에서만 쓸 만한 토크를 내는데, 시속 100 km로 달리는 바퀴는 800 rpm 남짓으로 돌 뿐이고 출발할 때는 0 rpm이다. 그래서 엔진과 바퀴 사이에 회전수를 줄이고 그만큼 토크를 키우는 장치들이 차례로 놓인다. 뒷바퀴를 굴리는 앞 엔진 차(FR)를 기준으로 보면 순서는 다음과 같다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 300" role="img" aria-label="FR 차량의 동력 전달 경로">
+        <rect x="60" y="50" width="640" height="200" rx="46" class="f-surface"/>
+        <g fill="var(--text-dim)">
+          <rect x="130" y="34" width="84" height="26" rx="6"/><rect x="130" y="240" width="84" height="26" rx="6"/>
+          <rect x="546" y="34" width="84" height="26" rx="6"/><rect x="546" y="240" width="84" height="26" rx="6"/>
+        </g>
+        <g fill="var(--accent)"><rect x="130" y="34" width="84" height="26" rx="6"/><rect x="130" y="240" width="84" height="26" rx="6"/></g>
+        <rect x="520" y="112" width="110" height="76" rx="8" class="f-acc-soft"/>
+        <text x="575" y="146" class="t" text-anchor="middle" font-weight="700">엔진</text>
+        <text x="575" y="166" class="t-mono" text-anchor="middle">T, n</text>
+        <rect x="494" y="120" width="20" height="60" rx="3" fill="var(--warn)"/>
+        <path d="M490 124 L412 138 L412 162 L490 176 Z" class="f-acc2-soft"/>
+        <text x="452" y="155" class="t-dim" text-anchor="middle">변속기</text>
+        <line x1="412" y1="150" x2="206" y2="150" stroke="var(--accent)" stroke-width="7" stroke-linecap="round"/>
+        <circle cx="172" cy="150" r="30" class="f-acc-soft"/>
+        <text x="172" y="155" class="t-dim" text-anchor="middle">디프</text>
+        <line x1="172" y1="60" x2="172" y2="120" stroke="var(--accent)" stroke-width="6"/>
+        <line x1="172" y1="180" x2="172" y2="240" stroke="var(--accent)" stroke-width="6"/>
+        <line x1="588" y1="60" x2="588" y2="240" class="s-line" stroke-dasharray="4 4"/>
+        <g class="t-dim" text-anchor="middle">
+          <text x="504" y="104">클러치</text>
+          <text x="310" y="138">프로펠러 샤프트</text>
+          <text x="172" y="24" class="t-acc">구동륜 (뒤)</text>
+          <text x="588" y="24">조향륜 (앞)</text>
+          <text x="118" y="155" text-anchor="end">구동축</text>
+        </g>
+        <text x="380" y="290" class="t-dim" text-anchor="middle">← 뒤 &#160;&#160;&#160; 위에서 본 모습 &#160;&#160;&#160; 앞 →</text>
+      </svg>
+      <figcaption><b>그림 1-3.</b> FR 차량의 동력 전달 경로. 엔진 → 클러치(또는 토크 컨버터) → 변속기 → 프로펠러 샤프트 → 디퍼렌셜(종감속 기어 포함) → 좌우 구동축 → 바퀴.</figcaption>
+    </figure>
+
+    <ul>
+      <li><b>클러치</b> 또는 토크 컨버터: 엔진과 변속기를 잇고 끊는다. 서 있는 차에서 엔진이 꺼지지 않게 하고, 출발할 때 미끄러지면서 회전수 차이를 메운다(<a href="transmission.html">5장</a>).</li>
+      <li><b>변속기</b>: 기어비 \(i_g\)를 바꿔 준다. 1단은 3~4 정도로 크게 감속해 큰 구동력을 내고, 최고단은 1보다 작아 엔진 회전수를 낮춘다.</li>
+      <li><b>프로펠러 샤프트</b>: 앞쪽의 변속기에서 뒤 차축까지 회전을 보낸다. 앞바퀴 굴림 차에는 없다.</li>
+      <li><b>종감속 기어와 디퍼렌셜</b>: 한 번 더 감속하고(종감속비 \(i_f\), 대표적으로 3~4.5), 회전축 방향을 90° 꺾고, 코너에서 좌우 바퀴가 다른 속도로 돌 수 있게 한다(<a href="driveline.html">6장</a>).</li>
+    </ul>
+
+    <p>기어는 일을 만들어 내지 못한다. 손실을 무시하면 들어온 출력과 나간 출력이 같으므로, 회전수가 \(1/i\)로 줄면 토크는 \(i\)배가 된다. 전체 감속비는 두 기어비의 곱이다.</p>
+    <div class="formula">$$T_w = T_e\, i_g\, i_f\, \eta, \qquad n_w = \frac{n_e}{i_g\, i_f}, \qquad F_x = \frac{T_w}{r}, \qquad v = \frac{2\pi\, n_w}{60}\, r$$
+      <div class="where">\(T_e, n_e\): 엔진 토크와 회전수, \(T_w, n_w\): 바퀴축 토크와 회전수, \(\eta\): 구동계 효율(대표적으로 0.90~0.95), \(r\): 타이어 유효 반지름, \(F_x\): 접지면의 구동력, \(v\): 차속.</div>
+    </div>
+    <div class="callout tip">
+      <strong>계산 예: 3단 3,000 rpm</strong>
+      <p>엔진 토크 200 N·m, 3단 기어비 1.40, 종감속비 3.60, 효율 0.92, 타이어 반지름 0.32 m라고 하자. 전체 감속비는 \(1.40 \times 3.60 = 5.04\)다. 바퀴 토크는 \(200 \times 5.04 \times 0.92 \approx 927\) N·m, 구동력은 \(927 / 0.32 \approx 2{,}900\) N이다. 바퀴는 \(3000/5.04 \approx 595\) rpm으로 돌고 차속은 \(595 \times 2\pi/60 \times 0.32 \approx 19.9\) m/s, 약 72 km/h다. 같은 엔진 상태에서 1단(3.60)이라면 구동력은 약 7,450 N으로 2.6배가 되지만 속도는 28 km/h에 그친다.</p>
+    </div>
+
+    <div class="sim" id="sim-pf">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>동력 흐름: 페달과 기어로 차를 몰아 보기</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-pf"></canvas><canvas id="cv-pfc"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>가속 페달 <output id="pf-thr-out"></output></span><input type="range" id="pf-thr" min="0" max="100" value="40" step="1"></label>
+          <div class="ctrl"><span>기어</span><div class="seg" id="pf-gear"><button data-value="1" class="on">1</button><button data-value="2">2</button><button data-value="3">3</button><button data-value="4">4</button><button data-value="5">5</button><button data-value="6">6</button></div></div>
+          <div class="ctrl-row"><button class="btn primary" id="pf-reset">정지 상태에서 다시</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">엔진 회전수</span><span class="v" id="o-pf-n">—</span></div>
+        <div class="stat"><span class="k">전달 토크</span><span class="v" id="o-pf-t">—</span></div>
+        <div class="stat"><span class="k">바퀴 토크</span><span class="v" id="o-pf-tw">—</span></div>
+        <div class="stat"><span class="k">차속</span><span class="v" id="o-pf-v">—</span></div>
+        <div class="stat"><span class="k">가속도</span><span class="v" id="o-pf-a">—</span></div>
+        <div class="stat"><span class="k">엔진 출력</span><span class="v" id="o-pf-p">—</span></div>
+        <div class="stat"><span class="k">클러치</span><span class="v" id="o-pf-cl">—</span></div>
+      </div>
+      <div class="sim-note">모델: 1,500 kg 승용차, 최대 토크 200 N·m의 2.0 L급 자연흡기 엔진, 6단 변속기, 종감속비 3.60, 구동계 효율 0.92. 위 그림에서 서로 물린 두 기어의 크기 비가 기어비이고, 축 아래 숫자가 그 축의 회전수와 토크다. 아래 그래프의 여섯 곡선은 각 단에서 낼 수 있는 최대 구동력, 점선은 주행 저항, 점은 현재 상태다. 해볼 것: 1단으로 출발해 회전수가 오르면 차례로 단을 올린다. 6단에 둔 채 정지 상태에서 출발하면 왜 힘이 없는지, 시속 100 km에서 6단과 3단의 엔진 회전수가 얼마나 다른지 확인하자. 회전 관성과 변속 시간은 무시했다.</div>
+    </div>
+
+    <p>그래프에서 구동력 곡선과 주행 저항 곡선의 차이가 가속에 쓸 수 있는 여유 구동력이다. 두 곡선이 만나는 곳이 그 단의 최고 속도다. 이 관계는 <a href="dynamics.html">2장</a>에서 자세히 계산한다.</p>
+  </section>
+
+  <!-- =============================================================== 5 -->
+  <section id="layout">
+    <h2>구동 레이아웃</h2>
+    <p>엔진을 어디에 두고 어느 바퀴를 굴릴 것인가. 이 선택이 실내 공간, 무게 배분, 접지 한계, 조종 특성을 한꺼번에 정한다. 이름은 엔진 위치와 구동륜의 머리글자를 딴다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 240" role="img" aria-label="다섯 가지 구동 레이아웃">
+        <defs>
+          <g id="ov-car">
+            <rect x="0" y="0" width="124" height="56" rx="16" class="f-surface"/>
+            <g fill="var(--text-faint)"><rect x="14" y="-6" width="26" height="10" rx="3"/><rect x="14" y="52" width="26" height="10" rx="3"/><rect x="84" y="-6" width="26" height="10" rx="3"/><rect x="84" y="52" width="26" height="10" rx="3"/></g>
+          </g>
+          <g id="ov-wr" fill="var(--accent)"><rect x="14" y="-6" width="26" height="10" rx="3"/><rect x="14" y="52" width="26" height="10" rx="3"/><rect x="24" y="4" width="6" height="48"/></g>
+          <g id="ov-wf" fill="var(--accent)"><rect x="84" y="-6" width="26" height="10" rx="3"/><rect x="84" y="52" width="26" height="10" rx="3"/><rect x="94" y="4" width="6" height="48"/></g>
+        </defs>
+        <g transform="translate(14,50)">
+          <use href="#ov-car"/><use href="#ov-wf"/>
+          <rect x="84" y="12" width="20" height="32" rx="3" fill="var(--red)"/>
+          <text x="62" y="92" class="t-acc" text-anchor="middle">FF</text>
+          <text x="62" y="112" class="t-dim" text-anchor="middle">앞 엔진 · 앞바퀴 굴림</text>
+          <text x="62" y="132" class="t-mono" text-anchor="middle">앞 60~65 %</text>
+        </g>
+        <g transform="translate(166,50)">
+          <use href="#ov-car"/><use href="#ov-wr"/>
+          <rect x="76" y="18" width="32" height="20" rx="3" fill="var(--red)"/>
+          <line x1="76" y1="28" x2="30" y2="28" stroke="var(--accent)" stroke-width="4"/>
+          <text x="62" y="92" class="t-acc" text-anchor="middle">FR</text>
+          <text x="62" y="112" class="t-dim" text-anchor="middle">앞 엔진 · 뒷바퀴 굴림</text>
+          <text x="62" y="132" class="t-mono" text-anchor="middle">앞 50~55 %</text>
+        </g>
+        <g transform="translate(318,50)">
+          <use href="#ov-car"/><use href="#ov-wr"/>
+          <rect x="40" y="18" width="30" height="20" rx="3" fill="var(--red)"/>
+          <line x1="40" y1="28" x2="30" y2="28" stroke="var(--accent)" stroke-width="4"/>
+          <text x="62" y="92" class="t-acc" text-anchor="middle">MR</text>
+          <text x="62" y="112" class="t-dim" text-anchor="middle">미드 엔진 · 뒷바퀴 굴림</text>
+          <text x="62" y="132" class="t-mono" text-anchor="middle">앞 42~46 %</text>
+        </g>
+        <g transform="translate(470,50)">
+          <use href="#ov-car"/><use href="#ov-wr"/>
+          <rect x="2" y="18" width="20" height="20" rx="3" fill="var(--red)"/>
+          <text x="62" y="92" class="t-acc" text-anchor="middle">RR</text>
+          <text x="62" y="112" class="t-dim" text-anchor="middle">뒤 엔진 · 뒷바퀴 굴림</text>
+          <text x="62" y="132" class="t-mono" text-anchor="middle">앞 38~40 %</text>
+        </g>
+        <g transform="translate(622,50)">
+          <use href="#ov-car"/><use href="#ov-wr"/><use href="#ov-wf"/>
+          <rect x="76" y="18" width="32" height="20" rx="3" fill="var(--red)"/>
+          <line x1="76" y1="28" x2="30" y2="28" stroke="var(--accent)" stroke-width="4"/>
+          <text x="62" y="92" class="t-acc" text-anchor="middle">AWD</text>
+          <text x="62" y="112" class="t-dim" text-anchor="middle">네 바퀴 굴림</text>
+          <text x="62" y="132" class="t-mono" text-anchor="middle">앞 55~60 %</text>
+        </g>
+        <text x="380" y="222" class="t-dim" text-anchor="middle">빨강: 엔진, 주황: 구동륜과 구동축. 숫자는 앞축이 받는 정적 하중 비율의 대표 범위. 차는 오른쪽이 앞.</text>
+      </svg>
+      <figcaption><b>그림 1-4.</b> 다섯 가지 구동 레이아웃. 무거운 엔진과 변속기의 위치가 앞뒤 무게 배분을 좌우한다.</figcaption>
+    </figure>
+
+    <div class="table-wrap"><table>
+      <thead><tr><th>방식</th><th>장점</th><th>단점</th><th>주로 쓰는 차</th></tr></thead>
+      <tbody>
+        <tr><td><b>FF</b></td><td>구동계가 앞에 모여 실내가 넓고 가볍고 싸다. 구동륜 위에 무게가 실려 눈길 출발에 유리</td><td>앞바퀴가 구동과 조향을 함께 맡아 한계에서 언더스티어. 급가속 때 하중이 뒤로 빠져 접지 손실</td><td>소형~중형 승용차 대부분</td></tr>
+        <tr><td><b>FR</b></td><td>조향과 구동을 앞뒤가 나눠 맡음. 무게 배분이 50:50에 가깝고 가속 때 구동륜에 하중이 실림</td><td>프로펠러 샤프트용 바닥 터널, 무게와 비용 증가. 미끄러운 길 출발에 불리</td><td>대형 세단, 스포츠카, 트럭</td></tr>
+        <tr><td><b>MR</b></td><td>무거운 부품이 차 중심에 모여 회전 관성이 작고 선회 응답이 빠름</td><td>뒷좌석·적재 공간 희생, 한계 거동이 급함</td><td>본격 스포츠카</td></tr>
+        <tr><td><b>RR</b></td><td>구동륜 하중이 가장 커 출발 가속 접지가 좋음</td><td>뒤가 무거워 오버스티어 성향, 냉각과 적재 불리</td><td>일부 스포츠카, 과거 소형차</td></tr>
+        <tr><td><b>AWD</b></td><td>네 바퀴의 접지력을 모두 구동에 사용</td><td>무게, 비용, 구동 손실 증가</td><td>SUV, 고성능차</td></tr>
+      </tbody>
+    </table></div>
+
+    <p>가속 때 접지가 왜 레이아웃에 따라 달라지는지는 <span class="term">하중 이동</span><span class="en">(Load Transfer)</span>으로 설명된다. 차가 가속하면 무게중심에 뒤로 향하는 관성력이 걸리고, 무게중심이 지면보다 높이 있으므로 이 힘이 차를 뒤로 젖히려는 모멘트를 만든다. 그 결과 뒤축 하중이 늘고 앞축 하중이 그만큼 줄어든다. 제동할 때는 반대다.</p>
+    <div class="formula">$$W_f = mg\,\frac{b}{L} - m a\,\frac{h}{L}, \qquad W_r = mg\,\frac{a_f}{L} + m a\,\frac{h}{L}, \qquad F_{\max} = \mu\, W_{\text{drive}}$$
+      <div class="where">\(W_f, W_r\): 앞·뒤축 수직 하중, \(L\): 휠베이스, \(b\): 무게중심에서 뒤축까지 거리, \(a_f\): 앞축까지 거리(\(a_f + b = L\)), \(h\): 무게중심 높이, \(a\): 가속도(제동은 음수), \(\mu\): 타이어와 노면의 마찰 계수. 구동력은 구동축 하중에 \(\mu\)를 곱한 값을 넘지 못한다.</div>
+    </div>
+    <p>\(F = ma\)와 접지 한계를 함께 풀면 레이아웃별 최대 가속도가 나온다. 앞바퀴 굴림은 \(a_{\max} = \mu g\,(b/L)\,/\,(1 + \mu h/L)\), 뒷바퀴 굴림은 \(a_{\max} = \mu g\,(a_f/L)\,/\,(1 - \mu h/L)\), 네 바퀴 굴림은 이상적으로 \(\mu g\)다. 분모의 부호가 다르다는 점이 핵심이다. 앞바퀴 굴림은 가속할수록 스스로 접지를 잃고, 뒷바퀴 굴림은 가속할수록 접지를 얻는다.</p>
+    <div class="callout tip">
+      <strong>계산 예: 마른 길과 눈길</strong>
+      <p>\(h/L = 0.55/2.7 \approx 0.204\)인 차에서 앞축 하중 비율이 FF 62 %, FR 53 %라고 하자. 마른 아스팔트(\(\mu = 1.0\))에서 FF는 \(0.62/1.204 \approx 0.51\,g\), FR은 \(0.47/0.796 \approx 0.59\,g\)까지 가속할 수 있다. 눈길(\(\mu = 0.3\))에서는 FF가 \(0.3 \times 0.62/1.061 \approx 0.175\,g\), FR이 \(0.3 \times 0.47/0.939 \approx 0.150\,g\)로 순서가 뒤집힌다. 미끄러운 길에서는 하중 이동이 작아 정적 무게 배분이 승부를 가른다.</p>
+    </div>
+
+    <div class="sim" id="sim-lay">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>구동 레이아웃과 하중 이동</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-lay"></canvas><canvas id="cv-layb"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>레이아웃</span><div class="seg" id="lay-type"><button data-value="ff" class="on">FF</button><button data-value="fr">FR</button><button data-value="mr">MR</button><button data-value="rr">RR</button><button data-value="awd">AWD</button></div></div>
+          <label class="ctrl"><span>요구 가감속 <output id="lay-acc-out"></output></span><input type="range" id="lay-acc" min="-1" max="1" value="0.3" step="0.02"></label>
+          <label class="ctrl"><span>노면 마찰 계수 μ <output id="lay-mu-out"></output></span><input type="range" id="lay-mu" min="0.15" max="1.1" value="0.9" step="0.05"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">앞축 하중</span><span class="v" id="o-lay-wf">—</span></div>
+        <div class="stat"><span class="k">뒤축 하중</span><span class="v" id="o-lay-wr">—</span></div>
+        <div class="stat"><span class="k">접지 한계 가속도</span><span class="v" id="o-lay-lim">—</span></div>
+        <div class="stat"><span class="k">한계 가속 0→100 km/h</span><span class="v" id="o-lay-t">—</span></div>
+        <div class="stat"><span class="k">상태</span><span class="v" id="o-lay-st">—</span></div>
+      </div>
+      <div class="sim-note">모델: 1,500 kg, 휠베이스 2.7 m, 무게중심 높이 0.55 m. 위는 옆모습으로 초록 화살표가 각 축의 수직 하중, 주황 화살표가 타이어가 노면에서 받는 구동력(제동 때는 빨강), 노랑 화살표가 무게중심에 걸리는 관성력이다. 가운데는 위에서 본 구동계 배치, 아래 막대는 같은 노면에서 레이아웃별 접지 한계 가속도다. 해볼 것: μ = 0.9에서 요구 가속을 0.6 g로 올리고 FF와 FR을 바꿔 본다. μ를 0.3으로 내리면 순위가 어떻게 바뀌는가. 제동 쪽으로 끌면 어느 축이 일을 많이 하는가(<a href="brake.html">8장</a>). 0→100 km/h 시간은 엔진 출력이 충분하다고 가정한 접지 한계 값이다.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 6 -->
+  <section id="dims">
+    <h2>차체 형식과 치수</h2>
+    <p>차체 형식은 객실과 짐칸을 어떻게 나누고 지붕선을 어디까지 끄는가로 구분한다. 엔진룸·객실·트렁크가 뚜렷이 나뉘면 3박스, 객실과 짐칸이 이어지면 2박스다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>형식</th><th>특징</th><th>대표적인 전고 · 최저 지상고</th></tr></thead>
+      <tbody>
+        <tr><td><b>세단</b></td><td>3박스. 분리된 트렁크로 정숙성과 차체 강성에 유리</td><td class="num">1.42~1.50 m · 130~150 mm</td></tr>
+        <tr><td><b>해치백</b></td><td>2박스. 뒷유리째 열리는 테일게이트, 짧은 뒤 오버행</td><td class="num">1.42~1.50 m · 130~150 mm</td></tr>
+        <tr><td><b>왜건</b></td><td>세단의 지붕을 끝까지 늘린 2박스. 낮은 무게중심과 큰 적재 공간</td><td class="num">1.45~1.52 m · 130~160 mm</td></tr>
+        <tr><td><b>SUV · 크로스오버</b></td><td>높은 차체와 지상고, 높은 착좌 위치. 무게중심과 전면 면적이 커짐</td><td class="num">1.60~1.80 m · 170~220 mm</td></tr>
+        <tr><td><b>쿠페 · 스포츠카</b></td><td>낮고 뒤로 흐르는 지붕, 2도어. 공기 저항과 무게중심이 낮음</td><td class="num">1.20~1.35 m · 100~130 mm</td></tr>
+        <tr><td><b>미니밴 · 픽업</b></td><td>1박스에 가까운 넓은 객실 / 개방된 적재함과 프레임 차체</td><td class="num">1.75~1.95 m · 160~230 mm</td></tr>
+      </tbody>
+    </table></div>
+
+    <p>제원표의 치수는 단순한 크기 정보가 아니다. 각각이 주행 특성과 연결된다.</p>
+    <figure class="diagram">
+      <svg viewBox="0 0 760 310" role="img" aria-label="자동차의 주요 치수">
+        <defs><path id="ov-side" vector-effect="non-scaling-stroke" d="M-2.2,0.28 L-1.77,0.28 A0.42,0.42 0 0 0 -0.93,0.28 L0.93,0.28 A0.42,0.42 0 0 0 1.77,0.28 L2.22,0.28 L2.25,0.6 L1.95,0.85 L0.95,1.0 L0.25,1.45 L-0.85,1.42 L-1.45,1.05 L-2.05,0.95 L-2.25,0.75 Z"/></defs>
+        <line x1="30" y1="210" x2="500" y2="210" class="s-axis"/>
+        <use href="#ov-side" transform="translate(265,210) scale(84,-84)" class="f-acc2-soft"/>
+        <circle cx="151.600" cy="182.3" r="27.7" fill="var(--text-dim)"/><circle cx="378.4" cy="182.3" r="27.7" fill="var(--text-dim)"/>
+        <circle cx="151.600" cy="182.3" r="15" class="f-elev"/><circle cx="378.4" cy="182.3" r="15" class="f-elev"/>
+        <g class="s-acc">
+          <line x1="151.600" y1="232" x2="378.4" y2="232"/><line x1="151.600" y1="224" x2="151.600" y2="240"/><line x1="378.4" y1="224" x2="378.4" y2="240"/>
+        </g>
+        <text x="265" y="252" class="t-acc" text-anchor="middle">휠베이스</text>
+        <g class="s-line">
+          <line x1="76" y1="232" x2="151.600" y2="232"/><line x1="76" y1="224" x2="76" y2="240"/>
+          <line x1="378.4" y1="232" x2="454" y2="232"/><line x1="454" y1="224" x2="454" y2="240"/>
+          <line x1="76" y1="276" x2="454" y2="276"/><line x1="76" y1="268" x2="76" y2="284"/><line x1="454" y1="268" x2="454" y2="284"/>
+          <line x1="482" y1="88" x2="482" y2="210"/><line x1="474" y1="88" x2="490" y2="88"/>
+          <line x1="265" y1="186.500" x2="265" y2="210"/>
+        </g>
+        <g class="t-dim" text-anchor="middle">
+          <text x="113" y="252">뒤 오버행</text><text x="418" y="252">앞 오버행</text>
+          <text x="265" y="296">전장</text>
+          <text x="482" y="78">전고</text>
+          <text x="265" y="176">최저 지상고</text>
+        </g>
+        <line x1="540" y1="210" x2="740" y2="210" class="s-axis"/>
+        <path d="M565 186 L565 150 L585 128 L600 90 L680 90 L695 128 L715 150 L715 186 Z" class="f-acc2-soft"/>
+        <rect x="562" y="160" width="26" height="50" rx="5" fill="var(--text-dim)"/><rect x="692" y="160" width="26" height="50" rx="5" fill="var(--text-dim)"/>
+        <g class="s-acc"><line x1="575" y1="232" x2="705" y2="232"/><line x1="575" y1="224" x2="575" y2="240"/><line x1="705" y1="224" x2="705" y2="240"/></g>
+        <text x="640" y="252" class="t-acc" text-anchor="middle">트레드(윤거)</text>
+        <g class="s-line"><line x1="562" y1="276" x2="718" y2="276"/><line x1="562" y1="268" x2="562" y2="284"/><line x1="718" y1="268" x2="718" y2="284"/></g>
+        <text x="640" y="296" class="t-dim" text-anchor="middle">전폭</text>
+        <text x="265" y="30" class="t-dim" text-anchor="middle">옆모습</text><text x="640" y="30" class="t-dim" text-anchor="middle">앞모습</text>
+      </svg>
+      <figcaption><b>그림 1-5.</b> 주요 치수. 휠베이스는 앞뒤 차축 중심 사이, 트레드는 좌우 타이어 접지 중심 사이 거리다. 오버행은 차축 중심에서 차 끝까지다.</figcaption>
+    </figure>
+    <ul>
+      <li><b>휠베이스</b><span class="en">(Wheelbase)</span>: 길수록 실내가 넓고 직진이 안정되며 승차감이 좋지만 회전 반경이 커진다. 하중 이동 식의 분모 \(L\)이 바로 이 값이다.</li>
+      <li><b>트레드</b><span class="en">(Track)</span>: 넓을수록 코너에서 좌우 하중 이동이 작아 롤이 줄고 전복에 강하다(<a href="suspension.html">9장</a>).</li>
+      <li><b>오버행</b><span class="en">(Overhang)</span>: 앞 오버행은 충돌 흡수 공간이자 접근각을, 뒤 오버행은 트렁크 길이와 이탈각을 정한다.</li>
+      <li><b>최저 지상고</b><span class="en">(Ground Clearance)</span>: 높으면 험로와 턱에 강하지만 무게중심이 올라가고 차 밑으로 흐르는 공기가 늘어 저항이 커진다(<a href="aero.html">12장</a>).</li>
+      <li><b>공차 중량</b><span class="en">(Curb Weight)</span>: 연료와 오일류를 채우고 사람은 타지 않은 상태의 무게. 가속, 제동, 연비 모두에 직접 들어간다. <b>무게 배분</b>은 앞축과 뒤축이 받는 하중의 비다.</li>
+    </ul>
+    <p>험로 주행 능력은 세 각도로 나타낸다. <span class="term">접근각</span><span class="en">(Approach Angle)</span>은 앞 범퍼가 닿지 않고 오를 수 있는 경사, <span class="term">이탈각</span><span class="en">(Departure Angle)</span>은 뒤 범퍼가 닿지 않고 내려설 수 있는 경사, <span class="term">램프각</span><span class="en">(Breakover Angle)</span>은 배가 걸리지 않고 넘을 수 있는 둔덕의 꺾임각이다. 세 각 모두 타이어에 접하는 직선이 차체 하단에 닿는 조건으로 정해진다. 또 최소 회전 반경은 휠베이스와 앞바퀴가 꺾이는 최대 각으로 거의 정해진다(<a href="steering.html">10장</a>).</p>
+    <div class="formula">$$\theta_{\text{ramp}} \approx 2\arctan\frac{2\,c}{L}, \qquad R_{\min} \approx \sqrt{\left(\frac{L}{\tan\delta_i} + t\right)^{2} + L^{2}}$$
+      <div class="where">\(c\): 최저 지상고, \(L\): 휠베이스, \(\delta_i\): 안쪽 앞바퀴의 최대 조향각, \(t\): 트레드, \(R_{\min}\): 바깥쪽 앞바퀴 중심이 그리는 원의 반지름. 예: \(L = 2.7\) m, \(c = 0.14\) m이면 램프각 약 12°, \(\delta_i = 39°\), \(t = 1.56\) m이면 \(R_{\min} \approx 5.6\) m.</div>
+    </div>
+
+    <div class="sim" id="sim-dim">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>치수 놀이터: 차의 비례를 바꿔 보기</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-dim"></canvas><canvas id="cv-dimt"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>차체 형식</span><div class="seg" id="dim-type"><button data-value="sedan" class="on">세단</button><button data-value="hatch">해치백</button><button data-value="suv">SUV</button><button data-value="sport">스포츠카</button></div></div>
+          <label class="ctrl"><span>휠베이스 <output id="dim-wb-out"></output></span><input type="range" id="dim-wb" min="2.3" max="3.2" value="2.8" step="0.01"></label>
+          <label class="ctrl"><span>앞 오버행 <output id="dim-fo-out"></output></span><input type="range" id="dim-fo" min="0.6" max="1.2" value="0.9" step="0.01"></label>
+          <label class="ctrl"><span>뒤 오버행 <output id="dim-ro-out"></output></span><input type="range" id="dim-ro" min="0.6" max="1.3" value="1.1" step="0.01"></label>
+          <label class="ctrl"><span>전고 <output id="dim-h-out"></output></span><input type="range" id="dim-h" min="1.2" max="1.95" value="1.45" step="0.01"></label>
+          <label class="ctrl"><span>최저 지상고 <output id="dim-gc-out"></output></span><input type="range" id="dim-gc" min="0.1" max="0.3" value="0.14" step="0.005"></label>
+          <label class="ctrl"><span>안쪽 바퀴 최대 조향각 <output id="dim-st-out"></output></span><input type="range" id="dim-st" min="30" max="45" value="39" step="0.5"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">전장</span><span class="v" id="o-dim-len">—</span></div>
+        <div class="stat"><span class="k">접근각</span><span class="v" id="o-dim-ap">—</span></div>
+        <div class="stat"><span class="k">이탈각</span><span class="v" id="o-dim-dp">—</span></div>
+        <div class="stat"><span class="k">램프각</span><span class="v" id="o-dim-rp">—</span></div>
+        <div class="stat"><span class="k">최소 회전 반경</span><span class="v" id="o-dim-r">—</span></div>
+        <div class="stat"><span class="k">U턴에 필요한 폭</span><span class="v" id="o-dim-u">—</span></div>
+      </div>
+      <div class="sim-note">위: 옆모습과 세 각도(색칠한 쐐기). 아래: 위에서 본 최소 회전 원으로, 실선이 바깥쪽 앞바퀴, 점선이 안쪽 뒷바퀴가 지나는 길이다. 타이어 반지름은 0.34 m, 트레드는 1.56 m로 고정했고 범퍼 하단은 최저 지상고보다 조금 높게 두었다. 해볼 것: 세단에서 앞 오버행만 늘리면 접근각이 얼마나 빨리 줄어드는가. 휠베이스를 3.2 m로 늘리면 램프각과 회전 반경이 함께 나빠진다. SUV가 지상고를 올리는 이유와 대형 세단에 뒷바퀴 조향이 들어가는 이유가 여기에 있다.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 7 -->
+  <section id="spec">
+    <h2>제원표 읽는 법</h2>
+    <p>자동차 제원표에는 단위가 뒤섞여 있다. 같은 양을 나라와 시대에 따라 다르게 적어 왔기 때문이다. 먼저 가장 자주 혼동되는 출력과 토크부터 정리하자.</p>
+    <p><span class="term">토크</span><span class="en">(Torque)</span>는 축을 돌리는 힘의 세기, 곧 힘 × 팔 길이다. 단위는 N·m. <span class="term">출력</span><span class="en">(Power)</span>은 단위 시간에 하는 일로, 토크에 회전 각속도를 곱한 값이다. 단위는 kW. 둘은 독립된 성능이 아니라 회전수로 이어진 같은 곡선의 두 얼굴이다.</p>
+    <div class="formula">$$P = T\,\omega = T\,\frac{2\pi n}{60} \quad\Longrightarrow\quad P\,[\text{kW}] = \frac{T\,[\text{N·m}] \times n\,[\text{rpm}]}{9549}$$
+      <div class="where">\(\omega\): 각속도(rad/s), \(n\): 분당 회전수. 9549는 \(60000/(2\pi)\)다. 예: 350 N·m를 4,000 rpm에서 내면 \(350 \times 4000 / 9549 \approx 147\) kW, 약 200 ps.</div>
+    </div>
+    <p>바퀴에서 차를 미는 힘은 바퀴 토크이고, 그것은 엔진 토크에 감속비를 곱한 값이다. 감속비는 속도와 맞바꾸는 것이므로, 어떤 차속에서 낼 수 있는 구동력의 상한은 결국 출력이 정한다(\(F = P/v\)). 그래서 최고 속도와 고속 추월 가속은 최대 출력이, 변속 없이 밟았을 때의 즉각적인 반응은 넓은 회전 범위의 토크가 좌우한다.</p>
+
+    <div class="table-wrap"><table>
+      <thead><tr><th>항목</th><th>표기 예</th><th>읽는 법</th></tr></thead>
+      <tbody>
+        <tr><td>최고 출력</td><td class="num">132 kW (180 ps) / 6,000 rpm</td><td>그 회전수에서의 값. 1 ps = 0.7355 kW, 영미권 hp는 0.7457 kW</td></tr>
+        <tr><td>최대 토크</td><td class="num">265 N·m (27.0 kgf·m) / 1,500~4,500 rpm</td><td>범위로 적혀 있으면 터보 엔진처럼 평탄한 토크 곡선. 1 kgf·m = 9.807 N·m</td></tr>
+        <tr><td>배기량</td><td class="num">1,598 cc</td><td>실린더가 한 사이클에 쓸어내는 부피의 합(<a href="engine.html">3장</a>)</td></tr>
+        <tr><td>복합 연비</td><td class="num">13.5 km/L</td><td>도심과 고속 모드를 가중 평균. 유럽은 L/100 km, 미국은 mpg</td></tr>
+        <tr><td>전비(전기차)</td><td class="num">5.2 km/kWh</td><td>1 kWh로 가는 거리. 역수 표기는 Wh/km 또는 kWh/100 km</td></tr>
+        <tr><td>공차 중량</td><td class="num">1,480 kg</td><td>출력 대 중량비(kW/t 또는 kg/ps)를 계산해 가속 성능을 가늠</td></tr>
+        <tr><td>타이어</td><td class="num">225/45 R18</td><td>폭 225 mm, 편평비 45 %, 휠 지름 18인치(<a href="tire.html">7장</a>)</td></tr>
+        <tr><td>공기 저항 계수</td><td class="num">Cd 0.27</td><td>전면 면적과 곱해 공기 저항을 정함(<a href="aero.html">12장</a>)</td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout warn">
+      <strong>km/L와 L/100 km는 반비례다</strong>
+      <p>10 km/L에서 12 km/L로 좋아지면 100 km당 1.67 L를 아끼지만, 20 km/L에서 22 km/L로 좋아지면 0.45 L밖에 줄지 않는다. 같은 2 km/L 차이라도 연료 절감량은 연비가 나쁜 차에서 훨씬 크다. 소비량을 직접 비교하려면 L/100 km나 Wh/km처럼 '거리당 에너지' 표기가 정직하다.</p>
+    </div>
+
+    <div class="sim" id="sim-uc">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>토크·회전수·출력과 단위 변환기</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-uc"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>토크 <output id="uc-t-out"></output></span><input type="range" id="uc-t" min="50" max="700" value="350" step="5"></label>
+          <label class="ctrl"><span>회전수 <output id="uc-n-out"></output></span><input type="range" id="uc-n" min="500" max="8000" value="4000" step="50"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">출력</span><span class="v" id="o-uc-kw">—</span></div>
+        <div class="stat"><span class="k">마력</span><span class="v" id="o-uc-ps">—</span></div>
+        <div class="stat"><span class="k">토크</span><span class="v" id="o-uc-kgf">—</span></div>
+        <div class="stat"><span class="k">각속도</span><span class="v" id="o-uc-w">—</span></div>
+      </div>
+      <div class="uc-grid">
+        <div class="uc-row"><b>출력</b>
+          <label>ps (미터 마력)<input type="number" id="uc-ps" step="any" inputmode="decimal"></label>
+          <label>kW<input type="number" id="uc-kw" step="any" inputmode="decimal"></label>
+          <label>hp (영국 마력)<input type="number" id="uc-hp" step="any" inputmode="decimal"></label></div>
+        <div class="uc-row"><b>토크</b>
+          <label>kgf·m<input type="number" id="uc-kgfm" step="any" inputmode="decimal"></label>
+          <label>N·m<input type="number" id="uc-nm" step="any" inputmode="decimal"></label>
+          <label>lb·ft<input type="number" id="uc-lbft" step="any" inputmode="decimal"></label></div>
+        <div class="uc-row"><b>연비</b>
+          <label>km/L<input type="number" id="uc-kml" step="any" inputmode="decimal"></label>
+          <label>L/100 km<input type="number" id="uc-l100" step="any" inputmode="decimal"></label>
+          <label>mpg (미국)<input type="number" id="uc-mpg" step="any" inputmode="decimal"></label></div>
+        <div class="uc-row"><b>전비</b>
+          <label>km/kWh<input type="number" id="uc-kmkwh" step="any" inputmode="decimal"></label>
+          <label>Wh/km<input type="number" id="uc-whkm" step="any" inputmode="decimal"></label>
+          <label>kWh/100 km<input type="number" id="uc-kwh100" step="any" inputmode="decimal"></label></div>
+      </div>
+      <div class="sim-note">그래프의 회색 곡선은 출력이 같은 점을 이은 등출력선이다. 같은 150 kW라도 낮은 회전수의 큰 토크로 낼 수도, 높은 회전수의 작은 토크로 낼 수도 있다. 아래 칸은 어느 쪽에 숫자를 넣어도 같은 줄의 나머지가 바뀐다. 해볼 것: 토크를 고정하고 회전수만 두 배로 올리면 출력이 어떻게 되는가. 제원표의 최대 토크와 최고 출력 회전수를 넣어 그 점들이 그래프 어디에 놓이는지 보자.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 8 -->
+  <section id="energy">
+    <h2>내연기관차와 전기차, 그리고 에너지의 행방</h2>
+    <p>전기차는 엔진을 모터로 바꾼 차가 아니라 사슬의 앞 두 단계가 통째로 달라진 차다. 그 차이가 차의 구조를 다시 그린다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 290" role="img" aria-label="내연기관차와 전기차의 부품 배치 비교">
+        <line x1="20" y1="200" x2="370" y2="200" class="s-axis"/><line x1="390" y1="200" x2="740" y2="200" class="s-axis"/>
+        <use href="#ov-side" transform="translate(195,200) scale(68,-68)" class="f-surface"/>
+        <use href="#ov-side" transform="translate(565,200) scale(68,-68)" class="f-surface"/>
+        <g fill="var(--text-dim)"><circle cx="103.2" cy="177.600" r="22.4"/><circle cx="286.800" cy="177.600" r="22.4"/><circle cx="473.2" cy="177.600" r="22.4"/><circle cx="656.800" cy="177.600" r="22.4"/></g>
+        <!-- ICE -->
+        <rect x="262" y="140" width="50" height="34" rx="4" fill="var(--red)"/><text x="287" y="161" text-anchor="middle" font-size="12" fill="#fff" font-weight="700">엔진</text>
+        <path d="M262 150 L222 158 L222 172 L262 176 Z" class="f-acc2-soft"/>
+        <line x1="222" y1="166" x2="112" y2="176" stroke="var(--accent)" stroke-width="4"/>
+        <circle cx="103.2" cy="177.600" r="9" fill="var(--accent)"/>
+        <rect x="122" y="150" width="44" height="16" rx="4" fill="var(--green)"/>
+        <path d="M262 180 L150 186 L60 184" fill="none" stroke="var(--text-faint)" stroke-width="4" stroke-linecap="round"/>
+        <rect x="322" y="150" width="6" height="30" fill="var(--blue)"/>
+        <!-- EV -->
+        <rect x="496" y="172" width="138" height="12" rx="3" fill="var(--blue)"/>
+        <circle cx="473.2" cy="177.600" r="11" fill="var(--accent)"/>
+        <rect x="462" y="154" width="24" height="10" rx="2" fill="var(--warn)"/>
+        <rect x="640" y="150" width="30" height="14" rx="3" fill="var(--warn)"/>
+        <g class="t-dim" text-anchor="middle">
+          <text x="242" y="142">변속기</text><text x="144" y="142">연료 탱크</text><text x="80" y="218">디퍼렌셜</text><text x="190" y="218">배기관</text><text x="330" y="218">라디에이터</text>
+          <text x="565" y="218">배터리 팩 (바닥)</text><text x="452" y="142">인버터</text><text x="452" y="218">모터·감속기</text><text x="660" y="142">충전·전력 분배</text>
+        </g>
+        <text x="195" y="60" class="t" text-anchor="middle" font-weight="700">내연기관차 (FR)</text>
+        <text x="565" y="60" class="t" text-anchor="middle" font-weight="700">전기차 (뒷바퀴 모터)</text>
+        <text x="195" y="252" class="t-mono" text-anchor="middle">움직이는 부품 수천 개, 다단 변속</text>
+        <text x="565" y="252" class="t-mono" text-anchor="middle">회전체 하나, 1단 감속, 낮은 무게중심</text>
+        <text x="380" y="280" class="t-dim" text-anchor="middle">두 차 모두 왼쪽이 뒤, 오른쪽이 앞</text>
+      </svg>
+      <figcaption><b>그림 1-6.</b> 내연기관차와 전기차의 부품 배치. 전기차는 가장 무거운 부품인 배터리가 바닥에 깔려 무게중심이 낮고, 엔진룸과 바닥 터널이 비는 만큼 객실이 길어진다.</figcaption>
+    </figure>
+
+    <div class="table-wrap"><table>
+      <thead><tr><th>항목</th><th>내연기관차</th><th>전기차</th></tr></thead>
+      <tbody>
+        <tr><td>에너지 저장</td><td>연료 탱크 40~70 L (약 30~50 kg)</td><td>배터리 팩 50~100 kWh (약 300~600 kg)</td></tr>
+        <tr><td>변환 효율</td><td>최고 35~41 %, 실주행 평균 20~30 %</td><td>모터·인버터 90 % 안팎</td></tr>
+        <tr><td>토크 특성</td><td>일정 회전수 이상에서만 유효, 정지 때 0</td><td>0 rpm부터 최대 토크, 넓은 회전 범위</td></tr>
+        <tr><td>변속기</td><td>6~10단 또는 무단</td><td>대부분 고정 1단 감속(감속비 약 7~11)</td></tr>
+        <tr><td>제동 에너지</td><td>모두 열로 버림</td><td>모터를 발전기로 써서 일부 회수(회생 제동)</td></tr>
+        <tr><td>보충</td><td>주유 수 분</td><td>급속 20~40분, 완속 수 시간</td></tr>
+        <tr><td>공통</td><td colspan="2">타이어, 브레이크, 서스펜션, 조향, 차체, 12 V 전장, 공기·구름 저항은 같다</td></tr>
+      </tbody>
+    </table></div>
+
+    <p>그렇다면 탱크에 넣은 연료, 배터리에 넣은 전기는 어디로 가는가. 내연기관은 열기관이라 연료 에너지의 대부분이 배기가스와 냉각수를 통해 열로 빠져나간다. 여기에 엔진 내부의 펌핑·마찰 손실, 신호 대기 중의 공회전, 구동계 손실을 빼고 남은 것만 바퀴에 닿는다. 도심에서는 대략 15~20 %, 고속 정속 주행에서는 25~30 % 수준이다. 바퀴에 닿은 에너지는 다시 공기 저항, 구름 저항, 그리고 브레이크 열로 나뉜다.</p>
+    <p>전기차는 변환 손실이 작아 배터리 에너지의 대부분이 바퀴에 닿고, 도심에서는 제동 에너지를 되찾기까지 한다. 다만 무거운 만큼 구름 저항이 크고, 고속에서는 공기 저항이 지배적이라는 점은 똑같다. 아래 모델은 주행 조건으로부터 바퀴에서 필요한 에너지를 먼저 계산하고, 각 장치의 효율로 거슬러 올라가 전체 소비량을 구한다.</p>
+
+    <div class="sim" id="sim-en">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>에너지 흐름: 100 중 얼마가 바퀴에 닿는가</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-en"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>차종</span><div class="seg" id="en-type"><button data-value="ice" class="on">내연기관차</button><button data-value="ev">전기차</button></div></div>
+          <div class="ctrl"><span>주행 조건</span><div class="seg" id="en-cyc"><button data-value="city" class="on">도심</button><button data-value="hwy">고속</button></div></div>
+          <label class="ctrl"><span>차량 질량 보정 <output id="en-m-out"></output></span><input type="range" id="en-m" min="-300" max="500" value="0" step="50"></label>
+          <label class="check"><input type="checkbox" id="en-regen" checked> 회생 제동 (전기차)</label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">바퀴에 닿는 비율</span><span class="v" id="o-en-wh">—</span></div>
+        <div class="stat"><span class="k">에너지 소비</span><span class="v" id="o-en-e">—</span></div>
+        <div class="stat"><span class="k">연비 · 전비</span><span class="v" id="o-en-eco">—</span></div>
+        <div class="stat"><span class="k">100 km당</span><span class="v" id="o-en-100">—</span></div>
+      </div>
+      <div class="sim-note">왼쪽 막대가 연료(또는 배터리에서 꺼낸 에너지) 100이고, 오른쪽으로 가면서 손실이 아래로 갈라져 나간다. 마지막 세 갈래가 바퀴에 닿아 쓰이는 에너지다. 가정: 내연기관차 1,500 kg, 전기차 1,800 kg, Cd·A = 0.64 m², 구름 저항 계수 0.010. 도심은 km당 2.5회 시속 45 km에서 정지, 고속은 시속 100 km 안팎 정속. 전기차는 충전기에서 배터리까지의 충전 손실(대표적으로 10~15 %)은 넣지 않았다. 해볼 것: 내연기관차 도심과 고속의 열 손실 비율은 비슷한데 왜 바퀴 도달 비율이 다른가. 전기차 도심에서 회생 제동을 끄면 전비가 얼마나 나빠지는가. 질량을 500 kg 늘리면 도심과 고속 중 어느 쪽이 더 크게 나빠지는가.</div>
+    </div>
+
+    <div class="callout deep">
+      <strong>탱크에서 바퀴까지, 우물에서 바퀴까지</strong>
+      <p>위 그림은 차에 실린 에너지부터 따지는 탱크-투-휠<span class="en">(Tank-to-Wheel)</span> 관점이다. 전기를 만드는 발전소의 효율과 송전 손실, 원유를 정제하고 운반하는 에너지까지 넣으면 웰-투-휠<span class="en">(Well-to-Wheel)</span>이 된다. 전기차의 실제 우위는 그 지역의 전원 구성에 따라 달라진다. 이 책은 차 안에서 일어나는 일에 집중한다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== summary -->
+  <section class="keypoints" id="summary">
+    <h2>핵심 정리</h2>
+    <ol>
+      <li>자동차는 에너지를 저장하고(탱크·배터리), 회전으로 변환하고(엔진·모터), 감속해 전달하고(변속기·구동축), 타이어로 노면을 미는 네 단계의 사슬이다.</li>
+      <li>역사의 큰 전환은 기계(1886) → 대량생산(1913) → 전자 제어 → 전동화 → 자율주행 순서로 쌓여 왔다.</li>
+      <li>차는 파워트레인, 섀시, 차체, 전장의 네 시스템으로 나눈다. 구동 방식이 바뀌어도 섀시와 전장의 기본 기능은 그대로 남는다.</li>
+      <li>기어는 회전수를 \(1/i\)로 줄이고 토크를 \(i\)배로 키운다. 바퀴 토크는 \(T_e\, i_g\, i_f\, \eta\), 구동력은 이를 타이어 반지름으로 나눈 값이다.</li>
+      <li>구동 레이아웃은 무게 배분과 접지 한계를 정한다. 가속하면 하중이 뒤로 \(m a h / L\)만큼 옮겨 가므로 뒷바퀴 굴림은 접지를 얻고 앞바퀴 굴림은 잃는다. 미끄러운 길에서는 정적 배분이 더 중요하다.</li>
+      <li>휠베이스는 실내·안정성·회전 반경을, 오버행과 지상고는 접근각·이탈각·램프각을, 트레드와 무게중심 높이는 롤과 전복 안정성을 좌우한다.</li>
+      <li>출력은 토크 × 각속도다(\(P[\text{kW}] = T n / 9549\)). 1 ps = 0.7355 kW, 1 kgf·m = 9.807 N·m. km/L와 L/100 km는 반비례 관계다.</li>
+      <li>내연기관차는 연료 에너지의 15~30 %만 바퀴에 닿고 나머지는 대부분 열이 된다. 전기차는 변환 손실이 작고 제동 에너지를 회수하지만, 공기 저항과 구름 저항은 피할 수 없다.</li>
+    </ol>
+  </section>
+
+  <!-- =============================================================== quiz -->
+  <section class="quiz-sec" id="quiz">
+    <h2>확인 퀴즈</h2>
+    <div class="quiz">
+      <div class="quiz-q"><p>Q1. 엔진 토크 180 N·m, 2단 기어비 2.0, 종감속비 4.0, 구동계 효율 0.9일 때 바퀴축 토크는?</p><div class="opts">
+        <button class="opt">약 20 N·m</button><button class="opt">약 650 N·m</button><button class="opt" data-correct>약 1,300 N·m</button><button class="opt">약 1,440 N·m</button>
+      </div><div class="quiz-exp">\(180 \times 2.0 \times 4.0 \times 0.9 = 1296\) N·m. 1,440 N·m는 효율을 빼먹은 값이다. 회전수는 반대로 1/8로 줄어든다.</div></div>
+
+      <div class="quiz-q"><p>Q2. 프로펠러 샤프트가 필요한 구성은?</p><div class="opts">
+        <button class="opt">앞 엔진 앞바퀴 굴림(FF)</button>
+        <button class="opt" data-correct>앞 엔진 뒷바퀴 굴림(FR)</button>
+        <button class="opt">뒤 엔진 뒷바퀴 굴림(RR)</button>
+        <button class="opt">뒤 차축에 모터가 달린 전기차</button>
+      </div><div class="quiz-exp">프로펠러 샤프트는 동력원과 구동 차축이 앞뒤로 떨어져 있을 때 그 사이를 잇는다. FF와 RR, 차축 일체형 모터는 동력원이 구동 차축 바로 옆에 있어 필요 없다. 앞 엔진 기반 AWD에도 뒤 차축으로 가는 프로펠러 샤프트가 있다.</div></div>
+
+      <div class="quiz-q"><p>Q3. 마른 노면에서 급가속할 때 뒷바퀴 굴림이 앞바퀴 굴림보다 접지에 유리한 주된 이유는?</p><div class="opts">
+        <button class="opt">뒷타이어가 더 넓기 때문</button>
+        <button class="opt">프로펠러 샤프트가 토크를 키우기 때문</button>
+        <button class="opt" data-correct>가속 때 하중이 뒤축으로 옮겨 가 구동륜의 수직 하중이 늘기 때문</button>
+        <button class="opt">앞바퀴는 조향 때문에 구동력을 낼 수 없기 때문</button>
+      </div><div class="quiz-exp">무게중심이 지면보다 높아 가속 관성력이 뒤축 하중을 \(m a h/L\)만큼 늘린다. 구동력 한계는 \(\mu\) × 구동축 하중이므로 뒷바퀴 굴림은 가속할수록 한계가 올라간다. 마찰 계수가 낮은 눈길에서는 가속도와 하중 이동이 작아 앞이 무거운 FF가 오히려 유리할 수 있다.</div></div>
+
+      <div class="quiz-q"><p>Q4. 최대 토크 400 N·m를 2,000 rpm에서 내는 디젤 엔진과 200 N·m를 6,000 rpm에서 내는 가솔린 엔진이 있다. 그 점에서의 출력은?</p><div class="opts">
+        <button class="opt">디젤이 2배 크다</button>
+        <button class="opt">둘이 같다</button>
+        <button class="opt" data-correct>가솔린이 1.5배 크다</button>
+        <button class="opt">회전수와 무관하게 토크로만 정해진다</button>
+      </div><div class="quiz-exp">디젤 \(400 \times 2000/9549 \approx 84\) kW, 가솔린 \(200 \times 6000/9549 \approx 126\) kW. 출력은 토크와 회전수의 곱이므로 토크가 절반이어도 회전수가 3배면 출력은 1.5배다. 적절한 기어비를 쓰면 바퀴에서 더 큰 힘을 낼 수 있는 쪽은 출력이 큰 쪽이다.</div></div>
+
+      <div class="quiz-q"><p>Q5. 다른 조건이 같을 때 휠베이스만 늘리면 나타나는 변화로 옳은 것은?</p><div class="opts">
+        <button class="opt">램프각이 커지고 회전 반경이 줄어든다</button>
+        <button class="opt" data-correct>램프각이 작아지고 최소 회전 반경이 커진다</button>
+        <button class="opt">접근각이 커진다</button>
+        <button class="opt">가속 때 하중 이동이 커진다</button>
+      </div><div class="quiz-exp">램프각은 약 \(2\arctan(2c/L)\)이라 \(L\)이 커지면 줄고, 회전 반경은 휠베이스에 거의 비례해 커진다. 접근각은 앞 오버행과 범퍼 높이로 정해지므로 휠베이스와 무관하다. 하중 이동 \(m a h/L\)은 오히려 줄어든다.</div></div>
+
+      <div class="quiz-q"><p>Q6. 내연기관차가 도심 주행에서 연료 에너지의 15~20 %만 바퀴에 전달하는 가장 큰 원인은?</p><div class="opts">
+        <button class="opt">변속기와 디퍼렌셜의 기어 마찰</button>
+        <button class="opt">타이어의 구름 저항</button>
+        <button class="opt" data-correct>배기가스와 냉각수로 빠져나가는 엔진의 열 손실</button>
+        <button class="opt">공기 저항</button>
+      </div><div class="quiz-exp">엔진은 열기관이어서 연료 에너지의 60 % 이상이 배기와 냉각으로 나간다. 구동계 손실은 수 % 수준이다. 구름 저항과 공기 저항은 손실이 아니라 바퀴에 닿은 에너지가 쓰이는 곳이다.</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const cs = getComputedStyle(document.documentElement);
+  const FONT = cs.getPropertyValue("--font").trim() || "sans-serif";
+  const MONO = cs.getPropertyValue("--mono").trim() || "monospace";
+  const G = CB.G, PI = Math.PI;
+  const rrect = (ctx, x, y, w, h, r) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); };
+  const line = (ctx, x1, y1, x2, y2) => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); };
+  const text = (ctx, s, x, y, color, font, align, base) => { ctx.fillStyle = color; ctx.font = font; ctx.textAlign = align || "center"; ctx.textBaseline = base || "middle"; ctx.fillText(s, x, y); };
+
+  /* ================================================================ 1. 3D 투시 자동차 */
+  (function xray() {
+    const T = CB.three($("x3-view"), { camera: [5.4, 3.3, 5.8], target: [0, 0.55, 0], fov: 36, minDistance: 3, maxDistance: 16 });
+    if (!T) return;
+    const THREE = T.THREE;
+    CB.ground3d(T, 12, 12);
+    const car = CB.car3d(T, { color: 0x8d97ab, opacity: 0.2 });
+
+    const sets = {};
+    const makeSet = (type, intro) => { const g = new THREE.Group(); T.scene.add(g); return (sets[type] = { group: g, parts: [], spin: [], intro }); };
+    function part(S, key, name, color, desc, ch, labelPos) {
+      const mat = T.material(color, { transparent: true, roughness: 0.5, metalness: 0.25 });
+      const p = { key, name, desc, ch, mat, group: new THREE.Group(), label: T.label(name, labelPos) };
+      S.group.add(p.group); S.parts.push(p);
+      return p;
+    }
+    const add = (parent, geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); parent.add(m); return m; };
+    const boxG = (sx, sy, sz) => new THREE.BoxGeometry(sx, sy, sz);
+    const cylG = (r1, r2, len, axis, seg) => {
+      const geo = new THREE.CylinderGeometry(r1, r2, len, seg || 20);
+      if (axis === "x") geo.rotateZ(-PI / 2); else if (axis === "z") geo.rotateX(PI / 2);
+      return geo;
+    };
+    const tubeG = (pts, r, seg) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((a) => new THREE.Vector3(a[0], a[1], a[2]))), seg || 48, r, 8, false);
+    const spinner = (S, p, x, y, z, axis, ratio) => { const g = new THREE.Group(); g.position.set(x, y, z); p.group.add(g); S.spin.push({ obj: g, axis, ratio }); return g; };
+    function axleShaft(S, p, x) {
+      const g = spinner(S, p, x, 0.33, 0, "z", 1);
+      add(g, cylG(0.028, 0.028, 1.36, "z", 10), p.mat, 0, 0, 0);
+      [-0.5, 0.5].forEach((z) => add(g, boxG(0.11, 0.07, 0.12), p.mat, 0, 0, z));
+    }
+
+    function chassis(S, o) {
+      let p = part(S, "susp", "서스펜션", 0xd9a520, "스프링이 차체를 떠받치고 댐퍼가 출렁임을 가라앉힌다. 링크는 바퀴가 움직이는 궤적을 정해 타이어가 노면에 바르게 닿게 한다.", "suspension", [1.35, 0.98, 0.6]);
+      [[1.35, 0.56], [1.35, -0.56], [-1.35, 0.56], [-1.35, -0.56]].forEach(([x, z]) => {
+        const pts = [];
+        for (let i = 0; i <= 72; i++) { const a = (i / 72) * 6 * 2 * PI; pts.push([x + Math.cos(a) * 0.07, 0.42 + (i / 72) * 0.42, z + Math.sin(a) * 0.07]); }
+        add(p.group, tubeG(pts, 0.014, 140), p.mat, 0, 0, 0);
+        add(p.group, cylG(0.026, 0.026, 0.5, "y", 10), p.mat, x, 0.63, z);
+        add(p.group, cylG(0.02, 0.02, 0.36, "z", 8), p.mat, x, 0.3, z * 0.68);
+      });
+      if (o.beam) add(p.group, cylG(0.04, 0.04, 1.2, "z", 10), p.mat, -1.2, 0.33, 0);
+
+      p = part(S, "brake", "브레이크", 0xb04a3a, "패드가 바퀴와 함께 도는 디스크를 조여 운동 에너지를 열로 바꾼다. 페달 힘은 유압으로 네 바퀴에 전달된다.", "brake", [-1.35, 0.72, -0.72]);
+      [[1.35, 0.63], [1.35, -0.63], [-1.35, 0.63], [-1.35, -0.63]].forEach(([x, z]) => {
+        add(p.group, cylG(x > 0 ? 0.2 : 0.17, x > 0 ? 0.2 : 0.17, 0.03, "z", 28), p.mat, x, 0.33, z);
+        add(p.group, boxG(0.09, 0.14, 0.09), p.mat, x - 0.15, 0.4, z);
+      });
+
+      p = part(S, "steer", "조향 장치", 0x7e57c2, "스티어링 휠의 회전을 랙과 피니언이 좌우 직선 운동으로 바꿔 앞바퀴를 꺾는다. 전동 모터가 힘을 보탠다.", "steering", [0.42, 1.2, -0.36]);
+      add(p.group, cylG(0.026, 0.026, 1.2, "z", 10), p.mat, o.rackX, 0.36, 0);
+      add(p.group, tubeG([[o.rackX, 0.36, -0.36], [0.95, 0.58, -0.36], [0.44, 0.98, -0.36]], 0.018, 24), p.mat, 0, 0, 0);
+      const tor = new THREE.TorusGeometry(0.17, 0.02, 8, 28); tor.rotateY(PI / 2);
+      add(p.group, tor, p.mat, 0.43, 0.99, -0.36).rotation.z = Math.atan2(0.4, -0.51);
+
+      p = part(S, "lv", "12 V 배터리", 0x4b8f8c, "조명, ECU, 와이퍼 같은 저전압 전장품의 전원이다. 전기차에도 그대로 있으며 고전압 배터리가 컨버터를 통해 충전한다.", "electrical", [1.82, 1.0, 0.52]);
+      add(p.group, boxG(0.24, 0.18, 0.17), p.mat, 1.82, 0.74, 0.52);
+    }
+
+    function iceCommon(S, exStart) {
+      let p = part(S, "tank", "연료 탱크", 0x3f9b5a, "휘발유나 경유 40~70 L를 담는다. 충돌 때 안전하도록 뒷좌석 아래, 뒤 차축 앞에 둔다.", "combustion", [-0.72, 0.9, 0.3]);
+      add(p.group, boxG(0.5, 0.2, 1.0), p.mat, -0.72, 0.56, 0);
+      p = part(S, "exh", "배기관", 0x8a8f99, "연소 가스를 촉매에서 정화하고 머플러에서 소음을 줄여 차 뒤로 내보낸다. 연료 에너지의 약 3분의 1이 이 길로 빠져나간다.", "combustion", [-1.85, 0.62, 0.5]);
+      add(p.group, tubeG([exStart, [0.8, 0.3, 0.32], [0, 0.27, 0.32], [-1.0, 0.3, 0.36], [-1.5, 0.5, 0.42], [-2.12, 0.36, 0.45]], 0.035, 64), p.mat, 0, 0, 0);
+      add(p.group, cylG(0.085, 0.085, 0.3, "x", 16), p.mat, 0.42, 0.28, 0.32);
+      add(p.group, cylG(0.1, 0.1, 0.42, "x", 16), p.mat, -1.88, 0.39, 0.44);
+      p = part(S, "rad", "라디에이터", 0x3a8fd6, "엔진을 식힌 냉각수의 열을 주행풍으로 내보낸다. 연료 에너지의 약 3분의 1이 냉각으로 나간다.", "engine", [2.05, 0.95, 0]);
+      add(p.group, boxG(0.05, 0.42, 0.9), p.mat, 2.06, 0.55, 0);
+    }
+
+    (function buildFR() {
+      const S = makeSet("fr", "<b>내연기관 FR</b>엔진을 앞에 세로로 놓고 변속기, 프로펠러 샤프트, 디퍼렌셜을 일렬로 이어 뒷바퀴를 굴린다. 축이 지나가야 해서 바닥 가운데에 터널이 생긴다.");
+      let p = part(S, "engine", "엔진", 0xc0392b, "연료를 태워 크랭크축을 돌린다. FR에서는 크랭크축이 차의 앞뒤 방향과 나란한 세로 배치다.", "engine", [1.45, 1.08, 0]);
+      add(p.group, boxG(0.72, 0.42, 0.46), p.mat, 1.45, 0.62, 0);
+      add(p.group, boxG(0.66, 0.12, 0.3), p.mat, 1.45, 0.89, 0);
+      p = part(S, "trans", "변속기", 0x2f6fb0, "기어비를 바꿔 엔진 회전수를 쓸 만한 범위에 묶어 두면서 필요한 구동력을 만든다. 클러치 또는 토크 컨버터가 엔진 쪽에 붙는다.", "transmission", [0.7, 0.82, 0]);
+      add(p.group, cylG(0.21, 0.11, 0.75, "x"), p.mat, 0.7, 0.47, 0);
+      p = part(S, "prop", "프로펠러 샤프트", 0xe08a2e, "변속기 출력을 뒤 차축까지 보내는 긴 축. 서스펜션이 움직여도 꺾일 수 있게 양 끝에 유니버설 조인트가 있다.", "driveline", [-0.45, 0.62, 0]);
+      const sg = spinner(S, p, -0.44, 0.38, 0, "x", 3.5);
+      add(sg, cylG(0.036, 0.036, 1.52, "x", 12), p.mat, 0, 0, 0);
+      add(sg, boxG(0.1, 0.12, 0.05), p.mat, 0.7, 0, 0); add(sg, boxG(0.1, 0.05, 0.12), p.mat, -0.7, 0, 0);
+      p = part(S, "diff", "디퍼렌셜·구동축", 0xe0662e, "종감속 기어가 회전을 한 번 더 줄이고 90° 꺾는다. 디퍼렌셜은 코너에서 좌우 바퀴가 다른 속도로 돌게 해 준다.", "driveline", [-1.35, 0.68, 0]);
+      add(p.group, new THREE.SphereGeometry(0.17, 20, 14), p.mat, -1.35, 0.33, 0);
+      add(p.group, cylG(0.07, 0.09, 0.2, "x", 12), p.mat, -1.16, 0.36, 0);
+      axleShaft(S, p, -1.35);
+      iceCommon(S, [1.3, 0.42, 0.3]);
+      chassis(S, { rackX: 1.0 });
+    })();
+
+    (function buildFF() {
+      const S = makeSet("ff", "<b>내연기관 FF</b>엔진을 가로로 놓고 변속기와 디퍼렌셜을 한 덩어리(트랜스액슬)로 묶어 앞바퀴를 굴린다. 구동계가 엔진룸 안에서 끝나 객실 바닥이 평평하다.");
+      let p = part(S, "engine", "엔진", 0xc0392b, "FF에서는 크랭크축이 차의 좌우 방향과 나란한 가로 배치다. 엔진룸 길이가 짧아져 객실을 넓게 쓸 수 있다.", "engine", [1.55, 1.08, 0.12]);
+      add(p.group, boxG(0.46, 0.42, 0.62), p.mat, 1.55, 0.64, 0.12);
+      add(p.group, boxG(0.3, 0.12, 0.56), p.mat, 1.55, 0.91, 0.12);
+      p = part(S, "trans", "트랜스액슬", 0x2f6fb0, "변속기, 종감속 기어, 디퍼렌셜을 한 케이스에 넣은 장치. 엔진 옆에 나란히 붙어 좌우 구동축으로 바로 출력한다.", "transmission", [1.52, 0.9, -0.42]);
+      add(p.group, boxG(0.42, 0.36, 0.32), p.mat, 1.52, 0.56, -0.38);
+      p = part(S, "diff", "디퍼렌셜·구동축", 0xe0662e, "트랜스액슬 안의 디퍼렌셜에서 좌우 구동축이 나온다. 조향하며 구동해야 하므로 큰 각도로 꺾이는 등속 조인트를 쓴다.", "driveline", [1.35, 0.14, 0.45]);
+      add(p.group, new THREE.SphereGeometry(0.13, 18, 12), p.mat, 1.35, 0.35, -0.3);
+      axleShaft(S, p, 1.35);
+      iceCommon(S, [1.3, 0.46, 0.2]);
+      chassis(S, { rackX: 1.08, beam: true });
+    })();
+
+    (function buildEV() {
+      const S = makeSet("ev", "<b>전기차</b>바닥 전체가 배터리 팩이고, 모터·감속기·인버터가 차축에 붙은 한 덩어리로 들어간다. 엔진, 변속기, 배기관, 연료 탱크가 없다.");
+      let p = part(S, "batt", "배터리 팩", 0x2f7ed8, "수백~수천 개의 리튬 이온 셀을 모듈로 묶어 바닥에 깐다. 대표적으로 400 V 또는 800 V, 50~100 kWh. 차에서 가장 무거운 단일 부품이다.", "battery", [0, 0.6, 0]);
+      add(p.group, boxG(2.1, 0.13, 1.36), p.mat, 0, 0.3, 0);
+      for (let i = -2; i <= 2; i++) add(p.group, boxG(0.34, 0.03, 1.2), p.mat, i * 0.4, 0.38, 0);
+      p = part(S, "motor", "구동 모터", 0xc0392b, "회전 자기장으로 로터를 돌린다. 정지 상태에서 최대 토크가 나오고 1만 rpm 이상까지 돌아 다단 변속기가 필요 없다.", "motor", [-1.35, 0.86, 0.4]);
+      add(p.group, cylG(0.2, 0.2, 0.36, "z", 28), p.mat, -1.35, 0.36, 0.14);
+      const mg = spinner(S, p, -1.35, 0.36, 0.34, "z", 9);
+      add(mg, cylG(0.12, 0.12, 0.03, "z", 20), p.mat, 0, 0, 0);
+      add(mg, boxG(0.3, 0.05, 0.03), p.mat, 0, 0, 0.01);
+      p = part(S, "red", "감속기·디퍼렌셜", 0xe0662e, "고정 감속비 약 7~11의 1단 기어로 모터 회전을 줄여 바퀴 토크를 만든다. 디퍼렌셜이 함께 들어 있다.", "driveline", [-1.35, 0.1, -0.2]);
+      add(p.group, cylG(0.22, 0.22, 0.12, "z", 28), p.mat, -1.35, 0.36, -0.12);
+      axleShaft(S, p, -1.35);
+      p = part(S, "inv", "인버터", 0xf08c00, "배터리의 직류를 3상 교류로 바꿔 모터의 토크와 회전수를 제어한다. 회생 제동 때는 반대로 교류를 직류로 되돌린다.", "motor", [-1.35, 0.98, -0.1]);
+      add(p.group, boxG(0.34, 0.12, 0.4), p.mat, -1.35, 0.64, 0.08);
+      add(p.group, tubeG([[-1.0, 0.38, 0.3], [-1.15, 0.52, 0.25], [-1.25, 0.62, 0.2]], 0.022, 16), p.mat, 0, 0, 0);
+      p = part(S, "chg", "충전·전력 분배", 0xf5b301, "충전구로 들어온 전기를 배터리에 맞게 바꾸는 탑재형 충전기와, 고전압을 12 V로 낮추는 컨버터, 각 장치로 전력을 나누는 정션 박스.", "battery", [1.55, 0.98, 0]);
+      add(p.group, boxG(0.42, 0.16, 0.56), p.mat, 1.55, 0.64, 0);
+      add(p.group, tubeG([[1.02, 0.38, 0.3], [1.25, 0.5, 0.25], [1.4, 0.6, 0.2]], 0.022, 16), p.mat, 0, 0, 0);
+      add(p.group, boxG(0.14, 0.14, 0.05), p.mat, -1.72, 0.86, -0.82);
+      add(p.group, tubeG([[-1.72, 0.86, -0.78], [-1.5, 0.6, -0.6], [-1.0, 0.38, -0.5]], 0.018, 20), p.mat, 0, 0, 0);
+      p = part(S, "rad", "열 관리", 0x3a8fd6, "배터리, 모터, 인버터를 알맞은 온도로 유지하는 냉각 회로와 히트 펌프. 식힐 열이 적어 라디에이터가 작다.", "battery", [2.05, 0.9, 0]);
+      add(p.group, boxG(0.05, 0.3, 0.8), p.mat, 2.06, 0.5, 0);
+      chassis(S, { rackX: 1.08 });
+    })();
+
+    const partsBox = $("x3-parts"), info = $("x3-info"), showAll = $("x3-labels"), run = $("x3-run");
+    let cur = "fr", sel = "";
+    function refresh() {
+      Object.keys(sets).forEach((k) => {
+        const S = sets[k], on = k === cur;
+        S.group.visible = on;
+        S.parts.forEach((p) => {
+          const isSel = on && sel === p.key, dim = !!sel && !isSel;
+          p.mat.opacity = dim ? 0.14 : 1; p.mat.depthWrite = !dim;
+          p.mat.emissive.copy(p.mat.color).multiplyScalar(isSel ? 0.45 : 0);
+          p.label.setVisible(on && (isSel || (!sel && showAll.checked)));
+        });
+      });
+      [...partsBox.querySelectorAll("button")].forEach((b) => b.classList.toggle("on", b.dataset.key === sel));
+      const S = sets[cur], p = S.parts.find((q) => q.key === sel);
+      info.innerHTML = p ? `<b>${p.name}</b>${p.desc} <a href="${p.ch}.html">자세히 보기 →</a>` : S.intro + " 아래 버튼으로 부품을 하나씩 골라 보자.";
+    }
+    function setType(t) {
+      cur = t;
+      if (!sets[t].parts.some((p) => p.key === sel)) sel = "";
+      partsBox.innerHTML = '<button data-key="">전체</button>' + sets[t].parts.map((p) => `<button data-key="${p.key}">${p.name}</button>`).join("");
+      refresh();
+    }
+    partsBox.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; sel = b.dataset.key; refresh(); });
+    showAll.addEventListener("change", refresh);
+    CB.seg("x3-type", setType);
+    function setOp(v) {
+      const o = v / 100, m = car.body.material;
+      m.transparent = true; m.opacity = o; m.depthWrite = o > 0.98;
+      if (car.glass) car.glass.material.opacity = o > 0.98 ? 0.85 : Math.min(0.35, o);
+    }
+    setOp(CB.range("x3-op", (v) => v + " %", setOp)());
+    setType("fr");
+
+    T.onFrame((dt) => {
+      if (!run.checked) return;
+      const w = 2.2 * dt;
+      car.wheels.forEach((wh) => (wh.spin.rotation.z -= w));
+      sets[cur].spin.forEach((s) => (s.obj.rotation[s.axis] -= w * s.ratio));
+    });
+  })();
+
+  /* ================================================================ 2. 동력 흐름 */
+  (function powerflow() {
+    const GEARS = [3.6, 2.1, 1.4, 1.0, 0.78, 0.63], FINAL = 3.6, ETA = 0.92, R = 0.32, M = 1500;
+    const IDLE = 800, NMAX = 6500, VIS = 0.025;
+    const tmax = (n) => 200 * (1 - 0.55 * Math.pow((n - 4400) / 4400, 2));
+    const resist = (v) => (v > 0.05 ? 0.012 * M * G : 0) + 0.5 * CB.RHO * 0.3 * 2.2 * v * v;
+    const thr = CB.range("pf-thr", (x) => x + " %"), gear = CB.seg("pf-gear");
+    let v = 0, st = {};
+    const ang = { e: 0, a: 0, b: 0, w: 0 };
+
+    function step(dt) {
+      const g = GEARS[+gear() - 1], k = g * FINAL, a = thr() / 100;
+      const nDrive = ((v / R) * k * 30) / PI;
+      const nSlip = IDLE + a * 1400, slip = nDrive < nSlip;
+      const n = slip ? nSlip : nDrive;
+      const cut = CB.clamp((NMAX + 150 - n) / 150, 0, 1), fr = 12 + 0.004 * n;
+      const te = a * cut * tmax(n) - (1 - a * cut) * fr;
+      const tc = slip ? Math.max(0, te) : te;
+      const tw = tc * k * ETA, F = tw / R;
+      let acc = (F - resist(v)) / M;
+      if (v <= 0 && acc < 0) acc = 0;
+      v = Math.max(0, v + acc * dt);
+      ang.e += ((n * PI) / 30) * VIS * dt;
+      ang.a += ((nDrive * PI) / 30) * VIS * dt;
+      ang.b += ((nDrive * PI) / 30 / g) * VIS * dt;
+      ang.w += ((nDrive * PI) / 30 / k) * VIS * dt;
+      st = { g, k, n, nDrive, tc, tw, F, acc, slip, a };
+    }
+
+    function gearWheel(ctx, x, y, r, a, fill, stroke) {
+      ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+      ctx.fillStyle = fill; ctx.strokeStyle = stroke; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, PI * 2); ctx.fill(); ctx.stroke();
+      const nt = Math.max(8, Math.round(r / 2.6));
+      for (let i = 0; i < nt; i++) { const t = (i / nt) * PI * 2; line(ctx, Math.cos(t) * (r - 4), Math.sin(t) * (r - 4), Math.cos(t) * r, Math.sin(t) * r); }
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 3; i++) { const t = (i / 3) * PI * 2; line(ctx, 0, 0, Math.cos(t) * (r - 4), Math.sin(t) * (r - 4)); }
+      ctx.restore();
+    }
+
+    const cv = CB.canvas("#cv-pf", (ctx, w, h) => {
+      if (st.g == null) return;
+      const P = CB.palette(), s = st;
+      const D = Math.min(h * 0.28, w * 0.15), yA = h * 0.33, yB = yA + D;
+      const xe = w * 0.115, xt = w * 0.38, xf = w * 0.64, xw = w * 0.88, xc = w * 0.262;
+      const fs = w < 420 ? 10 : 12, fm = `${fs}px ${MONO}`, fl = `600 ${fs}px ${FONT}`;
+      // 축
+      ctx.strokeStyle = P.dim; ctx.lineWidth = 4; ctx.lineCap = "round";
+      line(ctx, w * 0.2, yA, xt, yA); line(ctx, xt, yB, xf, yB); line(ctx, xf, yA, xw, yA);
+      // 엔진
+      ctx.fillStyle = P.surface; ctx.strokeStyle = P.border; ctx.lineWidth = 1.5;
+      rrect(ctx, w * 0.03, yA - D * 0.6, w * 0.17, D * 1.2, 6); ctx.fill(); ctx.stroke();
+      const rc = Math.min(D * 0.36, w * 0.06);
+      ctx.strokeStyle = P.red; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(xe, yA, rc, 0, PI * 2); ctx.stroke();
+      line(ctx, xe, yA, xe + Math.cos(ang.e) * rc, yA + Math.sin(ang.e) * rc);
+      ctx.fillStyle = P.red; ctx.beginPath(); ctx.arc(xe + Math.cos(ang.e) * rc, yA + Math.sin(ang.e) * rc, 3.5, 0, PI * 2); ctx.fill();
+      // 클러치
+      const gap = s.slip ? (s.a > 0 ? 3 : 7) : 0;
+      ctx.fillStyle = s.slip ? P.warn : P.accent;
+      ctx.fillRect(xc - 4 - gap / 2, yA - D * 0.32, 4, D * 0.64);
+      ctx.fillRect(xc + gap / 2, yA - D * 0.32, 4, D * 0.64);
+      // 기어 쌍
+      const ri = D / (1 + s.g), ro = D - ri, rp = D / (1 + FINAL), rr = D - rp;
+      gearWheel(ctx, xt, yA, ri, ang.a, P.surface, P.accent2);
+      gearWheel(ctx, xt, yB, ro, -ang.b, P.surface, P.accent2);
+      gearWheel(ctx, xf, yB, rp, ang.b, P.surface, P.accent);
+      gearWheel(ctx, xf, yA, rr, -ang.w, P.surface, P.accent);
+      // 바퀴
+      const rw = Math.min(w * 0.09, D * 0.85);
+      ctx.save(); ctx.translate(xw, yA); ctx.rotate(ang.w);
+      ctx.fillStyle = "#1c2028"; ctx.strokeStyle = P.dim; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(0, 0, rw, 0, PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#aeb6c6"; ctx.beginPath(); ctx.arc(0, 0, rw * 0.6, 0, PI * 2); ctx.fill();
+      ctx.strokeStyle = "#1c2028"; ctx.lineWidth = 2;
+      for (let i = 0; i < 5; i++) { const t = (i / 5) * PI * 2; line(ctx, 0, 0, Math.cos(t) * rw * 0.6, Math.sin(t) * rw * 0.6); }
+      ctx.restore();
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 1.5;
+      line(ctx, xw - rw * 1.5, yA + rw + 1, Math.min(w - 2, xw + rw * 1.5), yA + rw + 1);
+      const fl2 = CB.clamp(s.F / 7500, -0.3, 1) * w * 0.11;
+      CB.arrow(ctx, xw - fl2 / 2, yA + rw + 9, xw + fl2 / 2, yA + rw + 9, s.F >= 0 ? P.accent : P.bad, 3);
+      // 글자
+      text(ctx, "엔진", xe, 11, P.text, fl);
+      text(ctx, "변속기 ×" + s.g.toFixed(2), xt, 11, P.text, fl);
+      text(ctx, "종감속 ×" + FINAL.toFixed(2), xf, 11, P.text, fl);
+      text(ctx, "바퀴", xw, 11, P.text, fl);
+      const y1 = h - 28, y2 = h - 12;
+      text(ctx, Math.round(s.n) + " rpm", xe, y1, P.dim, fm); text(ctx, Math.round(s.tc) + " N·m", xe, y2, P.text, fm);
+      text(ctx, Math.round(s.nDrive / s.g) + " rpm", xt, y1, P.dim, fm); text(ctx, Math.round(s.tc * s.g) + " N·m", xt, y2, P.text, fm);
+      text(ctx, Math.round(s.nDrive / s.k) + " rpm", xf, y1, P.dim, fm); text(ctx, Math.round(s.tw) + " N·m", xf, y2, P.text, fm);
+      text(ctx, CB.kmh(v).toFixed(0) + " km/h", xw, y1, P.dim, fm); text(ctx, Math.round(s.F) + " N", xw, y2, P.accent, fm);
+    }, { aspect: 0.42, minHeight: 210, maxHeight: 280 });
+
+    const cc = CB.canvas("#cv-pfc", (ctx) => {
+      if (st.g == null) return;
+      const P = CB.palette(), gi = +gear() - 1;
+      const series = GEARS.map((g, i) => {
+        const k = g * FINAL, d = [];
+        for (let n = 1000; n <= NMAX; n += 250) d.push([CB.kmh(((n * PI) / 30 / k) * R), (tmax(n) * k * ETA) / R]);
+        return { data: d, color: i === gi ? P.accent : P.faint, width: i === gi ? 2.6 : 1.4 };
+      });
+      const rs = [];
+      for (let s = 0; s <= 260; s += 5) rs.push([s, resist(CB.ms(s))]);
+      series.push({ data: rs, color: P.accent2, width: 2, dash: [5, 4] });
+      CB.chart(ctx, null, { x: [0, 260], y: [0, 8000], xLabel: "차속 (km/h)", yLabel: "구동력 (N)", series, points: [{ x: CB.kmh(v), y: Math.max(0, st.F), color: P.accent, r: 5 }] });
+    }, { aspect: 0.48, minHeight: 200, maxHeight: 280 });
+
+    function stats() {
+      const s = st;
+      CB.stat("o-pf-n", Math.round(s.n) + "<small>rpm</small>");
+      CB.stat("o-pf-t", Math.round(s.tc) + "<small>N·m</small>");
+      CB.stat("o-pf-tw", Math.round(s.tw) + "<small>N·m</small>");
+      CB.stat("o-pf-v", CB.kmh(v).toFixed(1) + "<small>km/h</small>");
+      CB.stat("o-pf-a", s.acc.toFixed(2) + "<small>m/s²</small>");
+      CB.stat("o-pf-p", ((s.tc * s.n * PI) / 30 / 1000).toFixed(1) + "<small>kW</small>");
+      CB.stat("o-pf-cl", s.slip ? (s.a > 0 ? "반클러치" : "끊김") : s.n >= NMAX ? "직결 · 회전 한계" : "직결");
+    }
+    $("pf-reset").addEventListener("click", () => { v = 0; });
+    step(0); cv.redraw(); cc.redraw(); stats();
+    CB.loop(cv.canvas, (dt) => { step(dt); cv.redraw(); cc.redraw(); stats(); });
+  })();
+
+  /* ================================================================ 3. 구동 레이아웃 */
+  (function layout() {
+    const M = 1500, L = 2.7, HCG = 0.55, K = HCG / L, C = CB.CAR;
+    const LAY = {
+      ff: { name: "FF", ff: 0.62, eng: 1.55, drive: "f" },
+      fr: { name: "FR", ff: 0.53, eng: 1.35, drive: "r" },
+      mr: { name: "MR", ff: 0.44, eng: -0.55, drive: "r" },
+      rr: { name: "RR", ff: 0.39, eng: -1.75, drive: "r" },
+      awd: { name: "AWD", ff: 0.57, eng: 1.45, drive: "a" },
+    };
+    const ORDER = ["ff", "fr", "mr", "rr", "awd"];
+    const amax = (l, mu) => (l.drive === "a" ? mu : l.drive === "f" ? (mu * l.ff) / (1 + mu * K) : (mu * (1 - l.ff)) / (1 - mu * K));
+    let cv = null, cb = null;
+    const update = () => { if (cv) cv.redraw(); if (cb) cb.redraw(); stats(); };
+    const type = CB.seg("lay-type", update);
+    const accR = CB.range("lay-acc", (x) => (x >= 0 ? "가속 " : "제동 ") + Math.abs(x).toFixed(2) + " g", update);
+    const muR = CB.range("lay-mu", (x) => x.toFixed(2), update);
+
+    function state() {
+      const l = LAY[type()], mu = muR(), req = accR(), lim = amax(l, mu);
+      const a = req >= 0 ? Math.min(req, lim) : Math.max(req, -mu);
+      return { l, mu, req, lim, a, wf: l.ff - a * K, wr: 1 - l.ff + a * K, spin: req > lim + 1e-9, lock: req < -mu - 1e-9 };
+    }
+
+    cv = CB.canvas("#cv-lay", (ctx, w, h) => {
+      const P = CB.palette(), S = state(), l = S.l;
+      const s = Math.min(w / 6.0, h / 8.2), cx = w / 2, gy = h * 0.42;
+      const fs = w < 420 ? 10 : 12, fm = `${fs}px ${MONO}`, fl = `600 ${fs}px ${FONT}`;
+      const xF = cx + C.axF * s, xR = cx + C.axR * s;
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 1.5; line(ctx, w * 0.03, gy, w * 0.97, gy);
+      CB.carSide(ctx, cx, gy, s, { color: P.accent2, alpha: 0.5, pitch: -S.a * 0.035 });
+      // 엔진
+      const ex = cx + l.eng * s;
+      ctx.fillStyle = "#c0392b"; rrect(ctx, ex - 0.34 * s, gy - 0.86 * s, 0.68 * s, 0.44 * s, 3); ctx.fill();
+      text(ctx, "엔진", ex, gy - 0.64 * s, "#fff", `600 ${Math.max(9, Math.min(12, s * 0.26))}px ${FONT}`);
+      // 수직 하중
+      const kN = h * 0.2, ty = gy + kN + 16;
+      [[xF, S.wf], [xR, S.wr]].forEach(([x, f]) => {
+        CB.arrow(ctx, x, gy + 6 + f * kN, x, gy + 5, P.green, 3);
+        text(ctx, Math.round(f * M) + " kg · " + Math.round(f * 100) + "%", x, ty, P.text, fm);
+      });
+      // 구동력·제동력
+      const share = S.a >= 0 ? (l.drive === "f" ? [1, 0] : l.drive === "r" ? [0, 1] : [S.wf, S.wr]) : [S.wf, S.wr];
+      [[xF, share[0]], [xR, share[1]]].forEach(([x, sh]) => {
+        const len = S.a * sh * 2.0 * s;
+        if (Math.abs(len) > 1) CB.arrow(ctx, x, gy + 3, x + len, gy + 3, S.a >= 0 ? P.accent : P.bad, 3.5);
+      });
+      // 무게중심과 관성력
+      const gx = cx + (C.axR + l.ff * L) * s, gyc = gy - HCG * s;
+      CB.arrow(ctx, gx, gyc, gx - S.a * 1.6 * s, gyc, P.warn, 3);
+      ctx.fillStyle = P.bg; ctx.strokeStyle = P.text; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(gx, gyc, 6, 0, PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = P.text;
+      ctx.beginPath(); ctx.moveTo(gx, gyc); ctx.arc(gx, gyc, 6, 0, PI / 2); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(gx, gyc); ctx.arc(gx, gyc, 6, PI, PI * 1.5); ctx.closePath(); ctx.fill();
+      text(ctx, "무게중심", gx, gyc - 14, P.dim, fl);
+      if (S.spin) text(ctx, "구동륜 휠 스핀: 접지 한계 초과", cx, 14, P.bad, fl);
+      else if (S.lock) text(ctx, "바퀴 잠김: 접지 한계 초과", cx, 14, P.bad, fl);
+      // 위에서 본 구동계
+      const ty2 = h * 0.83;
+      ctx.fillStyle = P.surface; ctx.strokeStyle = P.border; ctx.lineWidth = 1.5;
+      rrect(ctx, cx - 2.25 * s, ty2 - 0.9 * s, 4.5 * s, 1.8 * s, 0.32 * s); ctx.fill(); ctx.stroke();
+      const dF = l.drive !== "r", dR = l.drive !== "f";
+      ctx.strokeStyle = P.accent; ctx.lineWidth = Math.max(2, s * 0.07); ctx.lineCap = "round";
+      if (dF) line(ctx, xF, ty2 - 0.78 * s, xF, ty2 + 0.78 * s);
+      if (dR) line(ctx, xR, ty2 - 0.78 * s, xR, ty2 + 0.78 * s);
+      if (l.drive !== "f" || type() !== "ff") {
+        if (dR) line(ctx, ex, ty2, xR, ty2);
+        if (dF) line(ctx, ex, ty2, xF, ty2);
+      }
+      [[xF, dF], [xR, dR]].forEach(([x, d]) => [-1, 1].forEach((sd) => {
+        ctx.fillStyle = d ? P.accent : P.faint;
+        rrect(ctx, x - 0.33 * s, ty2 + sd * 0.78 * s - 0.11 * s, 0.66 * s, 0.22 * s, 2); ctx.fill();
+        if (d && sd === 1) { ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(x, ty2, 0.15 * s, 0, PI * 2); ctx.fill(); }
+      }));
+      if (type() === "ff") {
+        ctx.fillStyle = "#c0392b"; rrect(ctx, ex - 0.23 * s, ty2 - 0.2 * s, 0.46 * s, 0.66 * s, 2); ctx.fill();
+        ctx.fillStyle = P.accent2; rrect(ctx, ex - 0.2 * s, ty2 - 0.6 * s, 0.4 * s, 0.36 * s, 2); ctx.fill();
+      } else {
+        const dir = type() === "rr" ? 1 : -1;
+        ctx.fillStyle = "#c0392b"; rrect(ctx, ex - 0.35 * s, ty2 - 0.23 * s, 0.7 * s, 0.46 * s, 2); ctx.fill();
+        ctx.fillStyle = P.accent2; rrect(ctx, ex + dir * 0.38 * s - (dir < 0 ? 0.4 * s : 0), ty2 - 0.15 * s, 0.4 * s, 0.3 * s, 2); ctx.fill();
+      }
+      text(ctx, "앞 →", cx + 2.25 * s + 4, ty2, P.faint, fl, "left");
+    }, { aspect: 0.8, minHeight: 300, maxHeight: 470 });
+
+    cb = CB.canvas("#cv-layb", (ctx, w, h) => {
+      const P = CB.palette(), S = state();
+      const x0 = 46, x1 = w - 12, y0 = 22, y1 = h - 24, top = 1.2;
+      const Y = (v) => y1 - (v / top) * (y1 - y0);
+      const fm = `11px ${MONO}`, fl = `600 12px ${FONT}`;
+      ctx.strokeStyle = P.grid; ctx.lineWidth = 1;
+      [0, 0.4, 0.8, 1.2].forEach((v) => { line(ctx, x0, Y(v), x1, Y(v)); text(ctx, v.toFixed(1), x0 - 6, Y(v), P.dim, fm, "right"); });
+      text(ctx, "g", 12, y0 - 10, P.dim, fm, "left");
+      const bw = (x1 - x0) / ORDER.length;
+      ORDER.forEach((k, i) => {
+        const v = amax(LAY[k], S.mu), x = x0 + bw * (i + 0.5), on = LAY[k] === S.l;
+        ctx.fillStyle = on ? P.accent : P.faint; ctx.globalAlpha = on ? 1 : 0.55;
+        rrect(ctx, x - bw * 0.3, Y(v), bw * 0.6, y1 - Y(v), 3); ctx.fill(); ctx.globalAlpha = 1;
+        text(ctx, v.toFixed(2), x, Y(v) - 9, on ? P.accent : P.dim, fm);
+        text(ctx, LAY[k].name, x, y1 + 12, on ? P.text : P.dim, fl);
+      });
+      ctx.strokeStyle = P.axis; line(ctx, x0, y1, x1, y1);
+      if (S.req > 0) {
+        ctx.strokeStyle = P.warn; ctx.setLineDash([5, 4]); ctx.lineWidth = 1.5;
+        line(ctx, x0, Y(Math.min(S.req, top)), x1, Y(Math.min(S.req, top))); ctx.setLineDash([]);
+        text(ctx, "요구 " + S.req.toFixed(2) + " g", x1 - 2, Y(Math.min(S.req, top)) - 8, P.warn, fm, "right");
+      }
+    }, { height: 170 });
+
+    function stats() {
+      const S = state();
+      CB.stat("o-lay-wf", Math.round(S.wf * M) + "<small>kg (" + Math.round(S.wf * 100) + " %)</small>");
+      CB.stat("o-lay-wr", Math.round(S.wr * M) + "<small>kg (" + Math.round(S.wr * 100) + " %)</small>");
+      CB.stat("o-lay-lim", S.lim.toFixed(2) + "<small>g</small>");
+      CB.stat("o-lay-t", (100 / 3.6 / (S.lim * G)).toFixed(1) + "<small>s</small>");
+      CB.stat("o-lay-st", S.spin ? "휠 스핀" : S.lock ? "바퀴 잠김" : S.a > 0.005 ? "가속 " + S.a.toFixed(2) + "<small>g</small>" : S.a < -0.005 ? "제동 " + (-S.a).toFixed(2) + "<small>g</small>" : "정속");
+    }
+    stats();
+  })();
+
+  /* ================================================================ 4. 치수 놀이터 */
+  (function dims() {
+    const RT = 0.34, TR = 1.56, WID = 1.8;
+    const PRE = {
+      sedan: { wb: 2.8, fo: 0.9, ro: 1.1, h: 1.45, gc: 0.14 },
+      hatch: { wb: 2.6, fo: 0.85, ro: 0.7, h: 1.47, gc: 0.14 },
+      suv: { wb: 2.8, fo: 0.9, ro: 0.95, h: 1.7, gc: 0.21 },
+      sport: { wb: 2.5, fo: 0.95, ro: 0.9, h: 1.26, gc: 0.11 },
+    };
+    let cv = null, ct = null;
+    const update = () => { if (cv) cv.redraw(); if (ct) ct.redraw(); stats(); };
+    const m2 = (x) => x.toFixed(2) + " m";
+    const R = {
+      wb: CB.range("dim-wb", m2, update), fo: CB.range("dim-fo", m2, update), ro: CB.range("dim-ro", m2, update),
+      h: CB.range("dim-h", m2, update), gc: CB.range("dim-gc", (x) => Math.round(x * 1000) + " mm", update),
+      st: CB.range("dim-st", (x) => x.toFixed(1) + "°", update),
+    };
+    const type = CB.seg("dim-type", (t) => { const p = PRE[t]; Object.keys(p).forEach((k) => R[k].set(p[k])); update(); });
+    // 타이어에 접하는 직선이 지면과 이루는 각: 차축에서 수평 dx, 높이 hb인 점 기준
+    const tang = (dx, hb) => { const d = Math.hypot(dx, RT - hb); return d <= RT ? PI / 2 : Math.asin(RT / d) - Math.atan2(RT - hb, dx); };
+
+    function calc() {
+      const d = { wb: R.wb(), fo: R.fo(), ro: R.ro(), h: R.h(), gc: R.gc(), st: (R.st() * PI) / 180 };
+      d.hF = d.gc + 0.05; d.hR = d.gc + 0.12;
+      d.len = d.wb + d.fo + d.ro;
+      d.ap = tang(d.fo - 0.06, d.hF); d.dp = tang(d.ro - 0.05, d.hR); d.rp = 2 * tang(d.wb / 2, d.gc);
+      d.rr = d.wb / Math.tan(d.st) + TR / 2;            // 뒤 차축 중심의 회전 반지름
+      d.rmin = Math.hypot(d.rr + TR / 2, d.wb);          // 바깥쪽 앞바퀴
+      d.rbody = Math.hypot(d.rr + WID / 2, d.wb + d.fo); // 바깥쪽 앞 모서리
+      return d;
+    }
+    const deg = (r) => ((r * 180) / PI).toFixed(1) + "°";
+
+    cv = CB.canvas("#cv-dim", (ctx, w, h) => {
+      const P = CB.palette(), d = calc(), hatch = type() === "hatch" || type() === "suv";
+      const s = Math.min((w - 50) / 5.7, (h - 78) / 1.95), gy = h - 52;
+      const xF = d.wb / 2 + d.fo, xR = -d.wb / 2 - d.ro, mid = (xF + xR) / 2;
+      const X = (x) => w / 2 + (x - mid) * s, Y = (y) => gy - y * s;
+      const fs = w < 420 ? 10 : 12, fm = `${fs}px ${MONO}`, fl = `600 ${fs}px ${FONT}`;
+      const yh = d.gc + (d.h - d.gc) * 0.5, rise = d.h - yh, xc = d.wb / 2 - 0.15, xrf = xc - rise * 1.25;
+      const pts = [[xF - 0.06, d.hF], [xF, d.hF + 0.18], [xF - 0.05, yh - 0.12], [xF - 0.3, yh - 0.03], [xc, yh + 0.04], [xrf, d.h]];
+      let xrr, xgb;
+      if (hatch) { xrr = xR + 0.5; xgb = xR + 0.14; pts.push([xrr, d.h - 0.04], [xR + 0.08, yh + 0.1], [xR, yh - 0.1]); }
+      else { xrr = Math.min(xrf - 0.3, -d.wb / 2 + 0.35); xgb = Math.min(xrr - 0.2, xR + 0.75); pts.push([xrr, d.h - 0.03], [xgb, yh + 0.08], [xR + 0.05, yh + 0.02]); }
+      pts.push([xR, d.hR + 0.2], [xR + 0.05, d.hR], [-d.wb / 2 - 0.45, d.gc], [d.wb / 2 + 0.45, d.gc]);
+      // 각도 쐐기
+      const wedge = (px, hb, ang, dir, col) => {
+        if (ang <= 0.001 || ang >= PI / 2) return;
+        const xg = px - (dir * hb) / Math.tan(ang);
+        ctx.fillStyle = col; ctx.globalAlpha = 0.28;
+        ctx.beginPath(); ctx.moveTo(X(xg), gy); ctx.lineTo(X(px), Y(hb)); ctx.lineTo(X(px), gy); ctx.closePath(); ctx.fill();
+        ctx.globalAlpha = 1; ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.setLineDash([5, 3]);
+        line(ctx, X(xg), gy, X(px + dir * 0.35), Y(hb + 0.35 * Math.tan(ang))); ctx.setLineDash([]);
+      };
+      wedge(xF - 0.06, d.hF, d.ap, 1, P.accent);
+      wedge(xR + 0.05, d.hR, d.dp, -1, P.accent2);
+      const gh = d.gc / Math.tan(d.rp / 2);
+      ctx.fillStyle = P.ok; ctx.globalAlpha = 0.3;
+      ctx.beginPath(); ctx.moveTo(X(-gh), gy); ctx.lineTo(X(0), Y(d.gc)); ctx.lineTo(X(gh), gy); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+      // 차체
+      ctx.fillStyle = P.surface; ctx.strokeStyle = P.dim; ctx.lineWidth = 1.5; ctx.lineJoin = "round";
+      ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)))); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "rgba(15,22,36,0.5)";
+      ctx.beginPath(); ctx.moveTo(X(xc - 0.1), Y(yh + 0.07)); ctx.lineTo(X(xrf - 0.02), Y(d.h - 0.07)); ctx.lineTo(X(xrr + 0.02), Y(d.h - 0.09)); ctx.lineTo(X(xgb + 0.08), Y(yh + 0.12)); ctx.closePath(); ctx.fill();
+      // 바퀴
+      [d.wb / 2, -d.wb / 2].forEach((ax) => {
+        ctx.fillStyle = P.bg; ctx.beginPath(); ctx.arc(X(ax), Y(RT), (RT + 0.07) * s, PI, 0); ctx.fill();
+        ctx.fillStyle = "#1c2028"; ctx.strokeStyle = P.dim; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(X(ax), Y(RT), RT * s, 0, PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#aeb6c6"; ctx.beginPath(); ctx.arc(X(ax), Y(RT), RT * s * 0.58, 0, PI * 2); ctx.fill();
+      });
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 1.5; line(ctx, 6, gy, w - 6, gy);
+      // 치수선
+      text(ctx, "접근각 " + deg(d.ap), X(xF), gy + 12, P.accent, fl, "right");
+      text(ctx, "이탈각 " + deg(d.dp), X(xR), gy + 12, P.accent2, fl, "left");
+      text(ctx, "램프각 " + deg(d.rp), X(0), gy + 12, P.ok, fl);
+      const yd = gy + 40;
+      ctx.strokeStyle = P.dim; ctx.lineWidth = 1;
+      line(ctx, X(xR), yd, X(xF), yd);
+      [xR, -d.wb / 2, d.wb / 2, xF].forEach((x) => line(ctx, X(x), yd - 5, X(x), yd + 5));
+      text(ctx, d.ro.toFixed(2), X((xR - d.wb / 2) / 2), yd - 10, P.dim, fm);
+      text(ctx, "휠베이스 " + d.wb.toFixed(2), X(0), yd - 10, P.text, fm);
+      text(ctx, d.fo.toFixed(2), X((xF + d.wb / 2) / 2), yd - 10, P.dim, fm);
+      const xh = Math.max(8, X(xR) - 12);
+      line(ctx, xh, gy, xh, Y(d.h)); line(ctx, xh - 4, Y(d.h), xh + 4, Y(d.h));
+      text(ctx, "전고 " + d.h.toFixed(2), xh - 4, Y(d.h) - 10, P.dim, fm, "left");
+    }, { aspect: 0.55, minHeight: 250, maxHeight: 360 });
+
+    ct = CB.canvas("#cv-dimt", (ctx, w, h) => {
+      const P = CB.palette(), d = calc();
+      const s = Math.min((h - 28) / 17.4, (w - 20) / 17.4), ox = w / 2, oy = h / 2;
+      const fm = `11px ${MONO}`;
+      ctx.strokeStyle = P.accent; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(ox, oy, d.rmin * s, 0, PI * 2); ctx.stroke();
+      ctx.strokeStyle = P.faint; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.arc(ox, oy, d.rbody * s, 0, PI * 2); ctx.stroke();
+      ctx.strokeStyle = P.dim; ctx.setLineDash([4, 4]); ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(ox, oy, Math.max(0.1, d.rr - TR / 2) * s, 0, PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = P.dim; ctx.beginPath(); ctx.arc(ox, oy, 2.5, 0, PI * 2); ctx.fill();
+      // 차: 뒤 차축 중심이 회전 중심 바로 아래, 오른쪽을 향함
+      ctx.save(); ctx.translate(ox, oy + d.rr * s);
+      ctx.fillStyle = P.accent2; ctx.globalAlpha = 0.6;
+      rrect(ctx, -d.ro * s, (-WID / 2) * s, d.len * s, WID * s, 0.3 * s); ctx.fill(); ctx.globalAlpha = 1;
+      const wheel = (x, y, a) => { ctx.save(); ctx.translate(x * s, y * s); ctx.rotate(a); ctx.fillStyle = P.text; ctx.fillRect(-0.34 * s, -0.11 * s, 0.68 * s, 0.22 * s); ctx.restore(); };
+      wheel(0, -TR / 2, 0); wheel(0, TR / 2, 0);
+      wheel(d.wb, -TR / 2, -Math.atan(d.wb / (d.rr - TR / 2)));
+      wheel(d.wb, TR / 2, -Math.atan(d.wb / (d.rr + TR / 2)));
+      ctx.restore();
+      const fx = ox + d.wb * s, fy = oy + (d.rr + TR / 2) * s;
+      ctx.strokeStyle = P.accent; ctx.lineWidth = 1.2; line(ctx, ox, oy, fx, fy);
+      text(ctx, "R = " + d.rmin.toFixed(2) + " m", ox, oy - 12, P.accent, `600 12px ${FONT}`);
+      text(ctx, "차체 모서리 " + d.rbody.toFixed(2) + " m", ox, 10, P.dim, fm);
+    }, { aspect: 0.6, minHeight: 230, maxHeight: 320 });
+
+    function stats() {
+      const d = calc();
+      CB.stat("o-dim-len", d.len.toFixed(2) + "<small>m</small>");
+      CB.stat("o-dim-ap", deg(d.ap)); CB.stat("o-dim-dp", deg(d.dp)); CB.stat("o-dim-rp", deg(d.rp));
+      CB.stat("o-dim-r", d.rmin.toFixed(2) + "<small>m</small>");
+      CB.stat("o-dim-u", (2 * d.rbody).toFixed(1) + "<small>m</small>");
+    }
+    stats();
+  })();
+
+  /* ================================================================ 5. 토크·출력·단위 변환 */
+  (function units() {
+    let cv = null;
+    const update = () => { if (cv) cv.redraw(); stats(); };
+    const tq = CB.range("uc-t", (x) => x + " N·m", update), rpm = CB.range("uc-n", (x) => x + " rpm", update);
+    const kw = () => (tq() * rpm()) / 9549.3;
+    cv = CB.canvas("#cv-uc", (ctx) => {
+      const P = CB.palette(), series = [], points = [];
+      [50, 100, 150, 200, 300, 400].forEach((p) => {
+        const d = [];
+        for (let n = 250; n <= 8000; n += 125) d.push([n, (p * 9549.3) / n]);
+        series.push({ data: d, color: P.faint, width: 1.3 });
+        const nl = Math.min(7600, (p * 9549.3) / 640);
+        points.push({ x: nl, y: (p * 9549.3) / nl, r: 0.1, color: P.faint, label: p + " kW" });
+      });
+      const cur = [];
+      for (let n = 250; n <= 8000; n += 125) cur.push([n, (kw() * 9549.3) / n]);
+      series.push({ data: cur, color: P.accent, width: 2.2, dash: [6, 4] });
+      points.push({ x: rpm(), y: tq(), r: 6, color: P.accent });
+      CB.chart(ctx, null, { x: [0, 8000], y: [0, 700], xLabel: "회전수 (rpm)", yLabel: "토크 (N·m)", series, points, vlines: [{ x: rpm(), color: P.faint }], hlines: [{ y: tq(), color: P.faint }] });
+    }, { aspect: 0.56, minHeight: 230, maxHeight: 340 });
+    function stats() {
+      const p = kw();
+      CB.stat("o-uc-kw", p.toFixed(1) + "<small>kW</small>");
+      CB.stat("o-uc-ps", (p / 0.73549875).toFixed(1) + "<small>ps</small>");
+      CB.stat("o-uc-kgf", (tq() / 9.80665).toFixed(1) + "<small>kgf·m</small>");
+      CB.stat("o-uc-w", ((rpm() * PI) / 30).toFixed(0) + "<small>rad/s</small>");
+    }
+    stats();
+
+    const lin = (f) => ({ to: (v) => v * f, from: (b) => b / f });
+    const inv = (c) => ({ to: (v) => c / v, from: (b) => c / b });
+    const groups = [
+      { init: ["uc-ps", 180], f: { "uc-ps": lin(0.73549875), "uc-kw": lin(1), "uc-hp": lin(0.74569987) } },
+      { init: ["uc-kgfm", 27], f: { "uc-kgfm": lin(9.80665), "uc-nm": lin(1), "uc-lbft": lin(1.3558179) } },
+      { init: ["uc-kml", 13.5], f: { "uc-kml": lin(1), "uc-l100": inv(100), "uc-mpg": lin(1 / 2.352146) } },
+      { init: ["uc-kmkwh", 5.2], f: { "uc-kmkwh": lin(1), "uc-whkm": inv(1000), "uc-kwh100": inv(100) } },
+    ];
+    groups.forEach((gr) => {
+      const ids = Object.keys(gr.f);
+      const spread = (src) => {
+        const v = parseFloat($(src).value);
+        if (!isFinite(v) || v <= 0) return;
+        const base = gr.f[src].to(v);
+        ids.forEach((id) => { if (id !== src) $(id).value = Number(gr.f[id].from(base).toPrecision(4)); });
+      };
+      ids.forEach((id) => $(id).addEventListener("input", () => spread(id)));
+      $(gr.init[0]).value = gr.init[1]; spread(gr.init[0]);
+    });
+  })();
+
+  /* ================================================================ 6. 에너지 흐름 */
+  (function energy() {
+    const CYC = { city: { vr: 40, stops: 2.5, vp: 45 }, hwy: { vr: 105, stops: 0.05, vp: 100 } };
+    const CDA = 0.29 * 2.2, CRR = 0.010, FUEL = 8900;   // Wh/L
+    let cv = null;
+    const update = () => { if (cv) cv.redraw(); stats(); };
+    const type = CB.seg("en-type", update), cyc = CB.seg("en-cyc", update);
+    const dm = CB.range("en-m", (x) => (x > 0 ? "+" : "") + x + " kg", update);
+    const regen = $("en-regen"); regen.addEventListener("change", update);
+
+    function calc() {
+      const ev = type() === "ev", city = cyc() === "city", c = CYC[cyc()], P = CB.palette();
+      const m = (ev ? 1800 : 1500) + dm();
+      const roll = (CRR * m * G * 1000) / 3600;
+      const aero = (0.5 * CB.RHO * CDA * Math.pow(CB.ms(c.vr), 2) * 1000) / 3600;
+      const brake = (c.stops * 0.5 * m * Math.pow(CB.ms(c.vp), 2) * 0.8) / 3600;
+      const wheel = roll + aero + brake;
+      let items, total;
+      if (!ev) {
+        const etaD = city ? 0.9 : 0.93, etaB = city ? 0.21 : 0.33, etaI = 0.37, idle = city ? 0.13 : 0.03;
+        const bw = wheel / etaD, run = bw / etaB;
+        total = run / (1 - idle);
+        items = [
+          { name: "배기·냉각 열", val: run * (1 - etaI), color: P.red },
+          { name: "펌핑·마찰", val: run * (etaI - etaB), color: P.warn },
+          { name: "공회전·보기류", val: total * idle, color: P.dim },
+          { name: "구동계", val: bw - wheel, color: P.accent2 },
+          { name: "공기 저항", val: aero, color: P.blue, wheel: true },
+          { name: "구름 저항", val: roll, color: P.green, wheel: true },
+          { name: "제동열", val: brake, color: P.accent, wheel: true },
+        ];
+      } else {
+        const eb = 0.97, em = city ? 0.9 : 0.93, er = 0.97, acc = city ? 0.04 : 0.02, chain = eb * em * er;
+        const cap = regen.checked ? 0.7 : 0;
+        const gross = wheel / chain, ret = brake * cap * chain;
+        total = (gross - ret) / (1 - acc);
+        items = [
+          { name: "보기류", val: total * acc, color: P.dim },
+          { name: "배터리 내부", val: gross * (1 - eb), color: P.warn },
+          { name: "인버터·모터", val: gross * eb * (1 - em) + (brake * cap - ret), color: P.red },
+          { name: "감속기", val: gross * eb * em * (1 - er), color: P.accent2 },
+          { name: "공기 저항", val: aero, color: P.blue, wheel: true },
+          { name: "구름 저항", val: roll, color: P.green, wheel: true },
+          { name: "마찰 제동", val: brake * (1 - cap), color: P.accent, wheel: true },
+        ];
+      }
+      const wsum = items.filter((i) => i.wheel).reduce((a, i) => a + i.val, 0);
+      return { ev, items, total, wfrac: wsum / total };
+    }
+
+    cv = CB.canvas("#cv-en", (ctx, w, h) => {
+      const P = CB.palette(), R = calc(), n = R.items.length;
+      const H = Math.min(h * 0.4, w * 0.3), k = H / 100, yTop = h * 0.15, x0 = 10, srcW = Math.max(24, w * 0.07), c = 8;
+      const gap = (w - x0 - srcW - 10 - H - n * c) / n, yEnd = yTop + H + 22;
+      const fs = w < 420 ? 10 : 12, fm = `600 ${fs}px ${MONO}`, fl = `${fs}px ${FONT}`;
+      ctx.fillStyle = P.text; ctx.globalAlpha = 0.75; ctx.fillRect(x0, yTop, srcW, H); ctx.globalAlpha = 1;
+      text(ctx, (R.ev ? "배터리" : "연료") + " 100", x0, yTop - 10, P.text, `600 ${fs + 1}px ${FONT}`, "left");
+      let x = x0 + srcW, rem = 100, wx0 = null;
+      R.items.forEach((it, i) => {
+        const pct = (it.val / R.total) * 100, lw = Math.max(1, pct * k), xb = x + gap, ya = yTop + (rem - pct) * k, yb = yTop + rem * k;
+        ctx.fillStyle = P.text; ctx.globalAlpha = 0.16; ctx.fillRect(x, yTop, xb - x, rem * k); ctx.globalAlpha = 1;
+        if (it.wheel && wx0 == null) wx0 = x + gap * 0.4;
+        ctx.fillStyle = it.color; ctx.globalAlpha = 0.82;
+        ctx.beginPath(); ctx.moveTo(xb, ya);
+        ctx.quadraticCurveTo(xb + c + lw, ya, xb + c + lw, ya + c + lw);
+        ctx.lineTo(xb + c + lw, yEnd); ctx.lineTo(xb + c, yEnd); ctx.lineTo(xb + c, yb + c);
+        ctx.quadraticCurveTo(xb + c, yb, xb, yb); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+        const xm = xb + c + lw / 2, yl = yEnd + 14 + (i % 3) * 26;
+        ctx.strokeStyle = P.faint; ctx.lineWidth = 1; line(ctx, xm, yEnd + 2, xm, yl - 8);
+        const tx = CB.clamp(xm, 34, w - 34);
+        text(ctx, it.name, tx, yl, P.dim, fl);
+        text(ctx, pct.toFixed(pct < 10 ? 1 : 0) + "%", tx, yl + 12, P.text, fm);
+        x = xb + c + lw; rem -= pct;
+      });
+      if (wx0 != null) {
+        ctx.strokeStyle = P.accent; ctx.lineWidth = 1.5;
+        line(ctx, wx0, yTop - 6, x, yTop - 6); line(ctx, wx0, yTop - 10, wx0, yTop - 2); line(ctx, x, yTop - 10, x, yTop - 2);
+        text(ctx, "바퀴에 닿음 " + (R.wfrac * 100).toFixed(0) + "%", x, yTop - 17, P.accent, `600 ${fs + 1}px ${FONT}`, "right");
+      }
+    }, { aspect: 0.62, minHeight: 270, maxHeight: 380 });
+
+    function stats() {
+      const R = calc();
+      CB.stat("o-en-wh", (R.wfrac * 100).toFixed(0) + "<small>%</small>");
+      CB.stat("o-en-e", R.total.toFixed(0) + "<small>Wh/km</small>");
+      if (R.ev) {
+        CB.stat("o-en-eco", (1000 / R.total).toFixed(1) + "<small>km/kWh</small>");
+        CB.stat("o-en-100", (R.total / 10).toFixed(1) + "<small>kWh</small>");
+      } else {
+        CB.stat("o-en-eco", (FUEL / R.total).toFixed(1) + "<small>km/L</small>");
+        CB.stat("o-en-100", ((R.total / FUEL) * 100).toFixed(1) + "<small>L</small>");
+      }
+    }
+    stats();
+  })();
+})();
+</script>
+</body>
+</html>

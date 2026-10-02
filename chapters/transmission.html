@@ -1,0 +1,1329 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>클러치와 변속기 · CarBook</title>
+<meta name="description" content="기어비와 토크 증배, 마찰 클러치와 발진, 수동 변속기와 싱크로나이저, 토크 컨버터, 유성 기어 자동 변속기, DCT와 CVT, 톱니 선도와 변속 선도를 직접 돌려 보는 시뮬레이터로 배운다.">
+<link rel="canonical" href="https://carbook.euiyun.com/chapters/transmission.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="CarBook">
+<meta property="og:title" content="클러치와 변속기 · CarBook">
+<meta property="og:description" content="기어비와 토크 증배, 마찰 클러치와 발진, 수동 변속기와 싱크로나이저, 토크 컨버터, 유성 기어 자동 변속기, DCT와 CVT, 톱니 선도와 변속 선도를 직접 돌려 보는 시뮬레이터로 배운다.">
+<meta property="og:url" content="https://carbook.euiyun.com/chapters/transmission.html">
+<meta property="og:image" content="https://carbook.euiyun.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TechArticle","headline":"클러치와 변속기","name":"클러치와 변속기 · CarBook","url":"https://carbook.euiyun.com/chapters/transmission.html","mainEntityOfPage":"https://carbook.euiyun.com/chapters/transmission.html","inLanguage":"ko","isAccessibleForFree":true,"learningResourceType":"interactive textbook chapter","position":5,"image":"https://carbook.euiyun.com/og.png","dateModified":"2026-10-02","isPartOf":{"@type":"Book","@id":"https://carbook.euiyun.com/#book","name":"CarBook — 인터랙티브 자동차 교과서","url":"https://carbook.euiyun.com/"},"publisher":{"@type":"Organization","name":"CarBook","url":"https://carbook.euiyun.com/"},"description":"기어비와 토크 증배, 마찰 클러치와 발진, 수동 변속기와 싱크로나이저, 토크 컨버터, 유성 기어 자동 변속기, DCT와 CVT, 톱니 선도와 변속 선도를 직접 돌려 보는 시뮬레이터로 배운다."},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"CarBook","item":"https://carbook.euiyun.com/"},{"@type":"ListItem","position":2,"name":"05 클러치와 변속기","item":"https://carbook.euiyun.com/chapters/transmission.html"}]}]}</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="../css/style.css">
+<script src="../js/common.js"></script>
+<style>
+  .sim-view canvas + canvas { border-top: 1px solid var(--border); }
+  .sim .table-wrap { margin: 0; border-top: 1px solid var(--border); }
+  .sim .table-wrap table { font-size: 13px; }
+  .sim .table-wrap td, .sim .table-wrap th { font-variant-numeric: tabular-nums; }
+  .draggable { cursor: grab; }
+  .draggable:active { cursor: grabbing; }
+</style>
+</head>
+<body data-chapter="transmission">
+<main class="chapter">
+  <header class="chapter-hero">
+    <div class="eyebrow">Chapter 05</div>
+    <h1>클러치와 변속기</h1>
+    <p class="lead">엔진은 좁은 회전 범위에서만 쓸 만한 힘을 낸다. 자동차는 정지 상태부터 시속 200 km까지 달려야 한다. 이 둘 사이의 간극을 메우는 장치가 변속기이고, 돌고 있는 엔진과 서 있는 바퀴를 부드럽게 이어 붙이는 장치가 클러치다. 이 장에서는 기어 한 쌍에서 출발해 수동·자동·DCT·CVT까지, 토크와 회전수를 맞바꾸는 모든 방법을 살펴본다.</p>
+    <ul class="objectives">
+      <li>변속기가 필요한 이유를 엔진의 회전 범위와 구동력으로 설명한다.</li>
+      <li>기어비가 토크와 회전수를 어떻게 맞바꾸는지 계산한다.</li>
+      <li>마찰 클러치의 전달 토크와 반클러치 발진, 슬립 열을 이해한다.</li>
+      <li>수동 변속기의 동력 경로와 싱크로나이저의 역할을 설명한다.</li>
+      <li>토크 컨버터, 유성 기어, DCT, CVT의 원리를 비교한다.</li>
+      <li>톱니 선도와 변속 선도를 읽고 기어비 배치를 평가한다.</li>
+    </ul>
+  </header>
+
+  <!-- =============================================================== 1 -->
+  <section id="why">
+    <h2>왜 변속기가 필요한가</h2>
+    <p><a href="engine.html">3장</a>에서 본 것처럼 내연기관은 공회전(약 700~900 rpm) 아래에서는 스스로 돌지 못하고, 레드라인(가솔린 기준 대표적으로 6,000~7,000 rpm) 위로는 올라가지 못한다. 쓸 수 있는 회전 범위가 고작 7 : 1 정도다. 반면 바퀴는 0 rpm에서 출발해 시속 200 km에서는 약 1,700 rpm까지 돌아야 한다. 범위의 폭이 무한대에 가깝다.</p>
+    <p>문제는 회전수만이 아니다. <a href="dynamics.html">2장</a>에서 계산했듯이 가파른 언덕을 오르거나 힘차게 가속하려면 바퀴에 수천 N의 구동력이 필요한데, 엔진 토크를 그대로 바퀴에 걸면 턱없이 모자란다. 변속기는 <span class="term">기어비</span><span class="en">(Gear Ratio)</span>를 바꿔 가며 이 두 문제를 동시에 푼다. 낮은 단에서는 회전수를 크게 줄이는 대신 토크를 그만큼 키우고, 높은 단에서는 토크 증배를 줄이는 대신 엔진을 낮은 회전수로 유지한다.</p>
+    <div class="formula">$$F_x = \frac{T_e\, i_g\, i_f\, \eta}{r}, \qquad v = \frac{2\pi r}{60}\cdot\frac{n_e}{i_g\, i_f}$$
+      <div class="where">\(F_x\): 바퀴 구동력(N), \(T_e\): 엔진 토크(N·m), \(n_e\): 엔진 회전수(rpm), \(i_g\): 변속기 기어비, \(i_f\): 종감속비, \(\eta\): 구동계 효율(약 0.9~0.95), \(r\): 타이어 동하중 반지름(m), \(v\): 차속(m/s).</div>
+    </div>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 720 290" role="img" aria-label="각 단이 담당하는 차속 범위">
+        <text x="60" y="24" class="t">엔진 1,000~6,500 rpm이 각 단에서 만드는 차속 범위</text>
+        <line x1="60" y1="238" x2="700" y2="238" class="s-axis"/>
+        <g class="t-mono" text-anchor="middle">
+          <line x1="60" y1="238" x2="60" y2="244" class="s-axis"/><text x="60" y="260" class="t-mono">0</text>
+          <line x1="166.700" y1="238" x2="166.700" y2="244" class="s-axis"/><text x="166.700" y="260" class="t-mono">50</text>
+          <line x1="273.300" y1="238" x2="273.300" y2="244" class="s-axis"/><text x="273.300" y="260" class="t-mono">100</text>
+          <line x1="380" y1="238" x2="380" y2="244" class="s-axis"/><text x="380" y="260" class="t-mono">150</text>
+          <line x1="486.700" y1="238" x2="486.700" y2="244" class="s-axis"/><text x="486.700" y="260" class="t-mono">200</text>
+          <line x1="593.300" y1="238" x2="593.300" y2="244" class="s-axis"/><text x="593.300" y="260" class="t-mono">250</text>
+          <line x1="700" y1="238" x2="700" y2="244" class="s-axis"/><text x="700" y="260" class="t-mono">300</text>
+        </g>
+        <text x="380" y="282" class="t-dim" text-anchor="middle">차속 (km/h)</text>
+        <g>
+          <rect x="77.500" y="40" width="95.800" height="22" rx="4" class="f-acc"/><text x="52" y="56" class="t-mono" text-anchor="end">1단</text><text x="180" y="56" class="t-dim">3.60 · 구동력 최대</text>
+          <rect x="89.900" y="72" width="164.400" height="22" rx="4" class="f-acc" opacity="0.85"/><text x="52" y="88" class="t-mono" text-anchor="end">2단</text>
+          <rect x="104.800" y="104" width="246.600" height="22" rx="4" class="f-acc" opacity="0.7"/><text x="52" y="120" class="t-mono" text-anchor="end">3단</text>
+          <rect x="122.700" y="136" width="345.300" height="22" rx="4" class="f-acc" opacity="0.55"/><text x="52" y="152" class="t-mono" text-anchor="end">4단</text><text x="476" y="152" class="t-dim">1.00 · 직결</text>
+          <rect x="138.500" y="168" width="431.300" height="22" rx="4" class="f-acc" opacity="0.42"/><text x="52" y="184" class="t-mono" text-anchor="end">5단</text>
+          <rect x="156.600" y="200" width="530.400" height="22" rx="4" class="f-acc" opacity="0.3"/><text x="52" y="216" class="t-mono" text-anchor="end">6단</text>
+        </g>
+        <rect x="60" y="34" width="17.500" height="194" class="f-acc2-soft" stroke="none"/>
+        <text x="64" y="50" class="t-dim" style="font-size:11px" transform="rotate(90 64 50)">클러치 슬립 구간</text>
+      </svg>
+      <figcaption><b>그림 5-1.</b> 기어비 3.60 / 2.10 / 1.40 / 1.00 / 0.80 / 0.65, 종감속비 4.1, 타이어 반지름 0.32 m인 차의 단별 차속 범위. 한 단만으로는 0 km/h부터 최고 속도까지 덮을 수 없다. 왼쪽 끝의 좁은 띠(정지~약 8 km/h)는 어느 단으로도 닿지 않는 영역으로, 클러치나 토크 컨버터가 미끄러지며 메운다.</figcaption>
+    </figure>
+
+    <div class="callout tip">
+      <strong>계산 예: 1단과 6단의 구동력</strong>
+      <p>엔진 토크 200 N·m, 종감속비 4.1, 효율 0.92, 타이어 반지름 0.32 m인 차를 생각하자. 1단(3.60)의 총 감속비는 \(3.60 \times 4.1 = 14.76\)이므로 구동력은 \(200 \times 14.76 \times 0.92 / 0.32 \approx 8{,}490\) N이다. 1,500 kg 차를 약 5.7 m/s²(0.58 g)로 가속할 수 있는 힘이다. 6단(0.65)에서는 총 감속비 2.67, 구동력 약 1,530 N으로 줄어든다. 대신 6,000 rpm에서 1단은 시속 49 km에 그치지만 6단은 이론상 시속 270 km에 해당한다. 같은 엔진이 기어비 하나로 '힘센 저속 기계'와 '빠른 고속 기계' 사이를 오간다.</p>
+    </div>
+    <p>이상적인 변속기는 어느 속도에서든 엔진을 최대 출력점에 묶어 둘 것이다. 그러면 구동력은 \(F = P_{\max}\eta / v\)의 쌍곡선을 따른다. 단수가 유한한 실제 변속기는 이 쌍곡선을 여러 개의 조각으로 근사한다. 단수가 많을수록, 그리고 뒤에서 볼 CVT처럼 기어비가 연속으로 변할수록 이상에 가까워진다.</p>
+  </section>
+
+  <!-- =============================================================== 2 -->
+  <section id="gear">
+    <h2>기어비의 원리</h2>
+    <p>맞물린 두 기어는 접점에서 이가 하나씩 차례로 넘어가므로, 같은 시간 동안 지나가는 <b>잇수</b>가 서로 같다. 잇수 \(z_1\)인 구동 기어가 한 바퀴 돌면 잇수 \(z_2\)인 피동 기어는 \(z_1/z_2\) 바퀴만 돈다. 이 비율이 기어비다.</p>
+    <div class="formula">$$i = \frac{z_2}{z_1} = \frac{n_1}{n_2} = \frac{T_2}{T_1}\quad(\eta = 1)$$
+      <div class="where">\(z\): 잇수, \(n\): 회전수, \(T\): 토크. 첨자 1은 구동(입력), 2는 피동(출력). \(i &gt; 1\)이면 감속(토크 증가), \(i &lt; 1\)이면 증속(오버드라이브).</div>
+    </div>
+    <p>토크가 커지는 이유는 지렛대와 같다. 두 기어가 접점에서 주고받는 힘 \(F\)는 작용·반작용이므로 크기가 같다. 그런데 토크는 힘에 반지름을 곱한 값이고, 기어의 피치원 반지름은 잇수에 비례한다. 큰 기어는 같은 힘을 더 긴 팔로 받으므로 토크가 잇수비만큼 커진다. 한편 회전수는 같은 비율로 줄어들므로 둘의 곱인 일률은 변하지 않는다.</p>
+    <div class="formula">$$P = T_1\omega_1 = T_2\omega_2,\qquad \omega = \frac{2\pi n}{60}$$
+      <div class="where">기어는 에너지를 만들지 않는다. 토크를 얻으면 회전수를 내주어야 한다. 실제 기어 한 쌍은 치면 마찰과 오일 교반으로 약 1~2 %를 잃는다.</div>
+    </div>
+
+    <div class="sim" id="sim-gear">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>기어 한 쌍: 잇수비가 토크와 회전수를 맞바꾼다</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-gear" class="draggable" style="touch-action:none"></canvas><span class="hint">기어를 끌어서 돌려 보자</span></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>구동 기어 잇수 z₁ <output id="g-z1-out"></output></span><input type="range" id="g-z1" min="10" max="40" value="16" step="1"></label>
+          <label class="ctrl"><span>피동 기어 잇수 z₂ <output id="g-z2-out"></output></span><input type="range" id="g-z2" min="10" max="60" value="40" step="1"></label>
+          <label class="ctrl"><span>입력 회전수 <output id="g-n-out"></output></span><input type="range" id="g-n" min="500" max="6000" value="2000" step="100"></label>
+          <label class="ctrl"><span>입력 토크 <output id="g-t-out"></output></span><input type="range" id="g-t" min="50" max="400" value="200" step="10"></label>
+          <label class="check"><input type="checkbox" id="g-auto" checked> 자동 회전</label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">기어비 i = z₂/z₁</span><span class="v" id="o-g-i">—</span></div>
+        <div class="stat"><span class="k">출력 회전수</span><span class="v" id="o-g-n">—</span></div>
+        <div class="stat"><span class="k">출력 토크</span><span class="v" id="o-g-t">—</span></div>
+        <div class="stat"><span class="k">일률 (입력 = 출력)</span><span class="v" id="o-g-p">—</span></div>
+        <div class="stat"><span class="k">치면 접선력 F</span><span class="v" id="o-g-f">—</span></div>
+      </div>
+      <div class="sim-note">치형은 모듈 2.5 mm 기준으로 잇수에 비례한 크기로 그렸다. 주황 화살표는 구동 기어가 피동 기어의 이를 미는 힘이다. 해볼 것: 자동 회전을 끄고 작은 기어를 손으로 한 바퀴 돌린 뒤 큰 기어의 표시선이 얼마나 돌았는지 보자. 두 잇수를 같게 하면 방향만 바뀌고 토크는 그대로다. z₂를 z₁보다 작게 하면 증속(오버드라이브)이 된다.</div>
+    </div>
+    <p>두 기어를 직접 맞물리면 회전 방향이 반대가 된다. 기어 쌍을 두 번 거치면 방향이 원래대로 돌아오고 기어비는 두 쌍의 곱이 된다. 수동 변속기와 후진 기어가 바로 이 성질을 쓴다. 실제 변속기의 기어는 이가 비스듬히 누운 <span class="term">헬리컬 기어</span><span class="en">(Helical Gear)</span>인데, 여러 이가 겹쳐 맞물려 조용하고 강하기 때문이다. 대신 축 방향으로 미는 힘이 생겨 베어링이 이를 받아 준다.</p>
+  </section>
+
+  <!-- =============================================================== 3 -->
+  <section id="clutch">
+    <h2>마찰 클러치: 도는 것과 서 있는 것을 잇기</h2>
+    <p>기어는 이가 맞물려 있어 미끄러질 수 없다. 그런데 출발할 때 엔진은 이미 800 rpm으로 돌고 있고 바퀴는 서 있다. 이 속도 차이를 흡수해 줄 '미끄러질 수 있는 연결'이 필요하다. 수동 변속기 차에서 그 역할을 하는 것이 <span class="term">건식 단판 마찰 클러치</span><span class="en">(Dry Single-Plate Clutch)</span>다.</p>
+    <p>구조는 단순하다. 크랭크축 끝의 무거운 <span class="term">플라이휠</span><span class="en">(Flywheel)</span>과, 그 위에 볼트로 고정된 클러치 커버 안의 <span class="term">압력판</span><span class="en">(Pressure Plate)</span> 사이에 <span class="term">클러치 디스크</span><span class="en">(Clutch Disc)</span>가 끼어 있다. 디스크는 변속기 입력축의 스플라인에 끼워져 축 방향으로는 미끄러지지만 회전은 함께한다. 평소에는 접시 모양의 <span class="term">다이어프램 스프링</span><span class="en">(Diaphragm Spring)</span>이 압력판을 수천 N으로 눌러 디스크를 플라이휠에 붙여 놓는다. 페달을 밟으면 릴리스 베어링이 스프링 중심을 밀고, 스프링이 지렛대처럼 뒤집히며 압력판을 뒤로 당겨 디스크가 풀려난다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 720 320" role="img" aria-label="건식 단판 클러치 단면">
+        <!-- crank + flywheel -->
+        <rect x="40" y="148" width="120" height="24" class="f-surface"/>
+        <text x="96" y="140" class="t-dim" text-anchor="middle">크랭크축</text>
+        <rect x="160" y="40" width="44" height="240" rx="3" class="f-elev"/>
+        <text x="182" y="30" class="t" text-anchor="middle">플라이휠</text>
+        <!-- disc -->
+        <rect x="212" y="66" width="8" height="70" fill="var(--warn)"/>
+        <rect x="212" y="184" width="8" height="70" fill="var(--warn)"/>
+        <rect x="220" y="66" width="6" height="188" class="f-surface"/>
+        <rect x="226" y="66" width="8" height="70" fill="var(--warn)"/>
+        <rect x="226" y="184" width="8" height="70" fill="var(--warn)"/>
+        <rect x="210" y="140" width="40" height="40" rx="3" class="f-acc2-soft"/>
+        <!-- pressure plate -->
+        <rect x="242" y="60" width="30" height="82" rx="3" class="f-acc-soft"/>
+        <rect x="242" y="178" width="30" height="82" rx="3" class="f-acc-soft"/>
+        <!-- cover -->
+        <path d="M204 44 H330 V96" fill="none" class="s-line" stroke-width="3"/>
+        <path d="M204 276 H330 V224" fill="none" class="s-line" stroke-width="3"/>
+        <!-- diaphragm spring -->
+        <line x1="274" y1="74" x2="390" y2="140" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
+        <line x1="274" y1="246" x2="390" y2="180" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="330" cy="105" r="6" fill="var(--text-dim)"/><circle cx="330" cy="215" r="6" fill="var(--text-dim)"/>
+        <!-- release bearing -->
+        <rect x="394" y="128" width="26" height="64" rx="5" class="f-elev"/>
+        <!-- input shaft -->
+        <rect x="204" y="152" width="470" height="16" fill="var(--accent-2)" opacity="0.75"/>
+        <!-- arrows -->
+        <path d="M500 118 H430" class="s-acc" marker-end="url(#tr-arr)"/>
+        <defs><marker id="tr-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker></defs>
+        <text x="508" y="114" class="t-acc">페달을 밟으면 베어링이 스프링 중심을 민다</text>
+        <text x="508" y="134" class="t-dim">→ 스프링 바깥쪽이 압력판을 뒤로 당긴다</text>
+        <!-- labels -->
+        <line x1="223" y1="264" x2="223" y2="296" class="s-line"/><text x="223" y="312" class="t" text-anchor="middle">디스크 (마찰재 양면)</text>
+        <line x1="257" y1="60" x2="275" y2="22" class="s-line"/><text x="280" y="20" class="t">압력판</text>
+        <line x1="352" y1="118" x2="372" y2="70" class="s-line"/><text x="376" y="66" class="t">다이어프램 스프링</text>
+        <line x1="407" y1="192" x2="420" y2="230" class="s-line"/><text x="424" y="246" class="t">릴리스 베어링</text>
+        <text x="596" y="190" class="t" text-anchor="middle" style="fill:var(--accent-2)">변속기 입력축</text>
+        <line x1="330" y1="224" x2="352" y2="276" class="s-line"/><text x="356" y="292" class="t-dim">클러치 커버 (플라이휠에 고정)</text>
+      </svg>
+      <figcaption><b>그림 5-2.</b> 건식 단판 클러치의 단면. 플라이휠·커버·압력판은 엔진과 함께 돌고, 디스크와 입력축은 변속기와 함께 돈다. 디스크 양면의 마찰재가 두 무리를 잇는 유일한 접점이다.</figcaption>
+    </figure>
+
+    <p>클러치가 미끄러지지 않고 전달할 수 있는 최대 토크는 마찰력에 반지름을 곱한 값이다.</p>
+    <div class="formula">$$T_c = \mu\, F_n\, r_m\, n_f,\qquad r_m \approx \frac{r_o + r_i}{2}$$
+      <div class="where">\(\mu\): 마찰재의 마찰 계수(유기질 건식 마찰재 약 0.25~0.4), \(F_n\): 스프링이 누르는 힘, \(r_m\): 마찰면 평균 반지름, \(n_f\): 마찰면 수(단판은 양면이므로 2), \(r_o, r_i\): 마찰재의 바깥·안쪽 반지름.</div>
+    </div>
+    <div class="callout tip">
+      <strong>계산 예: 클러치 용량</strong>
+      <p>\(\mu = 0.3\), 스프링 하중 \(F_n = 6{,}000\) N, 평균 반지름 \(r_m = 0.1\) m, 마찰면 2개라면 \(T_c = 0.3 \times 6000 \times 0.1 \times 2 = 360\) N·m다. 엔진 최대 토크가 250 N·m라면 안전율은 약 1.4다. 엔진 출력을 크게 올린 튜닝 차가 클러치부터 미끄러지는 이유가 여기에 있다. 용량을 키우려면 스프링을 세게 하거나(페달이 무거워진다), 지름을 키우거나, 디스크를 여러 장 겹쳐 \(n_f\)를 늘린다. 오토바이와 DCT의 습식 다판 클러치가 마지막 방법이다.</p>
+    </div>
+
+    <h3>반클러치와 발진</h3>
+    <p>페달을 조금씩 떼면 누르는 힘 \(F_n\)이 0에서부터 서서히 커진다. 이때 디스크는 플라이휠과 다른 속도로 돌며 미끄러지고, 미끄러지는 동안 전달되는 토크는 속도 차이와 거의 무관하게 그 순간의 \(T_c\)와 같다. 이것이 <span class="term">반클러치</span>다. 운전자는 페달 위치로 '바퀴에 보내는 토크'를 직접 조절하는 셈이다. 차가 가속해 입력축 회전수가 엔진 회전수를 따라잡으면 미끄럼이 사라지고 클러치는 한 덩어리로 돈다.</p>
+    <p>미끄러지는 동안 엔진이 내놓은 일의 일부는 차를 밀지 못하고 열이 된다. 발열률은 전달 토크에 속도 차를 곱한 값이다.</p>
+    <div class="formula">$$\dot Q = T_c\,(\omega_e - \omega_i),\qquad Q = \int \dot Q\, dt$$
+      <div class="where">\(\omega_e\): 엔진 각속도, \(\omega_i\): 입력축 각속도. 일정한 토크로 정지 상태에서 엔진 속도까지 끌어올리는 이상적인 발진에서는 차가 얻는 운동 에너지와 같은 양이 열로 사라진다.</div>
+    </div>
+
+    <div class="sim" id="sim-clutch">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>클러치 발진: 정지한 차를 1단으로 출발시키기</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-cl"></canvas>
+          <div class="legend"><span><i style="background:var(--accent)"></i>엔진 rpm</span><span><i style="background:var(--accent-2)"></i>입력축 rpm (차속에 비례)</span><span><i style="background:var(--warn)"></i>클러치 전달 토크 ×10 N·m</span></div>
+        </div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>클러치 페달 밟은 정도 <output id="cl-ped-out"></output></span><input type="range" id="cl-ped" min="0" max="100" value="100" step="1"></label>
+          <label class="ctrl"><span>가속 페달 <output id="cl-thr-out"></output></span><input type="range" id="cl-thr" min="0" max="100" value="0" step="1"></label>
+          <div class="ctrl-row"><button class="btn primary" id="cl-auto">모범 발진 시연</button><button class="btn" id="cl-dump">페달 급하게 떼기</button></div>
+          <div class="ctrl-row"><button class="btn" id="cl-reset">처음부터 (시동 걸고 정지)</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">상태</span><span class="v" id="o-cl-st">—</span></div>
+        <div class="stat"><span class="k">엔진 / 입력축</span><span class="v" id="o-cl-n">—</span></div>
+        <div class="stat"><span class="k">차속</span><span class="v" id="o-cl-v">—</span></div>
+        <div class="stat"><span class="k">클러치 용량 / 전달 토크</span><span class="v" id="o-cl-t">—</span></div>
+        <div class="stat"><span class="k">슬립 발열</span><span class="v" id="o-cl-q">—</span></div>
+        <div class="stat"><span class="k">마찰면 온도 / 누적 열</span><span class="v" id="o-cl-temp">—</span></div>
+      </div>
+      <div class="sim-note">모델: 1,400 kg 차, 1단 3.60 × 종감속 4.1, 엔진 관성 0.2 kg·m², 클러치 최대 용량 420 N·m. 페달은 100 %가 끝까지 밟은 상태이고, 약 75 %부터 디스크가 닿기 시작한다(접점). 해볼 것: 가속 페달을 밟지 않고 클러치를 접점 근처까지만 아주 천천히 떼면 공회전 제어만으로 차가 움직인다. 페달을 급하게 떼면 엔진 회전수가 차에 끌려 내려가 시동이 꺼진다. 가속 페달을 깊이 밟은 채 반클러치를 오래 유지하면 발열과 온도가 어떻게 되는지 보자.</div>
+    </div>
+    <div class="callout warn">
+      <strong>반클러치를 오래 쓰면</strong>
+      <p>언덕에서 브레이크 대신 반클러치로 차를 붙잡고 있으면, 차는 움직이지 않으니 엔진이 내는 일 전부가 열이 된다. 100 N·m를 1,500 rpm 차이로 미끄러뜨리면 발열은 약 16 kW로, 가정용 전기 난로 열 대 분량이 손바닥만 한 마찰면에 쏟아진다. 마찰재 온도가 대략 250~300 °C를 넘으면 수지가 분해되어 마찰 계수가 떨어지고(페이드), 타는 냄새와 함께 마모가 급격히 진행된다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 4 -->
+  <section id="manual">
+    <h2>수동 변속기: 상시 맞물림과 싱크로나이저</h2>
+    <p>초기의 변속기는 기어 자체를 축 방향으로 밀어 맞물렸다. 돌고 있는 이를 억지로 끼우니 소리가 요란했고 기술이 필요했다. 오늘날의 수동 변속기는 <span class="term">상시 맞물림</span><span class="en">(Constant Mesh)</span> 방식이다. 모든 단의 기어 쌍이 <b>항상</b> 맞물린 채 돌고 있고, 변속은 '어느 기어를 축에 고정할 것인가'만 바꾼다.</p>
+    <p>뒷바퀴 굴림 차의 전형적인 3축식 구조는 다음과 같다.</p>
+    <ul>
+      <li><b>입력축</b>: 클러치 디스크에 연결된다. 끝에 기어 하나가 붙어 있어 카운터축을 항상 돌린다.</li>
+      <li><b>카운터축</b><span class="en">(Countershaft)</span>: 입력축 아래에 놓인 축. 각 단의 구동 기어가 한 덩어리로 붙어 있어 모두 같은 속도로 돈다.</li>
+      <li><b>출력축</b>: 입력축과 같은 선 위에 있지만 따로 돈다. 각 단의 피동 기어가 베어링 위에 얹혀 축과 무관하게 <b>헛돈다</b>.</li>
+    </ul>
+    <p>헛도는 기어 가운데 하나를 출력축에 고정하면 그 단이 선택된다. 고정을 맡는 부품이 <span class="term">도그 클러치</span><span class="en">(Dog Clutch)</span>다. 출력축 스플라인에 끼워진 허브 위를 <span class="term">슬리브</span><span class="en">(Sleeve)</span>가 축 방향으로 미끄러져 가서, 기어 옆면에 달린 작은 맞물림 이(도그 이)에 끼워진다. 시프트 레버가 하는 일은 포크를 통해 이 슬리브를 좌우로 미는 것이 전부다.</p>
+
+    <div class="sim" id="sim-mt">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>수동 5단 변속기의 동력 경로</h3></div>
+      <div class="sim-body">
+        <div class="sim-view"><canvas id="cv-mt"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>변속 단</span><div class="seg" id="mt-gear"><button data-value="N">N</button><button data-value="1" class="on">1</button><button data-value="2">2</button><button data-value="3">3</button><button data-value="4">4</button><button data-value="5">5</button><button data-value="R">R</button></div></div>
+          <label class="ctrl"><span>입력축(엔진) 회전수 <output id="mt-n-out"></output></span><input type="range" id="mt-n" min="800" max="6000" value="2500" step="100"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">기어비</span><span class="v" id="o-mt-i">—</span></div>
+        <div class="stat"><span class="k">입력축</span><span class="v" id="o-mt-in">—</span></div>
+        <div class="stat"><span class="k">카운터축</span><span class="v" id="o-mt-c">—</span></div>
+        <div class="stat"><span class="k">출력축</span><span class="v" id="o-mt-out">—</span></div>
+        <div class="stat"><span class="k">차속 (종감속 4.1)</span><span class="v" id="o-mt-v">—</span></div>
+        <div class="stat"><span class="k">동력 경로</span><span class="v" id="o-mt-path" style="font-size:13px">—</span></div>
+      </div>
+      <div class="sim-note">옆에서 본 단면이다. 기어 위의 가로줄은 이가 지나가는 모습으로, 줄이 흐르는 속도와 방향이 그 기어의 회전을 나타낸다. 색이 칠해진 기어와 굵은 선이 동력이 지나가는 길이다. 해볼 것: 단을 바꿔 가며 출력축 위의 선택되지 않은 기어들이 출력축과 다른 속도로 헛도는 것을 확인하자. 4단은 카운터축을 거치지 않는 직결이다. R에서는 아이들러 기어가 하나 더 끼어 출력축이 반대로 돈다. 잇수: 입력 24/36, 1단 17/43, 2단 25/35, 3단 31/29, 5단 39/21, 후진 15/40.</div>
+    </div>
+
+    <h3>싱크로나이저</h3>
+    <p>위 시뮬레이터에서 보듯 선택되지 않은 기어는 출력축과 다른 속도로 돌고 있다. 3단으로 달리다 2단으로 내리려면, 출력축보다 느리게 돌던 2단 기어와 슬리브의 속도를 먼저 맞춰야 도그 이가 끼워진다. 이 속도 맞춤을 자동으로 해 주는 것이 <span class="term">싱크로나이저</span><span class="en">(Synchronizer)</span>다.</p>
+    <p>기어 옆면에는 원뿔 모양의 마찰면이 있고, 그 위에 놋쇠나 카본 라이닝으로 만든 <span class="term">싱크로 링</span><span class="en">(Synchro Ring, Blocker Ring)</span>이 얹혀 있다. 슬리브를 밀면 먼저 링이 원뿔에 눌려 마찰로 기어의 속도를 슬리브 쪽에 맞춘다. 속도 차가 남아 있는 동안에는 마찰 토크가 링을 살짝 비틀어 링의 이가 슬리브의 길을 막는다. 속도가 같아져 마찰 토크가 사라지면 링이 제자리로 돌아오며 길이 열리고, 슬리브가 통과해 기어의 도그 이와 결합한다. 작은 원뿔 클러치와 기계식 잠금장치가 하나로 합쳐진 장치다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 720 280" role="img" aria-label="싱크로나이저의 세 단계">
+        <g id="tr-syn">
+          <rect x="20" y="50" width="46" height="150" rx="3" class="f-surface"/>
+          <path d="M66 86 L96 96 V154 L66 164 Z" class="f-acc2-soft"/>
+          <rect x="66" y="74" width="12" height="12" fill="var(--text-dim)"/><rect x="66" y="164" width="12" height="12" fill="var(--text-dim)"/>
+          <rect x="10" y="118" width="210" height="14" fill="var(--text-faint)" opacity="0.6"/>
+          <rect x="150" y="92" width="44" height="66" rx="3" class="f-elev"/>
+        </g>
+        <!-- panel 1 -->
+        <path d="M108 84 L132 92 V98 L108 98 Z" fill="var(--warn)"/><path d="M108 166 L132 158 V152 L108 152 Z" fill="var(--warn)"/>
+        <rect x="142" y="74" width="60" height="16" rx="3" fill="var(--accent)"/><rect x="142" y="160" width="60" height="16" rx="3" fill="var(--accent)"/>
+        <text x="120" y="232" class="t" text-anchor="middle">① 중립</text>
+        <text x="120" y="254" class="t-dim" text-anchor="middle">기어가 축 위에서 헛돈다</text>
+        <!-- panel 2 -->
+        <use href="#tr-syn" x="240"/>
+        <path d="M324 84 L348 92 V98 L324 98 Z" fill="var(--warn)"/><path d="M324 166 L348 158 V152 L324 152 Z" fill="var(--warn)"/>
+        <rect x="358" y="74" width="60" height="16" rx="3" fill="var(--accent)"/><rect x="358" y="160" width="60" height="16" rx="3" fill="var(--accent)"/>
+        <path d="M430 60 H376" class="s-acc" marker-end="url(#tr-arr)"/>
+        <text x="360" y="232" class="t" text-anchor="middle">② 동기</text>
+        <text x="360" y="254" class="t-dim" text-anchor="middle">링이 원뿔에 눌려 속도를 맞춘다</text>
+        <!-- panel 3 -->
+        <use href="#tr-syn" x="480"/>
+        <path d="M564 84 L588 92 V98 L564 98 Z" fill="var(--warn)"/><path d="M564 166 L588 158 V152 L564 152 Z" fill="var(--warn)"/>
+        <rect x="546" y="74" width="60" height="16" rx="3" fill="var(--accent)"/><rect x="546" y="160" width="60" height="16" rx="3" fill="var(--accent)"/>
+        <text x="600" y="232" class="t" text-anchor="middle">③ 결합</text>
+        <text x="600" y="254" class="t-dim" text-anchor="middle">슬리브가 도그 이에 끼워진다</text>
+        <!-- legend -->
+        <text x="43" y="40" class="t-dim" text-anchor="middle">기어</text>
+        <text x="100" y="40" class="t-dim" text-anchor="middle">원뿔</text>
+        <text x="172" y="40" class="t-acc" text-anchor="middle">슬리브</text>
+        <text x="172" y="130" class="t-dim" text-anchor="middle" style="font-size:12px">허브</text>
+        <line x1="120" y1="98" x2="120" y2="110" class="s-line"/><text x="120" y="112" class="t-dim" text-anchor="middle" style="font-size:12px" dy="10">링</text>
+      </svg>
+      <figcaption><b>그림 5-3.</b> 싱크로나이저의 동작. 회색 작은 사각형이 기어 옆의 도그 이, 주황색이 싱크로 링, 파란색이 슬리브다. 슬리브가 링을 원뿔에 밀어붙여(②) 속도 차를 없앤 뒤에야 도그 이까지 넘어간다(③).</figcaption>
+    </figure>
+    <p>싱크로가 맞춰야 하는 것은 클러치 디스크·입력축·카운터축·모든 기어를 합친 회전 관성이다. 그래서 변속할 때 클러치를 밟아 엔진을 떼어 내는 것이다. 엔진까지 매달려 있으면 작은 싱크로 링으로는 감당할 수 없다. 레이싱 변속기는 싱크로 없이 이가 굵은 도그 클러치만 쓰며, 속도 맞춤은 운전자나 엔진 제어가 맡는다.</p>
+  </section>
+
+  <!-- =============================================================== 5 -->
+  <section id="converter">
+    <h2>토크 컨버터: 기름으로 잇는 클러치</h2>
+    <p>자동 변속기는 마찰 클러치 대신 <span class="term">토크 컨버터</span><span class="en">(Torque Converter)</span>로 엔진과 변속기를 잇는다. 선풍기 두 대를 마주 놓고 한쪽만 켜면 맞은편 날개가 따라 도는 것과 같은 원리인데, 공기 대신 자동 변속기 오일(ATF)을 쓰고 밀폐된 도넛 모양 하우징 안에 넣었다. 부품은 셋이다.</p>
+    <ul>
+      <li><b>펌프</b><span class="en">(Impeller)</span>: 하우징과 한 몸으로 엔진과 함께 돈다. 원심력으로 오일을 바깥쪽으로 내던진다.</li>
+      <li><b>터빈</b><span class="en">(Turbine)</span>: 변속기 입력축에 연결된다. 펌프가 던진 오일을 날개로 받아 돌려지고, 오일은 안쪽으로 흘러 되돌아간다.</li>
+      <li><b>스테이터</b><span class="en">(Stator)</span>: 둘 사이 안쪽에 있는 고정 날개. 한쪽으로만 도는 원웨이 클러치를 통해 변속기 케이스에 붙어 있다.</li>
+    </ul>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 720 300" role="img" aria-label="토크 컨버터 단면과 오일 흐름">
+        <!-- housing -->
+        <path d="M250 150 V40 Q250 24 266 24 H430 Q470 24 470 64 V150" fill="none" class="s-line" stroke-width="3"/>
+        <rect x="150" y="140" width="100" height="20" class="f-surface"/><text x="196" y="132" class="t-dim" text-anchor="middle">엔진 크랭크축</text>
+        <!-- lockup clutch -->
+        <rect x="262" y="44" width="8" height="96" fill="var(--warn)"/>
+        <!-- turbine (left half of torus) -->
+        <path d="M360 40 A54 54 0 0 0 306 94 A54 54 0 0 0 360 148 Z" class="f-acc2-soft"/>
+        <!-- pump (right half) -->
+        <path d="M368 40 A54 54 0 0 1 422 94 A54 54 0 0 1 368 148 Z" class="f-acc-soft"/>
+        <!-- stator -->
+        <rect x="346" y="118" width="36" height="26" rx="3" fill="var(--text-dim)"/>
+        <!-- flow -->
+        <path d="M376 60 A36 36 0 0 1 404 94" fill="none" stroke="var(--accent)" stroke-width="2.5" marker-start="url(#tr-arr)"/>
+        <path d="M352 60 A36 36 0 0 0 324 94" fill="none" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#tr-arr)"/>
+        <!-- shafts -->
+        <rect x="290" y="150" width="340" height="12" fill="var(--accent-2)" opacity="0.75"/>
+        <rect x="340" y="164" width="290" height="8" fill="var(--text-faint)"/>
+        <path d="M270 92 H306" class="s-line" stroke-width="2.5"/>
+        <path d="M290 92 V150" class="s-line" stroke-width="2.5"/>
+        <path d="M422 94 H470" class="s-line" stroke-width="2.5"/>
+        <path d="M364 144 V164" class="s-line" stroke-width="2.5"/>
+        <!-- labels -->
+        <text x="330" y="16" class="t" text-anchor="end" style="fill:var(--accent-2)">터빈</text><line x1="322" y1="20" x2="336" y2="60" class="s-line"/>
+        <text x="400" y="16" class="t-acc">펌프 (하우징과 한 몸)</text><line x1="408" y1="20" x2="396" y2="60" class="s-line"/>
+        <text x="236" y="72" class="t" text-anchor="end">록업 클러치</text><line x1="240" y1="68" x2="262" y2="80" class="s-line"/>
+        <text x="364" y="208" class="t" text-anchor="middle">스테이터</text><line x1="364" y1="144" x2="364" y2="192" class="s-line" stroke-dasharray="3 3"/>
+        <text x="364" y="228" class="t-dim" text-anchor="middle">원웨이 클러치로 케이스에 고정</text>
+        <text x="640" y="160" class="t" style="fill:var(--accent-2)">변속기로</text>
+        <text x="500" y="70" class="t-dim">오일 순환: 펌프 바깥쪽 → 터빈</text>
+        <text x="500" y="92" class="t-dim">→ 안쪽 스테이터 → 다시 펌프</text>
+        <text x="360" y="270" class="t-dim" text-anchor="middle">(축 위쪽 절반만 그린 단면. 실제로는 축을 중심으로 한 도넛 모양이다.)</text>
+      </svg>
+      <figcaption><b>그림 5-4.</b> 토크 컨버터. 펌프가 던진 오일이 터빈을 돌리고, 스테이터가 되돌아오는 오일의 방향을 꺾어 펌프의 회전을 돕는다. 록업 클러치가 붙으면 터빈이 하우징에 직접 묶인다.</figcaption>
+    </figure>
+
+    <p>펌프와 터빈만 있으면 단순한 유체 커플링으로, 토크를 그대로 전할 뿐이다. 스테이터가 토크를 <b>늘려</b> 준다. 터빈이 느릴 때 터빈을 빠져나온 오일은 펌프의 회전을 거스르는 방향으로 흐르는데, 스테이터의 날개가 이 흐름을 받아 펌프 회전 방향으로 꺾어 돌려보낸다. 오일의 운동량을 꺾느라 스테이터가 받는 반력이 케이스를 통해 지면으로 빠져나가고, 그만큼의 토크가 터빈에 더해진다. 세 요소의 토크 균형은 다음과 같다.</p>
+    <div class="formula">$$T_t = T_p + T_s,\qquad \text{TR} = \frac{T_t}{T_p},\qquad \text{SR} = \frac{n_t}{n_p},\qquad \eta = \text{TR}\times\text{SR}$$
+      <div class="where">\(T_p, T_t, T_s\): 펌프·터빈·스테이터 토크, TR: 토크비, SR: 속도비, \(\eta\): 효율. 터빈이 정지한 스톨(SR = 0)에서 TR은 대표적으로 약 1.8~2.5다.</div>
+    </div>
+    <p>터빈이 빨라져 속도비가 약 0.85~0.9에 이르면 되돌아오는 오일의 방향이 바뀌어 스테이터 날개의 뒷면을 때린다. 이때 원웨이 클러치가 풀리며 스테이터가 헛돌기 시작하고, 컨버터는 토크비 1의 유체 커플링이 된다. 이 지점을 <span class="term">커플링 포인트</span>라 한다. 유체로 토크를 전하려면 반드시 속도 차가 있어야 하므로 효율은 100 %에 이르지 못한다. 그래서 요즘 변속기는 발진 직후부터 <span class="term">록업 클러치</span><span class="en">(Lock-up Clutch)</span>를 붙여 펌프와 터빈을 기계적으로 묶어 버린다.</p>
+
+    <div class="sim" id="sim-tc">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>토크 컨버터 특성 곡선</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-tc"></canvas>
+          <div class="legend"><span><i style="background:var(--accent)"></i>토크비 TR</span><span><i style="background:var(--ok)"></i>효율 η</span><span><i style="background:var(--warn)"></i>펌프 흡수 토크 (상대값)</span></div>
+        </div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>속도비 SR = 터빈/펌프 <output id="tc-sr-out"></output></span><input type="range" id="tc-sr" min="0" max="0.99" value="0" step="0.01"></label>
+          <label class="ctrl"><span>엔진(펌프) 회전수 <output id="tc-n-out"></output></span><input type="range" id="tc-n" min="800" max="4000" value="2000" step="50"></label>
+          <label class="ctrl"><span>스톨 토크비 <output id="tc-k-out"></output></span><input type="range" id="tc-k" min="1.6" max="2.6" value="2.1" step="0.05"></label>
+          <label class="check"><input type="checkbox" id="tc-lock"> 록업 클러치 체결</label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">펌프 / 터빈 회전수</span><span class="v" id="o-tc-n">—</span></div>
+        <div class="stat"><span class="k">토크비</span><span class="v" id="o-tc-tr">—</span></div>
+        <div class="stat"><span class="k">펌프 → 터빈 토크</span><span class="v" id="o-tc-t">—</span></div>
+        <div class="stat"><span class="k">효율</span><span class="v" id="o-tc-e">—</span></div>
+        <div class="stat"><span class="k">오일로 가는 열</span><span class="v" id="o-tc-q">—</span></div>
+      </div>
+      <div class="sim-note">대표적인 승용차용 컨버터를 단순화한 모델이다. 펌프가 흡수하는 토크는 회전수의 제곱에 비례하고(\(T_p \propto n_p^2\)), 커플링 포인트는 SR = 0.87로 두었다. 해볼 것: SR = 0(브레이크를 밟고 D에 둔 상태)에서 엔진 회전수를 올리면 토크는 두 배로 전달되지만 효율은 0이고 엔진 일이 전부 열이 된다. SR을 올려 커플링 포인트를 넘기면 토크비가 1에 붙는다. 록업을 체결하면 속도비 1, 효율 약 100 %가 된다.</div>
+    </div>
+    <div class="callout">
+      <strong>크리프 현상</strong>
+      <p>자동 변속기 차가 D에서 브레이크만 떼면 슬금슬금 나아가는 것은, 공회전 중에도 펌프가 오일을 던져 터빈에 작은 토크를 계속 걸기 때문이다. 펌프 토크가 회전수의 제곱에 비례하므로 공회전에서는 작고, 가속 페달을 밟아 회전수가 오르면 급격히 커진다. 토크 컨버터는 회전수가 스스로 결합 정도를 정하는 자동 클러치다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 6 -->
+  <section id="planetary">
+    <h2>유성 기어와 자동 변속기</h2>
+    <p>자동 변속기는 수동 변속기처럼 기어를 축에 끼웠다 뺐다 하지 않는다. 대신 <span class="term">유성 기어 세트</span><span class="en">(Planetary Gear Set)</span>를 쓴다. 가운데 <span class="term">선 기어</span><span class="en">(Sun)</span>, 그 둘레를 도는 여러 개의 유성 기어<span class="en">(Planet)</span>, 유성 기어의 축을 한데 묶은 <span class="term">캐리어</span><span class="en">(Carrier)</span>, 맨 바깥에서 안쪽 이로 유성 기어를 감싸는 <span class="term">링 기어</span><span class="en">(Ring)</span>로 이루어진다. 선·캐리어·링 세 요소가 모두 같은 축 위에서 돈다는 점이 핵심이다.</p>
+    <p>세 요소의 회전수는 하나의 식으로 묶여 있다. 캐리어에 올라타서 보면 유성 기어는 제자리에서 도는 단순한 중간 기어이고, 선과 링은 잇수비 \(-Z_r/Z_s\)로 서로 반대로 돈다. 이것을 바깥에서 본 회전수로 다시 쓰면 <span class="term">윌리스 식</span><span class="en">(Willis Equation)</span>이 된다.</p>
+    <div class="formula">$$\frac{n_s - n_c}{n_r - n_c} = -\frac{Z_r}{Z_s}\quad\Longleftrightarrow\quad Z_s\, n_s + Z_r\, n_r = (Z_s + Z_r)\, n_c$$
+      <div class="where">\(n_s, n_c, n_r\): 선·캐리어·링의 회전수, \(Z_s, Z_r\): 선·링의 잇수. 유성 기어의 잇수는 \(Z_p = (Z_r - Z_s)/2\)로 자동으로 정해진다.</div>
+    </div>
+    <p>식은 하나인데 미지수는 셋이다. 그래서 한 요소를 <b>고정</b>하고(회전수 0) 다른 한 요소에 <b>입력</b>을 넣으면 나머지 요소의 회전수가 정해진다. 어느 요소를 붙잡느냐에 따라 한 세트에서 여섯 가지 기어비가 나오고, 두 요소를 서로 묶으면 전체가 한 덩어리로 도는 직결이 된다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>고정</th><th>입력</th><th>출력</th><th>기어비 (입력/출력)</th><th>성격</th></tr></thead>
+      <tbody>
+        <tr><td>링</td><td>선</td><td>캐리어</td><td>\(1 + Z_r/Z_s\)</td><td>큰 감속</td></tr>
+        <tr><td>선</td><td>링</td><td>캐리어</td><td>\(1 + Z_s/Z_r\)</td><td>작은 감속</td></tr>
+        <tr><td>선</td><td>캐리어</td><td>링</td><td>\(Z_r/(Z_s + Z_r)\)</td><td>작은 증속</td></tr>
+        <tr><td>링</td><td>캐리어</td><td>선</td><td>\(Z_s/(Z_s + Z_r)\)</td><td>큰 증속</td></tr>
+        <tr><td>캐리어</td><td>선</td><td>링</td><td>\(-Z_r/Z_s\)</td><td>후진 감속</td></tr>
+        <tr><td>캐리어</td><td>링</td><td>선</td><td>\(-Z_s/Z_r\)</td><td>후진 증속</td></tr>
+        <tr><td>없음 (두 요소 결합)</td><td colspan="2">전체가 한 덩어리</td><td>1</td><td>직결</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="sim" id="sim-pg">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>유성 기어 세트와 속도 선도</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-pg" class="draggable" style="touch-action:none"></canvas><canvas id="cv-pgl"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>고정 요소</span><div class="seg" id="pg-fix"><button data-value="r" class="on">링</button><button data-value="s">선</button><button data-value="c">캐리어</button><button data-value="lock">없음(직결)</button></div></div>
+          <div class="ctrl"><span>입력 요소</span><div class="seg" id="pg-in"><button data-value="s" class="on">선</button><button data-value="c">캐리어</button><button data-value="r">링</button></div></div>
+          <label class="ctrl"><span>선 기어 잇수 Z<sub>s</sub> <output id="pg-zs-out"></output></span><input type="range" id="pg-zs" min="18" max="48" value="30" step="2"></label>
+          <label class="ctrl"><span>링 기어 잇수 Z<sub>r</sub> <output id="pg-zr-out"></output></span><input type="range" id="pg-zr" min="66" max="100" value="78" step="2"></label>
+          <label class="ctrl"><span>입력 회전수 <output id="pg-n-out"></output></span><input type="range" id="pg-n" min="200" max="3000" value="1000" step="100"></label>
+          <label class="check"><input type="checkbox" id="pg-auto" checked> 자동 회전</label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">기어비 (입력/출력)</span><span class="v" id="o-pg-i">—</span></div>
+        <div class="stat"><span class="k">선 기어</span><span class="v" id="o-pg-s">—</span></div>
+        <div class="stat"><span class="k">캐리어</span><span class="v" id="o-pg-c">—</span></div>
+        <div class="stat"><span class="k">링 기어</span><span class="v" id="o-pg-r">—</span></div>
+        <div class="stat"><span class="k">유성 기어</span><span class="v" id="o-pg-p">—</span></div>
+      </div>
+      <div class="sim-note">위: 실제 잇수와 속도비로 도는 유성 기어 세트. 파랑은 입력, 보라는 출력, 회색은 고정 요소다. 자동 회전을 끄고 그림을 끌면 입력 요소를 손으로 돌릴 수 있다. 아래: 속도 선도(레버 다이어그램). 세로축이 회전수이고, 세 요소의 점이 항상 한 직선 위에 놓인다. 고정한 요소는 0에 박힌 받침점이고, 입력을 올리면 직선이 그 점을 중심으로 기울어진다. 해볼 것: 캐리어를 고정하면 직선이 0을 가로질러 출력이 음수(후진)가 된다. 잇수를 바꾸면 선도에서 캐리어의 가로 위치가 어떻게 움직이는지 보자.</div>
+    </div>
+
+    <p>속도 선도에서 세 축의 가로 간격은 잇수로 정해진다. 선–캐리어 간격을 1로 두면 캐리어–링 간격은 \(Z_s/Z_r\)이다. 윌리스 식이 '세 점은 한 직선 위'라는 그림 한 장으로 바뀌는 것이다. 변속기 설계자는 이 선도를 여러 세트에 걸쳐 이어 붙여 다단 변속기를 구상한다.</p>
+    <p>실제 자동 변속기는 유성 기어 세트 3~4개를 직렬로 놓고, 요소들 사이를 습식 다판 <b>클러치</b>(두 회전 요소를 서로 묶음)와 <b>브레이크</b>(요소를 케이스에 묶음) 5~6개로 연결한다. 유압으로 이 가운데 몇 개를 동시에 물리느냐에 따라 8단, 10단의 기어비가 만들어진다. 변속은 한 클러치를 풀면서 다른 클러치를 무는 <span class="term">클러치 투 클러치</span> 방식이라 동력이 끊기지 않는다. 기어는 늘 맞물려 있고 마찰 요소만 바뀌므로, 수동 변속기의 싱크로나 슬리브가 필요 없다.</p>
+    <div class="callout deep">
+      <strong>유성 기어가 균등하게 들어가는 조건</strong>
+      <p>유성 기어 \(N\)개를 같은 간격으로 배치하려면 \((Z_s + Z_r)/N\)이 정수여야 한다. 그렇지 않으면 한 유성 기어가 선·링과 맞물릴 때 다른 유성 기어의 이가 엇갈려 조립할 수 없다. 위 시뮬레이터도 이 조건을 만족하는 개수(3, 4, 5개 가운데 가능한 것, 안 되면 2개)를 골라 그린다. 여러 유성 기어가 하중을 나눠 받기 때문에 유성 기어 세트는 같은 토크를 평행축 기어보다 훨씬 작은 부피로 전달한다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 7 -->
+  <section id="dct-cvt">
+    <h2>DCT와 CVT</h2>
+    <h3>DCT: 수동 변속기 두 대를 번갈아 쓰기</h3>
+    <p>수동 변속기는 효율이 높지만 변속하는 동안 클러치를 끊어야 해서 동력이 잠깐 사라진다. <span class="term">듀얼 클러치 변속기</span><span class="en">(Dual Clutch Transmission, DCT)</span>는 이 약점을 구조로 없앤다. 입력축을 속이 빈 바깥 축과 그 안을 지나는 안쪽 축, 두 겹으로 만들어 한쪽에는 홀수 단(1·3·5·7), 다른 쪽에는 짝수 단(2·4·6·R) 기어를 배치하고 각 축에 클러치를 하나씩 단다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 720 290" role="img" aria-label="DCT 구조">
+        <rect x="20" y="118" width="70" height="24" class="f-surface"/><text x="54" y="108" class="t-dim" text-anchor="middle">엔진</text>
+        <!-- clutches -->
+        <rect x="96" y="60" width="16" height="140" rx="3" fill="var(--accent)"/><text x="104" y="48" class="t-acc" text-anchor="middle">K1</text>
+        <rect x="124" y="76" width="16" height="108" rx="3" fill="var(--accent-2)"/><text x="134" y="218" class="t" text-anchor="middle" style="fill:var(--accent-2);font-weight:700">K2</text>
+        <!-- inner shaft (odd) -->
+        <rect x="112" y="125" width="570" height="10" fill="var(--accent)"/>
+        <!-- outer hollow shaft (even) -->
+        <rect x="140" y="116" width="250" height="8" fill="var(--accent-2)"/><rect x="140" y="136" width="250" height="8" fill="var(--accent-2)"/>
+        <!-- even gears -->
+        <g fill="var(--accent-2)" opacity="0.55"><rect x="190" y="84" width="22" height="92"/><rect x="250" y="72" width="22" height="116"/><rect x="310" y="62" width="22" height="136"/><rect x="360" y="94" width="18" height="72"/></g>
+        <g class="t" text-anchor="middle"><text x="201" y="76" class="t">2</text><text x="261" y="64" class="t">4</text><text x="321" y="54" class="t">6</text><text x="369" y="86" class="t">R</text></g>
+        <!-- odd gears -->
+        <g fill="var(--accent)" opacity="0.55"><rect x="440" y="98" width="22" height="64"/><rect x="500" y="78" width="22" height="104"/><rect x="560" y="66" width="22" height="128"/><rect x="620" y="58" width="22" height="144"/></g>
+        <g text-anchor="middle"><text x="451" y="90" class="t">1</text><text x="511" y="70" class="t">3</text><text x="571" y="58" class="t">5</text><text x="631" y="50" class="t">7</text></g>
+        <!-- output shaft -->
+        <rect x="170" y="236" width="520" height="10" class="f-surface"/>
+        <g class="s-line" stroke-dasharray="3 3"><line x1="201" y1="176" x2="201" y2="236"/><line x1="261" y1="188" x2="261" y2="236"/><line x1="321" y1="198" x2="321" y2="236"/><line x1="451" y1="162" x2="451" y2="236"/><line x1="511" y1="182" x2="511" y2="236"/><line x1="571" y1="194" x2="571" y2="236"/><line x1="631" y1="202" x2="631" y2="236"/></g>
+        <text x="430" y="272" class="t-dim" text-anchor="middle">출력축 (각 단의 피동 기어와 싱크로가 여기에 있다) → 종감속</text>
+        <text x="260" y="26" class="t" style="fill:var(--accent-2)" text-anchor="middle">바깥 축: 짝수 단</text>
+        <text x="540" y="26" class="t-acc" text-anchor="middle">안쪽 축: 홀수 단</text>
+      </svg>
+      <figcaption><b>그림 5-5.</b> DCT의 개념 구조. 클러치 K1은 안쪽 축(홀수 단)을, K2는 바깥의 빈 축(짝수 단)을 엔진에 잇는다. 내부는 싱크로나이저를 쓰는 수동 변속기와 같다.</figcaption>
+    </figure>
+    <p>3단으로 달리는 동안 K1이 붙어 있고 K2는 떨어져 있다. 이때 한가한 짝수 축에서는 제어기가 다음에 쓸 4단(또는 2단)의 싱크로를 <b>미리 넣어 둔다</b>. 이것이 <span class="term">프리셀렉트</span><span class="en">(Pre-select)</span>다. 변속 순간에는 K1을 풀면서 동시에 K2를 물기만 하면 된다. 두 클러치의 토크가 서로 교차하며 넘어가므로 구동력이 끊기지 않고, 변속은 수십~수백 ms에 끝난다. 다만 3단에서 5단처럼 같은 축의 단으로 건너뛸 때나 예측이 빗나갔을 때는 프리셀렉트를 다시 해야 해서 느려진다. 발진과 저속 크리프를 마찰 클러치의 슬립으로 처리하므로, 건식 DCT는 정체 구간에서 <a href="#clutch">반클러치 열</a> 문제가 그대로 나타난다. 토크가 큰 차는 오일로 식히는 습식 다판 클러치를 쓴다.</p>
+
+    <h3>CVT: 단이 없는 변속기</h3>
+    <p><span class="term">무단 변속기</span><span class="en">(Continuously Variable Transmission, CVT)</span>는 기어 대신 풀리 두 개와 그 사이에 건 금속 벨트(또는 체인)를 쓴다. 각 풀리는 원뿔 모양의 판 두 장이 마주 보는 구조로, 유압으로 두 판 사이 간격을 좁히면 V자 홈이 좁아져 벨트가 바깥쪽으로 밀려 올라가고, 넓히면 벨트가 안쪽으로 내려앉는다. 벨트 길이가 일정하므로 구동 풀리의 간격을 좁히면 피동 풀리는 그만큼 넓어져야 한다. 벨트가 걸리는 반지름의 비가 곧 변속비다.</p>
+    <div class="formula">$$i = \frac{r_2}{r_1},\qquad L \approx 2a + \pi(r_1 + r_2) + \frac{(r_2 - r_1)^2}{a}$$
+      <div class="where">\(r_1, r_2\): 구동·피동 풀리에서 벨트가 걸리는 반지름, \(a\): 두 축 사이 거리, \(L\): 벨트 길이(일정). 승용차용 CVT의 변속비 폭(최저/최고)은 대표적으로 약 6~7이다.</div>
+    </div>
+
+    <div class="sim" id="sim-cvt">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>CVT: 풀리 간격과 변속비, 엔진 회전수를 고정한 가속</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-cvt"></canvas><canvas id="cv-cvtc"></canvas>
+          <div class="legend"><span><i style="background:var(--accent)"></i>CVT 운전점 궤적</span><span><i style="background:var(--text-dim)"></i>CVT 변속비 한계</span><span><i style="background:var(--warn)"></i>6단 변속기(비교)</span></div>
+        </div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>구동 풀리 간격 <output id="cvt-gap-out"></output></span><input type="range" id="cvt-gap" min="2" max="18.3" value="16" step="0.1"></label>
+          <label class="ctrl"><span>목표 엔진 회전수 <output id="cvt-n-out"></output></span><input type="range" id="cvt-n" min="1500" max="6000" value="5000" step="100"></label>
+          <div class="ctrl-row"><button class="btn primary" id="cvt-run">가속 실행</button><button class="btn" id="cvt-stop">정지</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">구동 / 피동 반지름</span><span class="v" id="o-cvt-r">—</span></div>
+        <div class="stat"><span class="k">변속비 i = r₂/r₁</span><span class="v" id="o-cvt-i">—</span></div>
+        <div class="stat"><span class="k">엔진 회전수</span><span class="v" id="o-cvt-n">—</span></div>
+        <div class="stat"><span class="k">차속</span><span class="v" id="o-cvt-v">—</span></div>
+        <div class="stat"><span class="k">벨트 속도</span><span class="v" id="o-cvt-b">—</span></div>
+        <div class="stat"><span class="k">0→100 km/h</span><span class="v" id="o-cvt-t">—</span></div>
+      </div>
+      <div class="sim-note">위 왼쪽: 옆에서 본 풀리와 벨트. 위 오른쪽: 축 방향 단면(위가 구동, 아래가 피동). 축간 거리 160 mm, 벨트 길이 일정, 종감속 5.2로 두었고 간격은 보기 쉽게 과장했다. 아래: 차속–엔진 회전수 선도. 해볼 것: 간격 슬라이더를 좁히면 구동 쪽 벨트가 바깥으로 올라가고 피동 쪽이 저절로 내려간다. '가속 실행'을 누르면 제어기가 엔진을 목표 회전수에 묶어 둔 채 변속비만 바꿔 가며 가속한다. 궤적이 톱니가 아니라 수평선이 된다. 목표 회전수를 2,000 rpm과 5,500 rpm으로 바꿔 가속 시간을 비교하자.</div>
+    </div>
+    <p>CVT의 가장 큰 장점은 엔진을 원하는 운전점에 둘 수 있다는 것이다. 정속 주행에서는 연료 소비가 가장 적은 저회전·고부하 영역에, 급가속에서는 최대 출력 회전수에 엔진을 묶어 둔다. 약점은 벨트가 미끄러지지 않도록 풀리를 강하게 조여야 해서 유압 펌프 손실과 벨트 마찰 손실이 크고, 전달할 수 있는 토크에 한계가 있다는 점이다. 가속 중에 엔진 소리는 일정한데 속도만 오르는 감각을 낯설어하는 운전자가 많아, 일부러 단이 있는 것처럼 회전수를 오르내리게 제어하기도 한다. <a href="hybrid.html">14장</a>에서 다루는 동력 분기형 하이브리드의 e-CVT는 벨트 없이 유성 기어 한 세트와 모터 두 개로 같은 효과를 낸다.</p>
+  </section>
+
+  <!-- =============================================================== 8 -->
+  <section id="ratios">
+    <h2>기어비 배치와 변속 선도</h2>
+    <h3>톱니 선도</h3>
+    <p>한 단에서 엔진 회전수는 차속에 비례한다. 차속을 가로축, 엔진 회전수를 세로축에 놓으면 각 단은 원점을 지나는 직선이고, 기울기가 총 감속비다. 가속하며 변속하면 운전점은 한 직선을 타고 오르다가 다음 직선으로 수직으로 떨어지기를 반복한다. 그 모양이 톱날 같아서 <span class="term">톱니 선도</span><span class="en">(Sawtooth Diagram)</span>라 부른다. 변속 직후의 회전수는 이웃한 두 기어비의 비, 곧 <span class="term">단간비</span><span class="en">(Step Ratio)</span>로 정해진다.</p>
+    <div class="formula">$$\varphi_k = \frac{i_k}{i_{k+1}},\qquad n_{\text{after}} = \frac{n_{\text{shift}}}{\varphi_k},\qquad \frac{i_1}{i_N} = \prod_{k=1}^{N-1}\varphi_k$$
+      <div class="where">\(\varphi_k\): \(k\)단과 \(k+1\)단 사이의 단간비, \(i_1/i_N\): 변속비 폭(Ratio Spread). 6단 변속기는 대표적으로 약 5~6, 8~10단 자동 변속기는 약 7~10이다.</div>
+    </div>
+    <p>기어비를 나누는 방식에는 두 가지 기본형이 있다.</p>
+    <ul>
+      <li><b>등비 배치</b>: 모든 단간비가 같다. 어느 단에서 변속해도 회전수가 같은 비율로 떨어지므로 엔진을 늘 같은 회전 범위에서 쓴다. 화물차처럼 최대 출력 근처를 계속 써야 하는 차에 맞는다. 대신 고속 단 사이의 속도 간격이 지나치게 넓어진다.</li>
+      <li><b>누진 배치</b><span class="en">(Progressive)</span>: 높은 단으로 갈수록 단간비가 작아진다. 저속 단은 간격이 넓고 고속 단은 촘촘해서, 각 단의 최고 속도가 거의 같은 간격으로 늘어선다. 공기 저항이 커지는 고속에서 구동력의 빈틈이 줄어들기 때문에 승용차는 대부분 이 방식을 쓴다.</li>
+    </ul>
+    <p>전체 폭을 좁히고 단 사이를 바짝 붙인 것을 <b>근접 배치</b><span class="en">(Close Ratio)</span>라 한다. 변속 후에도 회전수가 조금만 떨어져 최대 출력 영역을 벗어나지 않으므로 스포츠 주행에 유리하지만, 1단이 길어 발진이 둔하고 최고 단이 짧아 고속 연비가 나쁘다.</p>
+
+    <div class="sim" id="sim-saw">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>톱니 선도와 구동력 선도</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-saw"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>보기</span><div class="seg" id="sw-view"><button data-value="saw" class="on">톱니 선도</button><button data-value="force">구동력 선도</button></div></div>
+          <label class="ctrl"><span>1단 <output id="sw-g1-out"></output></span><input type="range" id="sw-g1" min="0.5" max="4.5" value="3.6" step="0.01"></label>
+          <label class="ctrl"><span>2단 <output id="sw-g2-out"></output></span><input type="range" id="sw-g2" min="0.5" max="4.5" value="2.1" step="0.01"></label>
+          <label class="ctrl"><span>3단 <output id="sw-g3-out"></output></span><input type="range" id="sw-g3" min="0.5" max="4.5" value="1.4" step="0.01"></label>
+          <label class="ctrl"><span>4단 <output id="sw-g4-out"></output></span><input type="range" id="sw-g4" min="0.5" max="4.5" value="1" step="0.01"></label>
+          <label class="ctrl"><span>5단 <output id="sw-g5-out"></output></span><input type="range" id="sw-g5" min="0.5" max="4.5" value="0.8" step="0.01"></label>
+          <label class="ctrl"><span>6단 <output id="sw-g6-out"></output></span><input type="range" id="sw-g6" min="0.5" max="4.5" value="0.65" step="0.01"></label>
+          <label class="ctrl"><span>종감속비 <output id="sw-fd-out"></output></span><input type="range" id="sw-fd" min="2.5" max="5.5" value="4.1" step="0.05"></label>
+          <label class="ctrl"><span>변속 회전수 <output id="sw-ns-out"></output></span><input type="range" id="sw-ns" min="2500" max="6500" value="6000" step="100"></label>
+          <div class="ctrl-row"><button class="btn" id="sw-geo">등비</button><button class="btn" id="sw-prog">누진</button><button class="btn" id="sw-close">근접</button></div>
+          <button class="btn primary" id="sw-run">가속 실행</button>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">변속비 폭 i₁/i₆</span><span class="v" id="o-sw-sp">—</span></div>
+        <div class="stat"><span class="k">현재 단 / 엔진</span><span class="v" id="o-sw-g">—</span></div>
+        <div class="stat"><span class="k">차속 / 경과 시간</span><span class="v" id="o-sw-v">—</span></div>
+        <div class="stat"><span class="k">0→100 km/h</span><span class="v" id="o-sw-t">—</span></div>
+        <div class="stat"><span class="k">최고 속도 (구동력 = 저항)</span><span class="v" id="o-sw-top">—</span></div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>단</th><th>기어비</th><th>총 감속비</th><th>6,500 rpm 차속</th><th>다음 단과의 단간비</th><th>변속 직후 rpm</th></tr></thead>
+        <tbody id="sw-tb"></tbody>
+      </table></div>
+      <div class="sim-note">모델: 1,500 kg, 최대 토크 240 N·m(4,000 rpm), 최대 출력 약 125 kW인 엔진, 타이어 반지름 0.32 m, 구동계 효율 0.92, \(C_d A = 0.66\) m², 구름 저항 계수 0.012. 구동력 선도에서 점선은 엔진을 늘 최대 출력에 두는 이상적인 변속기의 쌍곡선, 회색 선은 주행 저항이다. 해볼 것: '등비'와 '누진'을 눌러 톱니의 낙차와 각 단 최고 속도 간격을 비교하자. 종감속비를 키우면 모든 직선이 가팔라져 가속은 빨라지고 각 단의 최고 속도는 낮아진다. 변속 회전수를 3,000 rpm으로 내리면 가속 시간이 얼마나 늘어나는가?</div>
+    </div>
+
+    <h3>종감속비</h3>
+    <p>변속기를 나온 회전은 바퀴에 닿기 전에 한 번 더 감속된다. 디퍼렌셜에 붙은 <span class="term">종감속 기어</span><span class="en">(Final Drive)</span>가 대표적으로 약 3~4.5 : 1로 회전을 줄인다(구조는 <a href="driveline.html">6장</a>). 변속기 기어비가 단마다 다른 값이라면 종감속비는 모든 단에 공통으로 곱해지는 값이다. 변속기 안에서 큰 감속을 다 처리하면 기어가 커지므로 감속을 두 단계로 나눈 것이며, 같은 변속기에 종감속비만 달리해 차의 성격(가속 위주 또는 연비 위주)을 조절하기도 한다.</p>
+
+    <h3>변속 선도</h3>
+    <p>자동 변속기의 제어기는 언제 변속할지를 <span class="term">변속 선도</span><span class="en">(Shift Map)</span>로 결정한다. 가로축이 차속, 세로축이 가속 페달 개도인 지도 위에 단마다 변속선이 그려져 있고, 운전점이 선을 넘으면 변속한다. 페달을 살짝 밟고 있으면 낮은 회전수에서 일찍 올려 연료를 아끼고, 깊이 밟으면 최대 출력 회전수까지 끌고 간다. 페달을 갑자기 깊이 밟으면 운전점이 위로 뛰어 다운시프트 선을 넘는데, 이것이 <span class="term">킥다운</span>이다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 720 320" role="img" aria-label="변속 선도와 히스테리시스">
+        <line x1="70" y1="270" x2="690" y2="270" class="s-axis"/><line x1="70" y1="270" x2="70" y2="30" class="s-axis"/>
+        <text x="380" y="308" class="t-dim" text-anchor="middle">차속 →</text>
+        <text x="28" y="150" class="t-dim" text-anchor="middle" transform="rotate(-90 28 150)">가속 페달 개도 →</text>
+        <text x="62" y="274" class="t-mono" text-anchor="end">0</text><text x="62" y="44" class="t-mono" text-anchor="end">100%</text>
+        <!-- upshift lines -->
+        <g fill="none" stroke="var(--accent)" stroke-width="2.5">
+          <path d="M130 270 V210 C140 150 200 90 230 40"/>
+          <path d="M210 270 V210 C225 150 330 90 370 40"/>
+          <path d="M300 270 V210 C320 150 470 90 520 40"/>
+        </g>
+        <!-- downshift lines -->
+        <g fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-dasharray="7 5">
+          <path d="M100 270 V200 C108 150 150 90 172 40"/>
+          <path d="M170 270 V200 C182 150 262 90 296 40"/>
+          <path d="M250 270 V200 C266 150 388 90 430 40"/>
+        </g>
+        <g class="t-acc"><text x="238" y="34" class="t-acc">1→2</text><text x="378" y="34" class="t-acc">2→3</text><text x="528" y="34" class="t-acc">3→4</text></g>
+        <g><text x="128" y="34" class="t" style="fill:var(--accent-2)">2→1</text><text x="262" y="60" class="t" style="fill:var(--accent-2)">3→2</text><text x="394" y="60" class="t" style="fill:var(--accent-2)">4→3</text></g>
+        <!-- regions -->
+        <text x="92" y="250" class="t-dim" style="font-size:13px" text-anchor="middle">1단</text>
+        <text x="600" y="150" class="t-dim" text-anchor="middle">4단</text>
+        <!-- hysteresis -->
+        <line x1="170" y1="240" x2="210" y2="240" stroke="var(--warn)" stroke-width="3"/>
+        <line x1="190" y1="240" x2="230" y2="286" class="s-line"/><text x="236" y="296" class="t" style="fill:var(--warn)">히스테리시스 폭</text>
+        <!-- kickdown -->
+        <path d="M470 232 V110" stroke="var(--bad)" stroke-width="2.5" fill="none" marker-end="url(#tr-arr2)"/>
+        <defs><marker id="tr-arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--bad)"/></marker></defs>
+        <circle cx="470" cy="232" r="5" fill="var(--bad)"/>
+        <text x="480" y="176" class="t" style="fill:var(--bad)">킥다운: 4→3</text>
+        <text x="560" y="250" class="t-acc">실선: 업시프트</text>
+        <text x="560" y="230" class="t" style="fill:var(--accent-2)">점선: 다운시프트</text>
+      </svg>
+      <figcaption><b>그림 5-6.</b> 변속 선도의 개념도. 같은 두 단 사이에서도 다운시프트 선은 업시프트 선보다 낮은 차속 쪽에 놓인다.</figcaption>
+    </figure>
+    <p>업시프트 선과 다운시프트 선을 일부러 떨어뜨려 놓은 것이 <span class="term">히스테리시스</span>다. 두 선이 겹쳐 있으면 변속선 바로 위에서 정속 주행할 때 속도가 조금만 흔들려도 올렸다 내렸다를 반복하는 <span class="term">변속 헌팅</span>이 생긴다. 실제 제어기는 여기에 더해 오르막·내리막, 운전 성향, 오일 온도, 주행 모드에 따라 지도를 바꿔 쓰고, <a href="adas.html">17장</a>의 내비게이션·레이더 정보로 앞의 커브나 앞차를 보고 미리 변속하기도 한다.</p>
+
+    <h3>변속기 비교, 그리고 전기차</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>방식</th><th>발진 장치</th><th>변속 요소</th><th>장점</th><th>약점</th></tr></thead>
+      <tbody>
+        <tr><td>수동(MT)</td><td>건식 클러치</td><td>싱크로 + 도그 클러치</td><td>단순, 가볍고 효율 높음</td><td>변속 중 동력 단절, 운전자 조작</td></tr>
+        <tr><td>자동(AT)</td><td>토크 컨버터 + 록업</td><td>유성 기어 + 습식 클러치·브레이크</td><td>부드러운 발진, 무단절 변속, 다단화</td><td>유압·컨버터 손실, 무겁고 복잡</td></tr>
+        <tr><td>DCT</td><td>건식 또는 습식 클러치 2개</td><td>싱크로 + 클러치 교대</td><td>수동 수준 효율, 빠른 변속</td><td>저속 울컥임, 클러치 열, 건너뛰기 변속</td></tr>
+        <tr><td>CVT</td><td>토크 컨버터 또는 클러치</td><td>가변 풀리 + 벨트</td><td>엔진 운전점 자유, 변속 충격 없음</td><td>토크 한계, 풀리 조임 손실</td></tr>
+      </tbody>
+    </table></div>
+    <p>전기차는 대부분 변속기 없이 <b>감속비 하나</b>(대표적으로 약 7~11 : 1)로 달린다. 이 장의 첫 절에서 변속기가 필요했던 두 가지 이유가 모터에는 해당하지 않기 때문이다. 모터는 0 rpm에서부터 최대 토크를 내므로 발진용 클러치도, 토크를 키울 낮은 단도 필요 없다. 또 15,000~20,000 rpm까지 돌 수 있고 기저 속도 위에서는 넓은 범위에서 출력이 거의 일정해서, 그 자체로 '이상적인 변속기의 쌍곡선'을 그린다. 후진은 모터를 거꾸로 돌리면 된다. 일부 고성능 전기차가 뒤 차축에 2단 변속기를 쓰는 것은 발진 가속과 고속 효율을 동시에 더 끌어올리기 위한 예외다. 모터의 토크–속도 특성은 <a href="motor.html">15장</a>에서 자세히 다룬다.</p>
+  </section>
+
+  <!-- =============================================================== summary -->
+  <section class="keypoints" id="summary">
+    <h2>핵심 정리</h2>
+    <ol>
+      <li>엔진은 약 1,000~6,500 rpm에서만 쓸 수 있고 바퀴는 0부터 돌아야 한다. 변속기는 기어비를 바꿔 구동력 \(F = T_e i_g i_f \eta / r\)과 차속 범위를 맞춘다.</li>
+      <li>기어비 \(i = z_2/z_1\)만큼 토크는 커지고 회전수는 줄어든다. 일률 \(T\omega\)는 보존되며, 기어 한 쌍의 손실은 1~2 %다.</li>
+      <li>마찰 클러치의 용량은 \(T_c = \mu F_n r_m n_f\)다. 반클러치 동안 전달 토크는 페달 위치가 정하고, 속도 차만큼 \(T_c\,\Delta\omega\)의 열이 난다.</li>
+      <li>수동 변속기의 기어는 늘 맞물려 있고, 슬리브가 헛도는 기어 하나를 출력축에 고정한다. 싱크로나이저는 원뿔 마찰로 속도를 맞춘 뒤에야 결합을 허락한다.</li>
+      <li>토크 컨버터는 스테이터 덕분에 저속에서 토크를 약 2배로 키우고, 커플링 포인트 이후에는 유체 커플링이 된다. 효율은 \(\text{TR}\times\text{SR}\)이며 록업 클러치로 슬립 손실을 없앤다.</li>
+      <li>유성 기어는 \(Z_s n_s + Z_r n_r = (Z_s + Z_r) n_c\)를 따른다. 고정하는 요소에 따라 감속·증속·후진·직결이 나오고, 자동 변속기는 클러치와 브레이크로 이를 선택한다.</li>
+      <li>DCT는 홀수·짝수 단을 두 클러치에 나눠 다음 단을 미리 넣어 두고 클러치만 교대한다. CVT는 풀리 반지름비를 연속으로 바꿔 엔진을 원하는 회전수에 묶어 둔다.</li>
+      <li>톱니 선도에서 변속 후 회전수는 단간비로 정해진다. 승용차는 고단이 촘촘한 누진 배치를 쓰고, 변속 선도는 히스테리시스로 헌팅을 막는다. 전기 모터는 토크–속도 특성이 넓어 감속기 하나로 충분하다.</li>
+    </ol>
+  </section>
+
+  <!-- =============================================================== quiz -->
+  <section class="quiz-sec" id="quiz">
+    <h2>확인 퀴즈</h2>
+    <div class="quiz">
+      <div class="quiz-q"><p>Q1. 잇수 15의 구동 기어가 잇수 45의 피동 기어를 돌린다. 입력이 3,000 rpm, 120 N·m일 때 출력은? (손실 무시)</p><div class="opts">
+        <button class="opt">9,000 rpm, 40 N·m</button><button class="opt" data-correct>1,000 rpm, 360 N·m</button><button class="opt">1,000 rpm, 120 N·m</button><button class="opt">3,000 rpm, 360 N·m</button>
+      </div><div class="quiz-exp">기어비 \(i = 45/15 = 3\). 회전수는 1/3인 1,000 rpm, 토크는 3배인 360 N·m다. 일률은 \(120 \times 3000 = 360 \times 1000\)으로 같다.</div></div>
+
+      <div class="quiz-q"><p>Q2. 클러치를 반쯤 뗀 채 미끄러뜨리고 있다. 이때 변속기로 전달되는 토크를 결정하는 것은?</p><div class="opts">
+        <button class="opt">엔진과 입력축의 회전수 차이</button>
+        <button class="opt" data-correct>압력판이 디스크를 누르는 힘(페달 위치)</button>
+        <button class="opt">엔진이 그 순간 내는 토크</button>
+        <button class="opt">차의 속도</button>
+      </div><div class="quiz-exp">미끄러지는 마찰면이 전하는 토크는 \(\mu F_n r_m n_f\)로, 누르는 힘에 비례하고 속도 차와는 거의 무관하다. 엔진 토크가 이보다 크면 남는 만큼 엔진 회전수가 오르고, 작으면 회전수가 떨어진다. 속도 차는 발열량을 결정한다.</div></div>
+
+      <div class="quiz-q"><p>Q3. 싱크로나이저의 싱크로 링이 하는 일로 옳은 것은?</p><div class="opts">
+        <button class="opt">기어의 이를 서로 맞물리게 밀어 넣는다</button>
+        <button class="opt">엔진과 변속기 사이의 동력을 끊는다</button>
+        <button class="opt" data-correct>원뿔 마찰로 기어와 슬리브의 속도를 맞추고, 맞기 전에는 슬리브의 진행을 막는다</button>
+        <button class="opt">출력축의 회전 방향을 바꾼다</button>
+      </div><div class="quiz-exp">상시 맞물림 변속기에서 기어의 이는 늘 맞물려 있다. 싱크로 링은 기어 옆의 원뿔면에 눌려 속도 차를 없애는 작은 마찰 클러치이자, 속도가 같아지기 전에는 슬리브를 막는 잠금장치다.</div></div>
+
+      <div class="quiz-q"><p>Q4. 선 기어 30개, 링 기어 90개인 유성 기어 세트에서 링을 고정하고 선에 입력을 넣어 캐리어로 출력한다. 기어비는?</p><div class="opts">
+        <button class="opt">3</button><button class="opt" data-correct>4</button><button class="opt">1.33</button><button class="opt">−3</button>
+      </div><div class="quiz-exp">\(n_r = 0\)이면 \(Z_s n_s = (Z_s + Z_r) n_c\)이므로 \(n_s/n_c = 1 + Z_r/Z_s = 1 + 90/30 = 4\). −3은 캐리어를 고정하고 링으로 출력할 때의 값이다.</div></div>
+
+      <div class="quiz-q"><p>Q5. 토크 컨버터의 속도비가 0.6, 토크비가 1.4일 때 효율은?</p><div class="opts">
+        <button class="opt">60 %</button><button class="opt" data-correct>84 %</button><button class="opt">140 %</button><button class="opt">43 %</button>
+      </div><div class="quiz-exp">\(\eta = \text{TR} \times \text{SR} = 1.4 \times 0.6 = 0.84\). 토크를 1.4배로 키워도 회전수가 0.6배이므로 출력은 입력의 84 %이고, 나머지 16 %는 오일의 열이 된다.</div></div>
+
+      <div class="quiz-q"><p>Q6. 6,000 rpm에서 3단(1.40)에서 4단(1.00)으로 변속하면 변속 직후 엔진 회전수는 약 얼마인가?</p><div class="opts">
+        <button class="opt">8,400 rpm</button><button class="opt">5,600 rpm</button><button class="opt" data-correct>4,290 rpm</button><button class="opt">3,600 rpm</button>
+      </div><div class="quiz-exp">변속 순간 차속은 그대로이므로 회전수는 기어비에 비례한다. \(6000 \times 1.00/1.40 \approx 4{,}290\) rpm. 단간비가 1.4이므로 회전수가 1/1.4로 떨어진다.</div></div>
+    </div>
+  </section>
+</main>
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const TAU = Math.PI * 2;
+  const bs = getComputedStyle(document.body);
+  const font = (sz, mono, wt) => (wt ? wt + " " : "") + sz + "px " + bs.getPropertyValue(mono ? "--mono" : "--font");
+  const rad = (n) => (n * TAU) / 60;
+  const sm = (s) => "<small>" + s + "</small>";
+  const num = (x, d) => x.toLocaleString("en-US", { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
+  const R_TIRE = 0.32, KV = ((TAU * R_TIRE) / 60) * 3.6;
+  const tq = (n) => Math.max(0, 240 * (1 - Math.pow((n - 4000) / 5000, 2)));
+  const fres = (v, m) => m * CB.G * 0.012 + 0.5 * CB.RHO * 0.66 * v * v;
+
+  function gearPath(ctx, cx, cy, z, m, ang, internal) {
+    const r = (m * z) / 2, p = TAU / z;
+    const rt = internal ? r - m : r + m, rr = internal ? r + 1.2 * m : r - 1.2 * m;
+    for (let k = 0; k < z; k++) {
+      const c = ang + k * p;
+      [[c - 0.33 * p, rr], [c - 0.13 * p, rt], [c + 0.13 * p, rt], [c + 0.33 * p, rr]].forEach(([a, rad_], j) => {
+        const x = cx + Math.cos(a) * rad_, y = cy + Math.sin(a) * rad_;
+        k === 0 && j === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+    }
+    ctx.closePath();
+  }
+  function drawGear(ctx, x, y, z, m, ang, color, bg) {
+    ctx.save();
+    ctx.beginPath(); gearPath(ctx, x, y, z, m, ang);
+    ctx.fillStyle = color; ctx.globalAlpha = 0.22; ctx.fill(); ctx.globalAlpha = 1;
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.lineJoin = "round"; ctx.stroke();
+    const r = (m * z) / 2;
+    ctx.lineWidth = Math.max(2, m * 0.5); ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(ang) * r * 0.78, y + Math.sin(ang) * r * 0.78); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, Math.max(3, r * 0.16), 0, TAU); ctx.fillStyle = bg; ctx.fill(); ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.restore();
+  }
+  /** 옆에서 본 회전체의 이(가로줄) */
+  function rollStripes(ctx, x, yc, wd, R, ang, n, color) {
+    ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let k = 0; k < n; k++) {
+      const a = ang + (k * TAU) / n;
+      if (Math.cos(a) > 0.05) { const y = yc + R * Math.sin(a); ctx.moveTo(x, y); ctx.lineTo(x + wd, y); }
+    }
+    ctx.stroke(); ctx.restore();
+  }
+  function arcArrow(ctx, x, y, r, a0, a1, color) {
+    ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, y, r, a0, a1, a1 < a0); ctx.stroke();
+    const d = a1 > a0 ? 1 : -1, px = x + Math.cos(a1) * r, py = y + Math.sin(a1) * r, tx = -Math.sin(a1) * d, ty = Math.cos(a1) * d;
+    CB.arrow(ctx, px - tx * 9, py - ty * 9, px + tx * 3, py + ty * 3, color, 2);
+    ctx.restore();
+  }
+
+  /* =================================================== Sim 1: gear pair */
+  (function () {
+    const el = $("cv-gear");
+    let th1 = 0, dragging = false, grab = null, L = null, cv = null;
+    const upd = () => { stats(); if (cv) cv.redraw(); };
+    const gZ1 = CB.range("g-z1", (v) => v + "개", upd), gZ2 = CB.range("g-z2", (v) => v + "개", upd);
+    const gN = CB.range("g-n", (v) => num(v) + " rpm", upd), gT = CB.range("g-t", (v) => v + " N·m", upd);
+    function stats() {
+      const i = gZ2() / gZ1(), n2 = gN() / i, t2 = gT() * i;
+      CB.stat("o-g-i", i.toFixed(2) + sm(i > 1 ? "감속" : i < 1 ? "증속" : "1:1"));
+      CB.stat("o-g-n", num(n2) + sm("rpm"));
+      CB.stat("o-g-t", num(t2) + sm("N·m"));
+      CB.stat("o-g-p", ((gT() * rad(gN())) / 1000).toFixed(1) + sm("kW"));
+      CB.stat("o-g-f", ((gT() / ((0.0025 * gZ1()) / 2)) / 1000).toFixed(1) + sm("kN"));
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), z1 = gZ1(), z2 = gZ2();
+      const m = Math.min((w - 24) / (z1 + z2 + 4.4), (h - 70) / (Math.max(z1, z2) + 2.4));
+      const r1 = (m * z1) / 2, r2 = (m * z2) / 2, cy = (h - 50) / 2 + 6;
+      const x1 = w / 2 - r2, x2 = w / 2 + r1;
+      L = { x1, x2, cy };
+      const th2 = Math.PI + Math.PI / z2 - (th1 * z1) / z2;
+      drawGear(ctx, x1, cy, z1, m, th1, P.accent, P.bg);
+      drawGear(ctx, x2, cy, z2, m, th2, P.accent2, P.bg);
+      arcArrow(ctx, x1, cy, r1 * 0.5, -2.3, -0.8, P.accent);
+      arcArrow(ctx, x2, cy, r2 * 0.5, -0.8, -2.3, P.accent2);
+      const F = gT() / ((0.0025 * z1) / 2), len = 16 + 44 * Math.min(1, F / 20000);
+      CB.arrow(ctx, w / 2, cy, w / 2, cy + len, P.warn, 3);
+      ctx.fillStyle = P.warn; ctx.font = font(12, false, 700); ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillText("F", w / 2 + 6, cy + len - 4);
+      const i = z2 / z1;
+      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+      ctx.font = font(12, false, 700);
+      ctx.fillStyle = P.accent; ctx.fillText("입력 · 잇수 " + z1, w * 0.25, h - 26);
+      ctx.fillStyle = P.accent2; ctx.fillText("출력 · 잇수 " + z2, w * 0.75, h - 26);
+      ctx.font = font(11, true); ctx.fillStyle = P.dim;
+      ctx.fillText(num(gN()) + " rpm · " + gT() + " N·m", w * 0.25, h - 10);
+      ctx.fillText(num(gN() / i) + " rpm · " + num(gT() * i) + " N·m", w * 0.75, h - 10);
+    }
+    cv = CB.canvas(el, draw, { aspect: 0.62, minHeight: 240, maxHeight: 380 });
+    stats();
+    const angAt = (p, g) => Math.atan2(p.y - L.cy, p.x - (g === 1 ? L.x1 : L.x2));
+    CB.drag(el, {
+      down(p) { if (!L) return false; const g = Math.hypot(p.x - L.x1, p.y - L.cy) < Math.hypot(p.x - L.x2, p.y - L.cy) ? 1 : 2; grab = { g, a: angAt(p, g) }; dragging = true; },
+      move(p) {
+        const a = angAt(p, grab.g); let d = a - grab.a; grab.a = a;
+        if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU;
+        th1 += grab.g === 1 ? d : (-d * gZ2()) / gZ1();
+        cv.redraw();
+      },
+      up() { dragging = false; },
+    });
+    CB.loop(el, (dt) => { if ($("g-auto").checked && !dragging) { th1 += (gN() / 1000) * 1.2 * dt; cv.redraw(); } });
+  })();
+
+  /* =================================================== Sim 2: clutch launch */
+  (function () {
+    const el = $("cv-cl");
+    const Je = 0.2, I = 3.6 * 4.1, R = 0.31, M = 1400, Jv = (M * R * R) / (I * I), TCMAX = 420, WIN = 12;
+    const gPed = CB.range("cl-ped", (v) => v + " %"), gThr = CB.range("cl-thr", (v) => v + " %");
+    let we, wi, stalled, locked, temp, E, t, hist, auto, Tcl, Pq, angE = 0, angI = 0, acc = 0, dir = 0;
+    function reset() {
+      we = rad(850); wi = 0; stalled = false; locked = false; temp = 40; E = 0; t = 0; hist = []; auto = null; Tcl = 0; Pq = 0; acc = 0;
+      gPed.set(100); gThr.set(0);
+    }
+    const tmax = (n) => Math.max(0, 200 * (1 - Math.pow((n - 3500) / 4500, 2)));
+    const drag = (n) => 12 + 0.006 * n;
+    const cap = (ped) => TCMAX * Math.pow(CB.clamp((75 - ped) / 55, 0, 1), 1.5);
+    function step(dt) {
+      const n = (we * 60) / TAU, thr = gThr() / 100, Tc = cap(gPed());
+      let Te;
+      if (stalled) Te = we > 0 ? -30 : 0;
+      else if (n > 6500) Te = -drag(n);
+      else Te = thr * tmax(n) - drag(n) + CB.clamp(drag(n) + 0.6 * (850 - n), 0, 60);
+      const Tres = wi > 0.01 ? 3.5 + 0.02 * wi : 0;
+      const slip0 = we - wi;
+      if (locked) {
+        const a = (Te - Tres) / (Je + Jv);
+        Tcl = Te - Je * a;
+        if (Math.abs(Tcl) > Tc) { locked = false; dir = Math.sign(Tcl); } else { we += a * dt; wi = we; }
+      }
+      if (!locked) {
+        Tcl = Tc * (Math.abs(slip0) < 1e-6 ? dir : Math.sign(slip0));
+        dir = 0;
+        we += ((Te - Tcl) / Je) * dt; wi += ((Tcl - Tres) / Jv) * dt;
+        if (Tc > 0 && slip0 !== 0 && (we - wi) * slip0 <= 0) { locked = true; we = wi = (Je * we + Jv * wi) / (Je + Jv); }
+      }
+      if (we < 0) we = 0; if (wi < 0) wi = 0;
+      if (locked) wi = we;
+      Pq = Math.abs(Tcl * (we - wi));
+      E += Pq * dt; temp += ((Pq - 25 * (temp - 40)) / 2500) * dt;
+      if (!stalled && (we * 60) / TAU < 300) stalled = true;
+      angE += we * dt * 0.06; angI += wi * dt * 0.06;
+      t += dt;
+    }
+    function stats() {
+      const ne = (we * 60) / TAU, ni = (wi * 60) / TAU, Tc = cap(gPed());
+      let st;
+      if (stalled) st = '<span style="color:var(--bad)">시동 꺼짐</span>';
+      else if (Tc === 0) st = "분리";
+      else if (locked) st = '<span style="color:var(--ok)">직결</span>';
+      else st = '<span style="color:var(--warn)">슬립(반클러치)</span>';
+      CB.stat("o-cl-st", st);
+      CB.stat("o-cl-n", num(ne) + " / " + num(ni) + sm("rpm"));
+      CB.stat("o-cl-v", CB.kmh((wi / I) * R).toFixed(1) + sm("km/h"));
+      CB.stat("o-cl-t", num(Tc) + " / " + num(Tcl) + sm("N·m"));
+      CB.stat("o-cl-q", (Pq / 1000).toFixed(1) + sm("kW"));
+      CB.stat("o-cl-temp", (temp > 250 ? '<span style="color:var(--bad)">' + num(temp) + "</span>" : num(temp)) + sm("°C") + " / " + (E / 1000).toFixed(1) + sm("kJ"));
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), sh = Math.min(120, h * 0.34), yc = sh / 2 + 10, Rf = sh * 0.36, x0 = w * 0.5 - 50;
+      const ped = gPed(), gp = 7 * CB.clamp((ped - 20) / 55, 0, 1);
+      const ne = (we * 60) / TAU, ni = (wi * 60) / TAU;
+      // shafts
+      ctx.fillStyle = P.dim; ctx.fillRect(x0 - 46, yc - 4, 46, 8);
+      ctx.fillStyle = P.accent2; ctx.fillRect(x0 + 16 + gp, yc - 3, Math.min(150, w - x0 - 30) - gp, 6);
+      rollStripes(ctx, x0 + 60, yc, Math.min(150, w - x0 - 30) - 60, 3, angI, 4, P.bg);
+      // engine block
+      ctx.fillStyle = P.surface; ctx.strokeStyle = P.border; ctx.lineWidth = 1.5;
+      ctx.fillRect(x0 - 96, yc - Rf * 0.75, 50, Rf * 1.5); ctx.strokeRect(x0 - 96, yc - Rf * 0.75, 50, Rf * 1.5);
+      ctx.fillStyle = P.dim; ctx.font = font(11); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("엔진", x0 - 71, yc);
+      // flywheel
+      ctx.fillStyle = P.surface; ctx.strokeStyle = P.accent; ctx.lineWidth = 1.5;
+      ctx.fillRect(x0, yc - Rf, 16, 2 * Rf); ctx.strokeRect(x0, yc - Rf, 16, 2 * Rf);
+      rollStripes(ctx, x0, yc, 16, Rf, angE, 14, P.accent);
+      // disc
+      const xd = x0 + 16 + gp, Rd = Rf * 0.9;
+      if (Pq > 50) { ctx.fillStyle = "rgba(255,90,20," + Math.min(0.85, 0.2 + Pq / 30000) + ")"; ctx.fillRect(x0 + 14, yc - Rd, 12 + 2 * gp, 2 * Rd); }
+      ctx.fillStyle = P.accent2; ctx.fillRect(xd, yc - Rd, 6, 2 * Rd);
+      rollStripes(ctx, xd, yc, 6, Rd, angI, 12, P.bg);
+      // pressure plate + cover
+      const xp = xd + 6 + gp;
+      ctx.fillStyle = P.surface; ctx.fillRect(xp, yc - Rd, 11, 2 * Rd); ctx.strokeRect(xp, yc - Rd, 11, 2 * Rd);
+      rollStripes(ctx, xp, yc, 11, Rd, angE, 14, P.accent);
+      ctx.beginPath(); ctx.moveTo(x0 + 16, yc - Rf); ctx.lineTo(x0 + 52, yc - Rf); ctx.lineTo(x0 + 52, yc - Rf * 0.5);
+      ctx.moveTo(x0 + 16, yc + Rf); ctx.lineTo(x0 + 52, yc + Rf); ctx.lineTo(x0 + 52, yc + Rf * 0.5); ctx.stroke();
+      // labels
+      ctx.font = font(12, true, 600); ctx.textBaseline = "top";
+      ctx.textAlign = "left"; ctx.fillStyle = P.accent; ctx.fillText("엔진 " + num(ne) + " rpm", 8, 6);
+      ctx.textAlign = "right"; ctx.fillStyle = P.accent2; ctx.fillText("입력축 " + num(ni) + " rpm", w - 8, 6);
+      ctx.font = font(11); ctx.fillStyle = P.dim; ctx.textBaseline = "bottom";
+      ctx.fillText("→ 1단 기어 → 바퀴", w - 8, sh + 6);
+      if (stalled) { ctx.fillStyle = P.bad; ctx.font = font(13, false, 700); ctx.textAlign = "left"; ctx.fillText("시동 꺼짐", 8, sh + 6); }
+      // chart
+      const t0 = Math.max(0, t - WIN);
+      CB.chart(ctx, { x: 46, y: sh + 16, w: w - 46 - 14, h: h - sh - 16 - 46 }, {
+        x: [t0, t0 + WIN], y: [0, 7000], xLabel: "시간 (s)", yLabel: "rpm", xFmt: (v) => v.toFixed(0),
+        series: [
+          { data: hist.map((p) => [p[0], p[3] * 10]), color: P.warn, width: 1.5 },
+          { data: hist.map((p) => [p[0], p[1]]), color: P.accent },
+          { data: hist.map((p) => [p[0], p[2]]), color: P.accent2 },
+        ],
+      });
+    }
+    reset();
+    const cv = CB.canvas(el, draw, { aspect: 0.75, minHeight: 330, maxHeight: 440 });
+    $("cl-reset").addEventListener("click", reset);
+    $("cl-auto").addEventListener("click", () => { reset(); auto = { t: 0 }; });
+    $("cl-dump").addEventListener("click", () => { auto = null; gPed.set(0); });
+    ["cl-ped", "cl-thr"].forEach((id) => $(id).addEventListener("pointerdown", () => { auto = null; }));
+    CB.loop(el, (dt) => {
+      if (auto) {
+        auto.t += dt; const a = auto.t;
+        gThr.set(a < 0.3 ? 0 : a < 3.9 ? 30 : 40);
+        gPed.set(Math.round(a < 0.6 ? CB.map(a, 0, 0.6, 100, 66) : a < 3.2 ? CB.map(a, 0.6, 3.2, 66, 36) : a < 3.9 ? CB.map(a, 3.2, 3.9, 36, 0) : 0));
+        if (a > 6) auto = null;
+      }
+      const N = 20; for (let k = 0; k < N; k++) step(dt / N);
+      acc += dt;
+      if (acc >= 0.04) { acc = 0; hist.push([t, (we * 60) / TAU, (wi * 60) / TAU, Math.abs(Tcl)]); while (hist.length && hist[0][0] < t - WIN - 0.2) hist.shift(); }
+      stats(); cv.redraw();
+    });
+  })();
+
+  /* =================================================== Sim 3: manual gearbox */
+  (function () {
+    const el = $("cv-mt");
+    const HEAD = { x: 0.14, zi: 24, zc: 36 };
+    const PAIRS = [{ id: "3", x: 0.34, zc: 31, zo: 29 }, { id: "2", x: 0.44, zc: 25, zo: 35 }, { id: "1", x: 0.62, zc: 17, zo: 43 }, { id: "R", x: 0.72, zc: 15, zo: 40, rev: true }, { id: "5", x: 0.88, zc: 39, zo: 21 }];
+    const SLV = [{ x: 0.24, L: "4", R: "3" }, { x: 0.53, L: "2", R: "1" }, { x: 0.8, L: "R", R: "5" }];
+    const pos = [0, 0, 0], ang = { i: 0, c: 0, o: 0, g: { 1: 0, 2: 0, 3: 0, 5: 0, R: 0 } };
+    let cv = null;
+    const gGear = CB.seg("mt-gear", () => stats()), gN = CB.range("mt-n", (v) => num(v) + " rpm", () => stats());
+    const kHead = HEAD.zc / HEAD.zi;
+    function speeds() {
+      const nIn = gN(), nC = (-nIn * HEAD.zi) / HEAD.zc, g = {};
+      PAIRS.forEach((p) => { g[p.id] = ((p.rev ? 1 : -1) * nC * p.zc) / p.zo; });
+      const sel = gGear();
+      return { nIn, nC, g, nOut: sel === "N" ? 0 : sel === "4" ? nIn : g[sel] };
+    }
+    function stats() {
+      const s = speeds(), sel = gGear(), p = PAIRS.find((q) => q.id === sel);
+      const i = sel === "N" ? null : sel === "4" ? 1 : (p.rev ? -1 : 1) * kHead * (p.zo / p.zc);
+      CB.stat("o-mt-i", i == null ? "—" + sm("중립") : i.toFixed(2).replace("-", "−"));
+      CB.stat("o-mt-in", num(s.nIn) + sm("rpm"));
+      CB.stat("o-mt-c", num(Math.abs(s.nC)) + sm("rpm, 역방향"));
+      CB.stat("o-mt-out", num(Math.abs(s.nOut)) + sm(s.nOut < 0 ? "rpm, 역방향" : "rpm"));
+      const v = (s.nOut * KV) / 4.1;
+      CB.stat("o-mt-v", sel === "N" ? "—" : Math.abs(v).toFixed(0) + sm(v < 0 ? "km/h 후진" : "km/h"));
+      CB.stat("o-mt-path", sel === "N" ? "출력축에 고정된 기어 없음" : sel === "4" ? "입력축 → 슬리브 → 출력축 (직결)" : "입력 기어 → 카운터축 → " + (p.rev ? "아이들러 → " : "") + sel + (p.rev ? "" : "단") + " 기어 → 슬리브 → 출력축");
+    }
+    function target(k) { const sel = gGear(); return SLV[k].L === sel ? -1 : SLV[k].R === sel ? 1 : 0; }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), sel = gGear(), s = speeds();
+      const U = (h - 62) / 142, y1 = 30 + 43 * U, y2 = y1 + 60 * U, gw = Math.max(12, w * 0.055), rs = Math.max(3, 4 * U);
+      const engaged = sel !== "N" && SLV.every((_, k) => Math.abs(pos[k] - target(k)) < 0.15);
+      const inPath = (id) => engaged && sel === id;
+      const viaC = engaged && sel !== "4";
+      function gearRect(xc, yc, z, a, on, color) {
+        const x = xc - gw / 2, Rg = z * U;
+        ctx.fillStyle = P.surface; ctx.fillRect(x, yc - Rg, gw, 2 * Rg);
+        if (on) { ctx.globalAlpha = 0.3; ctx.fillStyle = color; ctx.fillRect(x, yc - Rg, gw, 2 * Rg); ctx.globalAlpha = 1; }
+        rollStripes(ctx, x, yc, gw, Rg, a, z, on ? color : P.faint);
+        ctx.strokeStyle = on ? color : P.dim; ctx.lineWidth = on ? 2 : 1.2; ctx.strokeRect(x, yc - Rg, gw, 2 * Rg);
+      }
+      // shafts
+      ctx.fillStyle = P.accent; ctx.fillRect(w * 0.02, y1 - rs, HEAD.x * w + gw / 2 - w * 0.02, 2 * rs);
+      ctx.fillStyle = P.accent2; ctx.fillRect(w * 0.19, y1 - rs, w * 0.79, 2 * rs);
+      ctx.fillStyle = P.dim; ctx.fillRect(w * 0.09, y2 - rs, w * 0.84, 2 * rs);
+      rollStripes(ctx, w * 0.02, y1, w * 0.08, rs, ang.i, 4, P.bg);
+      rollStripes(ctx, w * 0.93, y1, w * 0.05, rs, ang.o, 4, P.bg);
+      // reverse idler (behind)
+      const pr = PAIRS[3], xi = pr.x * w + gw * 0.45, yi = (y1 + pr.zo * U + y2 - pr.zc * U) / 2;
+      ctx.save(); ctx.setLineDash([3, 3]); ctx.strokeStyle = inPath("R") ? P.accent : P.dim; ctx.lineWidth = 1.2;
+      ctx.strokeRect(xi - gw / 2, yi - 9 * U, gw, 18 * U); ctx.restore();
+      // gears
+      gearRect(HEAD.x * w, y1, HEAD.zi, ang.i, engaged, P.accent);
+      gearRect(HEAD.x * w, y2, HEAD.zc, ang.c, viaC, P.accent);
+      PAIRS.forEach((p) => {
+        gearRect(p.x * w, y2, p.zc, ang.c, inPath(p.id), P.accent);
+        gearRect(p.x * w, y1, p.zo, ang.g[p.id], inPath(p.id), P.accent);
+      });
+      // dog rings + sleeves
+      const sw2 = w * 0.026, dogR = 12 * U;
+      SLV.forEach((sl, k) => {
+        const sx = sl.x * w;
+        [[sl.L, -1], [sl.R, 1]].forEach(([id, dir]) => {
+          const gx = (id === "4" ? HEAD.x : PAIRS.find((q) => q.id === id).x) * w;
+          ctx.fillStyle = P.dim; ctx.fillRect(dir < 0 ? gx + gw / 2 : gx - gw / 2 - w * 0.012, y1 - dogR, w * 0.012, 2 * dogR);
+        });
+        ctx.fillStyle = P.dim; ctx.fillRect(sx - w * 0.018, y1 - 10 * U, w * 0.036, 20 * U);
+        const tgt = (dir) => { const id = dir < 0 ? sl.L : sl.R, gx = (id === "4" ? HEAD.x : PAIRS.find((q) => q.id === id).x) * w; return Math.abs(gx - sx) - gw / 2 - sw2 + w * 0.008; };
+        const off = pos[k] < 0 ? pos[k] * tgt(-1) : pos[k] * tgt(1);
+        const on = engaged && target(k) !== 0;
+        ctx.fillStyle = on ? P.warn : P.text; ctx.globalAlpha = on ? 1 : 0.75;
+        ctx.fillRect(sx + off - sw2, y1 - 15 * U, 2 * sw2, 5 * U); ctx.fillRect(sx + off - sw2, y1 + 10 * U, 2 * sw2, 5 * U);
+        ctx.globalAlpha = 1;
+      });
+      // power path
+      if (engaged) {
+        const k = SLV.findIndex((sl) => sl.L === sel || sl.R === sel), sx = SLV[k].x * w, hx = HEAD.x * w;
+        const pts = sel === "4" ? [[w * 0.02, y1], [sx, y1], [w * 0.98, y1]] : (() => { const gx = PAIRS.find((q) => q.id === sel).x * w; return [[w * 0.02, y1], [hx, y1], [hx, y2], [gx, y2], [gx, y1], [sx, y1], [w * 0.98, y1]]; })();
+        ctx.save(); ctx.strokeStyle = P.warn; ctx.globalAlpha = 0.55; ctx.lineWidth = 4; ctx.lineJoin = "round"; ctx.lineCap = "round";
+        ctx.beginPath(); pts.forEach(([x, y], j) => (j ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke(); ctx.restore();
+      }
+      // labels
+      ctx.font = font(12, true, 700); ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+      PAIRS.forEach((p) => { ctx.fillStyle = inPath(p.id) ? P.accent : P.dim; ctx.fillText(p.id, p.x * w, y1 - p.zo * U - 3); });
+      ctx.fillStyle = inPath("4") ? P.accent : P.dim; ctx.fillText("4", HEAD.x * w + gw, y1 - HEAD.zi * U - 3);
+      ctx.font = font(11, true); ctx.textBaseline = "top";
+      ctx.textAlign = "left"; ctx.fillStyle = P.accent; ctx.fillText("입력축 " + num(s.nIn), 6, 5);
+      ctx.textAlign = "right"; ctx.fillStyle = P.accent2; ctx.fillText("출력축 " + num(Math.abs(s.nOut)) + (s.nOut < 0 ? " (역)" : ""), w - 6, 5);
+      ctx.textBaseline = "bottom"; ctx.textAlign = "left"; ctx.fillStyle = P.dim; ctx.fillText("카운터축 " + num(Math.abs(s.nC)) + " rpm", 6, h - 5);
+    }
+    cv = CB.canvas(el, draw, { aspect: 0.56, minHeight: 250, maxHeight: 370 });
+    stats();
+    CB.loop(el, (dt) => {
+      const s = speeds(), k = (1.5 / 1000) * dt;
+      ang.i += s.nIn * k; ang.c += s.nC * k; ang.o += s.nOut * k;
+      Object.keys(ang.g).forEach((id) => { ang.g[id] += s.g[id] * k; });
+      SLV.forEach((_, j) => { pos[j] += (target(j) - pos[j]) * Math.min(1, dt * 10); });
+      cv.redraw();
+    });
+  })();
+
+  /* =================================================== Sim 7: torque converter */
+  (function () {
+    const SRC = 0.87;
+    let cv = null;
+    const upd = () => { stats(); if (cv) cv.redraw(); };
+    const gSR = CB.range("tc-sr", (v) => v.toFixed(2), upd), gN = CB.range("tc-n", (v) => num(v) + " rpm", upd), gK = CB.range("tc-k", (v) => v.toFixed(2), upd);
+    const lock = $("tc-lock"); lock.addEventListener("change", upd);
+    const TR = (sr) => (sr < SRC ? gK() - ((gK() - 1) * sr) / SRC : 1);
+    const cf = (sr) => (sr < SRC ? 1 - 0.3 * sr : ((1 - 0.3 * SRC) * (1 - sr)) / (1 - SRC));
+    function state() {
+      if (lock.checked) return { sr: 1, tr: 1, eta: 0.99, tp: 150 };
+      const sr = gSR(), tr = TR(sr);
+      return { sr, tr, eta: tr * sr, tp: 35 * Math.pow(gN() / 1000, 2) * cf(sr) };
+    }
+    function stats() {
+      const s = state(), n = gN();
+      CB.stat("o-tc-n", num(n) + " / " + num(n * s.sr) + sm("rpm"));
+      CB.stat("o-tc-tr", s.tr.toFixed(2));
+      CB.stat("o-tc-t", num(s.tp) + " → " + num(s.tp * s.tr) + sm("N·m"));
+      CB.stat("o-tc-e", (s.eta * 100).toFixed(0) + sm(lock.checked ? "% (록업)" : "%"));
+      CB.stat("o-tc-q", ((s.tp * rad(n) * (1 - s.eta)) / 1000).toFixed(1) + sm("kW"));
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), s = state(), a = [], b = [], c = [];
+      for (let k = 0; k <= 100; k++) { const sr = k / 100; a.push([sr, TR(sr)]); b.push([sr, TR(sr) * sr]); c.push([sr, cf(sr)]); }
+      CB.chart(ctx, null, {
+        x: [0, 1], y: [0, 2.8], xLabel: "속도비 SR", yLabel: "토크비 · 효율",
+        series: [{ data: c, color: P.warn, width: 1.5, dash: [5, 4] }, { data: b, color: P.ok }, { data: a, color: P.accent, width: 2.5 }],
+        hlines: [{ y: 1, color: P.faint }],
+        vlines: [{ x: SRC, color: P.dim, label: "커플링 포인트" }, { x: Math.min(s.sr, 0.999), color: P.text, dash: [2, 3] }],
+        points: [{ x: s.sr, y: s.tr, color: P.accent, r: 5, label: "TR " + s.tr.toFixed(2) }, { x: s.sr, y: s.eta, color: P.ok, r: 5 }],
+      });
+    }
+    cv = CB.canvas($("cv-tc"), draw, { aspect: 0.6, minHeight: 250, maxHeight: 360 });
+    stats();
+  })();
+
+  /* =================================================== Sim 4: planetary gear set */
+  (function () {
+    const el = $("cv-pg");
+    let thS = 0, thC = 0, dragging = false, grabA = 0, C0 = null, cv = null, cvl = null;
+    const upd = () => { stats(); if (cv) { cv.redraw(); cvl.redraw(); } };
+    const gFix = CB.seg("pg-fix", (f) => { if (gIn() === f) gIn.set(["s", "c", "r"].find((e) => e !== f), false); upd(); });
+    const gIn = CB.seg("pg-in", (i) => { if (gFix() === i) gFix.set(i === "r" ? "s" : "r", false); upd(); });
+    const gZs = CB.range("pg-zs", (v) => v + "개", upd), gZr = CB.range("pg-zr", (v) => v + "개", upd), gN = CB.range("pg-n", (v) => num(v) + " rpm", upd);
+    const NAME = { s: "선", c: "캐리어", r: "링" };
+    function solve() {
+      const Zs = gZs(), Zr = gZr(), fix = gFix(), inp = gIn();
+      if (fix === "lock") return { s: 1, c: 1, r: 1, out: null };
+      const v = { s: null, c: null, r: null }; v[fix] = 0; v[inp] = 1;
+      const out = ["s", "c", "r"].find((e) => v[e] === null);
+      if (out === "c") v.c = (Zs * v.s + Zr * v.r) / (Zs + Zr);
+      else if (out === "r") v.r = ((Zs + Zr) * v.c - Zs * v.s) / Zr;
+      else v.s = ((Zs + Zr) * v.c - Zr * v.r) / Zs;
+      v.out = out; return v;
+    }
+    function nPlanets() {
+      const Zs = gZs(), Zp = (gZr() - Zs) / 2;
+      return [3, 4, 5].find((N) => (Zs + gZr()) % N === 0 && (Zs + Zp) * Math.sin(Math.PI / N) > Zp + 2.4) || 2;
+    }
+    function roleColor(e, P) { const f = gFix(); return f !== "lock" && e === f ? P.dim : e === gIn() ? P.accent : P.accent2; }
+    function stats() {
+      const v = solve(), n = gN(), Zs = gZs(), Zr = gZr(), Zp = (Zr - Zs) / 2;
+      const role = (e) => sm(gFix() !== "lock" && e === gFix() ? "rpm · 고정" : e === gIn() ? "rpm · 입력" : "rpm · 출력");
+      const f = (x) => num(x * n).replace("-", "−");
+      if (v.out) {
+        const i = 1 / v[v.out];
+        CB.stat("o-pg-i", i.toFixed(3).replace("-", "−") + sm(i < 0 ? "후진" : i > 1 ? "감속" : "증속"));
+      } else CB.stat("o-pg-i", "1.000" + sm("직결"));
+      CB.stat("o-pg-s", f(v.s) + role("s")); CB.stat("o-pg-c", f(v.c) + role("c")); CB.stat("o-pg-r", f(v.r) + role("r"));
+      CB.stat("o-pg-p", Zp + sm("개 × " + nPlanets() + " · 자전 " + f(v.c - (Zs / Zp) * (v.s - v.c)) + " rpm"));
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), Zs = gZs(), Zr = gZr(), Zp = (Zr - Zs) / 2, N = nPlanets();
+      const cx = w / 2, cy = h / 2, m = (Math.min(w, h) / 2 - 8) / (Zr / 2 + 4);
+      C0 = { cx, cy };
+      const sig = thS - thC, thR = thC + (Math.PI * Zp) / Zr - (sig * Zs) / Zr, Rc = (m * (Zs + Zp)) / 2;
+      const cS = roleColor("s", P), cC = roleColor("c", P), cR = roleColor("r", P);
+      // ring
+      ctx.beginPath(); ctx.arc(cx, cy, (m * Zr) / 2 + 3.6 * m, 0, TAU); gearPath(ctx, cx, cy, Zr, m, thR, true);
+      ctx.fillStyle = cR; ctx.globalAlpha = 0.25; ctx.fill("evenodd"); ctx.globalAlpha = 1;
+      ctx.strokeStyle = cR; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx + Math.cos(thR) * ((m * Zr) / 2 + 2.4 * m), cy + Math.sin(thR) * ((m * Zr) / 2 + 2.4 * m), Math.max(2.5, m * 0.7), 0, TAU); ctx.fillStyle = cR; ctx.fill();
+      // sun
+      drawGear(ctx, cx, cy, Zs, m, thS, cS, P.bg);
+      // planets
+      for (let k = 0; k < N; k++) {
+        const beta = (k * TAU) / N, phi = thC + beta, rho = beta + Math.PI - Math.PI / Zp + ((beta - sig) * Zs) / Zp;
+        drawGear(ctx, cx + Math.cos(phi) * Rc, cy + Math.sin(phi) * Rc, Zp, m, thC + rho, P.text, P.bg);
+      }
+      // carrier
+      ctx.save(); ctx.strokeStyle = cC; ctx.fillStyle = cC; ctx.lineWidth = Math.max(3, m * 1.6); ctx.lineCap = "round"; ctx.globalAlpha = 0.85;
+      for (let k = 0; k < N; k++) {
+        const phi = thC + (k * TAU) / N, px = cx + Math.cos(phi) * Rc, py = cy + Math.sin(phi) * Rc;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(px, py); ctx.stroke();
+        ctx.beginPath(); ctx.arc(px, py, Math.max(3, m * 1.5), 0, TAU); ctx.fill();
+      }
+      ctx.beginPath(); ctx.arc(cx, cy, Math.max(3, m * 1.8), 0, TAU); ctx.fill(); ctx.restore();
+      // legend
+      ctx.font = font(11, false, 600); ctx.textBaseline = "top"; ctx.textAlign = "left";
+      [["s", cS], ["c", cC], ["r", cR]].forEach(([e, col], j) => {
+        ctx.fillStyle = col; ctx.fillRect(8, 8 + j * 16, 9, 9);
+        ctx.fillText(NAME[e] + (gFix() !== "lock" && e === gFix() ? " 고정" : e === gIn() ? " 입력" : " 출력"), 22, 6 + j * 16);
+      });
+    }
+    function drawLever(ctx, w, h) {
+      const P = CB.palette(), v = solve(), Zs = gZs(), Zr = gZr();
+      const xs = 46, xr = w - 46, xc = xs + ((xr - xs) * Zr) / (Zs + Zr);
+      const lo = Math.min(0, v.s, v.c, v.r), hi = Math.max(1, v.s, v.c, v.r), pad = (hi - lo) * 0.18;
+      const Y = (s) => CB.map(s, lo - pad, hi + pad, h - 26, 22);
+      ctx.strokeStyle = P.grid; ctx.lineWidth = 1;
+      [xs, xc, xr].forEach((x) => { ctx.beginPath(); ctx.moveTo(x, 18); ctx.lineTo(x, h - 24); ctx.stroke(); });
+      ctx.strokeStyle = P.axis; ctx.beginPath(); ctx.moveTo(10, Y(0)); ctx.lineTo(w - 10, Y(0)); ctx.stroke();
+      ctx.fillStyle = P.dim; ctx.font = font(11, true); ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.fillText("0", 10, Y(0) - 2);
+      ctx.strokeStyle = P.text; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(xs, Y(v.s)); ctx.lineTo(xr, Y(v.r)); ctx.stroke();
+      [["s", xs], ["c", xc], ["r", xr]].forEach(([e, x]) => {
+        const col = roleColor(e, P);
+        ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, Y(v[e]), 6, 0, TAU); ctx.fill();
+        ctx.font = font(12, false, 700); ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillText(NAME[e], x, h - 20);
+        ctx.font = font(11, true); ctx.textBaseline = "bottom"; ctx.textAlign = e === "s" ? "left" : e === "r" ? "right" : "center";
+        ctx.fillStyle = P.text; ctx.fillText(num(v[e] * gN()).replace("-", "−"), x + (e === "s" ? 10 : e === "r" ? -10 : 0), Y(v[e]) - 8);
+      });
+    }
+    cv = CB.canvas(el, draw, { aspect: 0.9, minHeight: 260, maxHeight: 400 });
+    cvl = CB.canvas($("cv-pgl"), drawLever, { height: 190 });
+    stats();
+    const adv = (d) => { const v = solve(); thS += d * v.s; thC += d * v.c; };
+    CB.drag(el, {
+      down(p) { grabA = Math.atan2(p.y - C0.cy, p.x - C0.cx); dragging = true; },
+      move(p) {
+        const a = Math.atan2(p.y - C0.cy, p.x - C0.cx); let d = a - grabA; grabA = a;
+        if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU;
+        adv(d); cv.redraw();
+      },
+      up() { dragging = false; },
+    });
+    CB.loop(el, (dt) => { if ($("pg-auto").checked && !dragging) { adv((gN() / 1000) * 1.2 * dt); cv.redraw(); } });
+  })();
+
+  /* =================================================== Sim 6: CVT */
+  (function () {
+    const el = $("cv-cvt");
+    const A = 160, LB = 2 * A + Math.PI * 104, W = 30, TA = 0.1944, FD = 5.2, M = 1400, AT = [3.6, 2.1, 1.4, 1, 0.8, 0.65];
+    const r2of = (r1) => r1 + (-Math.PI * A + Math.sqrt(Math.PI * Math.PI * A * A - 4 * A * (2 * Math.PI * r1 + 2 * A - LB))) / 2;
+    const IMAX = r2of(30) / 30, IMIN = r2of(72) / 72;
+    function r1of(i) { let lo = 30, hi = 72; for (let k = 0; k < 30; k++) { const mid = (lo + hi) / 2; r2of(mid) / mid > i ? (lo = mid) : (hi = mid); } return (lo + hi) / 2; }
+    let cv = null, cvc = null, run = null, trail = [], th1 = 0, th2 = 0, sb = 0, t100 = null;
+    const upd = () => { stats(); if (cv) { cv.redraw(); cvc.redraw(); } };
+    const gGap = CB.range("cvt-gap", (v) => v.toFixed(1) + " mm", upd), gN = CB.range("cvt-n", (v) => num(v) + " rpm", upd);
+    function state() {
+      const r1 = (W - gGap()) / (2 * TA), r2 = r2of(r1), i = r2 / r1;
+      const n = run ? run.n : gN(), v = run ? run.v * 3.6 : (n * KV) / (i * FD);
+      return { r1, r2, i, n, v };
+    }
+    function stats() {
+      const s = state();
+      CB.stat("o-cvt-r", s.r1.toFixed(0) + " / " + s.r2.toFixed(0) + sm("mm"));
+      CB.stat("o-cvt-i", s.i.toFixed(2));
+      CB.stat("o-cvt-n", num(s.n) + sm("rpm"));
+      CB.stat("o-cvt-v", s.v.toFixed(0) + sm("km/h"));
+      CB.stat("o-cvt-b", ((rad(s.n) * s.r1) / 1000).toFixed(1) + sm("m/s"));
+      CB.stat("o-cvt-t", t100 == null ? "—" : t100.toFixed(1) + sm("s"));
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), s = state(), wl = w * 0.62, sc = Math.min(wl / 330, h / 175);
+      const x1 = wl / 2 - 80 * sc, x2 = x1 + A * sc, y = h / 2, r1 = s.r1 * sc, r2 = s.r2 * sc;
+      // sheaves (side view)
+      [[x1, th1, P.accent], [x2, th2, P.accent2]].forEach(([x, th, col]) => {
+        ctx.beginPath(); ctx.arc(x, y, 80 * sc, 0, TAU); ctx.fillStyle = col; ctx.globalAlpha = 0.14; ctx.fill(); ctx.globalAlpha = 1;
+        ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.stroke();
+        for (let k = 0; k < 3; k++) { const a = th + (k * TAU) / 3; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * 12 * sc, y + Math.sin(a) * 12 * sc); ctx.lineTo(x + Math.cos(a) * 78 * sc, y + Math.sin(a) * 78 * sc); ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1; }
+        ctx.beginPath(); ctx.arc(x, y, 12 * sc, 0, TAU); ctx.fillStyle = col; ctx.fill();
+      });
+      // belt
+      const nx = (r1 - r2) / (A * sc), ny = Math.sqrt(1 - nx * nx), au = Math.atan2(-ny, nx), al = -au;
+      ctx.beginPath();
+      ctx.moveTo(x1 + r1 * nx, y - r1 * ny); ctx.lineTo(x2 + r2 * nx, y - r2 * ny);
+      ctx.arc(x2, y, r2, au, al, false);
+      ctx.lineTo(x1 + r1 * nx, y + r1 * ny);
+      ctx.arc(x1, y, r1, al, au + TAU, false);
+      ctx.closePath();
+      ctx.strokeStyle = P.text; ctx.lineWidth = Math.max(4, 9 * sc); ctx.lineJoin = "round"; ctx.stroke();
+      ctx.strokeStyle = P.bg; ctx.lineWidth = Math.max(2, 4 * sc); ctx.setLineDash([3, 7]); ctx.lineDashOffset = -sb * sc; ctx.stroke(); ctx.setLineDash([]);
+      ctx.font = font(11, false, 700); ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+      ctx.fillStyle = P.accent; ctx.fillText("구동 r₁ " + s.r1.toFixed(0), x1, h - 4);
+      ctx.fillStyle = P.accent2; ctx.fillText("피동 r₂ " + s.r2.toFixed(0), x2, h - 4);
+      // axial sections
+      const xc = wl + (w - wl) / 2, s2 = h / 350, sa = s2 * 2;
+      [[h * 0.26, s.r1, P.accent], [h * 0.74, s.r2, P.accent2]].forEach(([yc, r, col]) => {
+        const g = W - 2 * r * TA;
+        ctx.fillStyle = P.dim; ctx.fillRect(xc - 34 * sa, yc - 5 * s2, 68 * sa, 10 * s2);
+        [-1, 1].forEach((sg) => {
+          const X = (rho) => xc + sg * (g / 2 + rho * TA) * sa, xo = xc + sg * (g / 2 + 80 * TA + 6) * sa;
+          ctx.beginPath();
+          ctx.moveTo(X(12), yc - 12 * s2); ctx.lineTo(X(80), yc - 80 * s2); ctx.lineTo(xo, yc - 80 * s2); ctx.lineTo(xo, yc + 80 * s2); ctx.lineTo(X(80), yc + 80 * s2); ctx.lineTo(X(12), yc + 12 * s2);
+          ctx.closePath(); ctx.fillStyle = col; ctx.globalAlpha = 0.3; ctx.fill(); ctx.globalAlpha = 1; ctx.strokeStyle = col; ctx.lineWidth = 1.2; ctx.stroke();
+        });
+        [-1, 1].forEach((ud) => {
+          const hw = (rho) => (g / 2 + rho * TA) * sa;
+          ctx.beginPath();
+          ctx.moveTo(xc - hw(r + 5), yc + ud * (r + 5) * s2); ctx.lineTo(xc + hw(r + 5), yc + ud * (r + 5) * s2);
+          ctx.lineTo(xc + hw(r - 5), yc + ud * (r - 5) * s2); ctx.lineTo(xc - hw(r - 5), yc + ud * (r - 5) * s2);
+          ctx.closePath(); ctx.fillStyle = P.text; ctx.fill();
+        });
+      });
+    }
+    function drawChart(ctx, w, h) {
+      const P = CB.palette(), s = state(), saw = [];
+      AT.forEach((g, k) => {
+        const n0 = k ? (6000 * g) / AT[k - 1] : 0;
+        saw.push([(n0 * KV) / (g * 4.1), n0], [((k < 5 ? 6000 : 6500) * KV) / (g * 4.1), k < 5 ? 6000 : 6500]);
+      });
+      CB.chart(ctx, null, {
+        x: [0, 240], y: [0, 7000], xLabel: "차속 (km/h)", yLabel: "엔진 rpm",
+        series: [
+          { data: [[0, 0], [(7000 * KV) / (IMAX * FD), 7000]], color: P.dim, width: 1.2 },
+          { data: [[0, 0], [(7000 * KV) / (IMIN * FD), 7000]], color: P.dim, width: 1.2 },
+          { data: saw, color: P.warn, width: 1.5, dash: [5, 4] },
+          { data: trail, color: P.accent, width: 2.5 },
+        ],
+        hlines: [{ y: gN(), color: P.accent, label: "목표 회전수" }],
+        points: [{ x: s.v, y: s.n, color: P.accent, r: 5 }],
+      });
+    }
+    cv = CB.canvas(el, draw, { aspect: 0.5, minHeight: 190, maxHeight: 300 });
+    cvc = CB.canvas($("cv-cvtc"), drawChart, { height: 240 });
+    stats();
+    $("cvt-run").addEventListener("click", () => { run = { v: 0, t: 0, n: 1500 }; trail = []; t100 = null; });
+    $("cvt-stop").addEventListener("click", () => { run = null; upd(); });
+    CB.loop(el, (dt) => {
+      if (run) {
+        const N = 10, h = (dt * 1.5) / N;
+        let i = IMAX;
+        for (let k = 0; k < N; k++) {
+          const vk = Math.max(0.1, run.v * 3.6);
+          i = CB.clamp((gN() * KV) / (vk * FD), IMIN, IMAX);
+          run.n = Math.max(1500, (vk * i * FD) / KV);
+          const F = run.n >= 6500 ? 0 : Math.min((tq(run.n) * i * FD * 0.88) / R_TIRE, 0.6 * M * CB.G);
+          const a = (F - fres(run.v, M)) / M;
+          run.v += a * h; run.t += h;
+          if (t100 == null && run.v * 3.6 >= 100) t100 = run.t;
+          if (run.t > 40 || (run.t > 3 && a < 0.03)) { run.done = true; break; }
+        }
+        trail.push([run.v * 3.6, run.n]);
+        gGap.set(CB.clamp(W - 2 * TA * r1of(i), 2, 18.3));
+        if (run.done) { run = null; upd(); }
+      }
+      const s = state(), w1 = (s.n / 1000) * 1.2;
+      th1 += w1 * dt; th2 += ((w1 * s.r1) / s.r2) * dt; sb += w1 * s.r1 * dt;
+      cv.redraw(); if (run) { stats(); cvc.redraw(); }
+    });
+  })();
+
+  /* =================================================== Sim 5: sawtooth / tractive force */
+  (function () {
+    const el = $("cv-saw"), M = 1500, ETA = 0.92, RED = 6500;
+    let cv = null, run = null, trail = [], t100 = null;
+    const upd = () => { table(); stats(); if (cv) cv.redraw(); };
+    const G = [1, 2, 3, 4, 5, 6].map((k) => CB.range("sw-g" + k, (v) => v.toFixed(2), upd));
+    const gFd = CB.range("sw-fd", (v) => v.toFixed(2), upd), gNs = CB.range("sw-ns", (v) => num(v) + " rpm", upd);
+    const gView = CB.seg("sw-view", upd);
+    const vAt = (n, k) => (n * KV) / (G[k]() * gFd());
+    const force = (n, k) => (tq(n) * G[k]() * gFd() * ETA) / R_TIRE;
+    function topSpeed() {
+      let best = 0, bg = 0;
+      for (let v = 5; v <= 360; v++) for (let k = 0; k < 6; k++) {
+        const n = (v * G[k]() * gFd()) / KV;
+        if (n >= 1000 && n <= RED && force(n, k) >= fres(v / 3.6, M)) { best = v; bg = k + 1; }
+      }
+      return [best, bg];
+    }
+    function table() {
+      $("sw-tb").innerHTML = G.map((g, k) => {
+        const step = k < 5 ? g() / G[k + 1]() : null;
+        return "<tr><td>" + (k + 1) + "</td><td>" + g().toFixed(2) + "</td><td>" + (g() * gFd()).toFixed(2) + "</td><td>" + vAt(RED, k).toFixed(0) + " km/h</td><td>" + (step ? step.toFixed(2) : "—") + "</td><td>" + (step ? num(gNs() / step) + " (−" + num(gNs() - gNs() / step) + ")" : "—") + "</td></tr>";
+      }).join("");
+    }
+    function stats() {
+      CB.stat("o-sw-sp", (G[0]() / G[5]()).toFixed(2));
+      const ts = topSpeed();
+      CB.stat("o-sw-top", ts[0] + sm("km/h · " + ts[1] + "단"));
+      CB.stat("o-sw-g", run ? run.g + 1 + sm("단") + " / " + num(run.n) + sm("rpm") : "—");
+      CB.stat("o-sw-v", run ? (run.v * 3.6).toFixed(0) + sm("km/h") + " / " + run.t.toFixed(1) + sm("s") : "—");
+      CB.stat("o-sw-t", t100 == null ? "—" : t100.toFixed(1) + sm("s"));
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), xmax = CB.clamp(Math.ceil(vAt(RED, 5) / 20) * 20, 160, 340);
+      if (gView() === "saw") {
+        const series = G.map((_, k) => ({ data: [[0, 0], [vAt(RED, k), RED]], color: P.faint, width: 1.2 }));
+        const saw = [], ns = gNs();
+        G.forEach((g, k) => {
+          const n0 = k ? (ns * g()) / G[k - 1]() : 0, n1 = k < 5 ? ns : RED;
+          saw.push([vAt(n0, k), n0], [vAt(n1, k), n1]);
+        });
+        series.push({ data: saw, color: P.accent, width: 2.5 }, { data: trail.map((p) => [p[0], p[1]]), color: P.warn, width: 2 });
+        const C = CB.chart(ctx, null, {
+          x: [0, xmax], y: [0, 7000], xLabel: "차속 (km/h)", yLabel: "엔진 rpm", series,
+          hlines: [{ y: RED, color: P.bad, label: "레드라인" }, { y: ns, color: P.dim, label: "변속" }],
+          points: run ? [{ x: run.v * 3.6, y: run.n, color: P.warn, r: 5 }] : [],
+        });
+        ctx.font = font(11, true, 700); ctx.fillStyle = P.dim; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+        G.forEach((_, k) => { const x = C.X(vAt(RED, k)); if (x < C.box.x + C.box.w - 4) ctx.fillText(k + 1, x, C.Y(RED) - 3); });
+      } else {
+        let pmax = 0; for (let n = 1000; n <= RED; n += 100) pmax = Math.max(pmax, tq(n) * rad(n));
+        const series = [], res = [], hyp = [];
+        for (let v = 2; v <= xmax; v += 2) { res.push([v, fres(v / 3.6, M) / 1000]); hyp.push([v, Math.min(11, (pmax * ETA) / (v / 3.6) / 1000)]); }
+        series.push({ data: hyp, color: P.dim, width: 1.2, dash: [5, 4] }, { data: res, color: P.dim, width: 2 });
+        G.forEach((_, k) => { const d = []; for (let n = 1000; n <= RED; n += 250) d.push([vAt(n, k), force(n, k) / 1000]); series.push({ data: d, color: P.series[k % 5], width: 2.2 }); });
+        const fmax = Math.max(4, Math.ceil(force(4000, 0) / 1000) + 1);
+        CB.chart(ctx, null, {
+          x: [0, xmax], y: [0, Math.min(fmax, 16)], xLabel: "차속 (km/h)", yLabel: "구동력 (kN)", series,
+          points: run ? [{ x: run.v * 3.6, y: run.F / 1000, color: P.warn, r: 5, label: run.g + 1 + "단" }] : [],
+        });
+      }
+    }
+    cv = CB.canvas(el, draw, { aspect: 0.62, minHeight: 260, maxHeight: 400 });
+    table(); stats();
+    function preset(arr) { arr.forEach((v, k) => { $("sw-g" + (k + 1)).value = v.toFixed(2); G[k].set(Number(v.toFixed(2))); }); }
+    function spread(c) { const q = Math.pow(3.6 / 0.65, 0.2), out = [3.6]; for (let k = 0; k < 5; k++) out.push(out[k] / (q * Math.pow(c, 2 - k))); return out; }
+    $("sw-geo").addEventListener("click", () => preset(spread(1)));
+    $("sw-prog").addEventListener("click", () => preset(spread(1.09)));
+    $("sw-close").addEventListener("click", () => preset([2.9, 2.05, 1.55, 1.24, 1.03, 0.88]));
+    $("sw-run").addEventListener("click", () => { run = { v: 0, t: 0, g: 0, n: 1500, F: 0, sh: 0 }; trail = []; t100 = null; });
+    CB.loop(el, (dt) => {
+      if (!run) return;
+      const N = 10, h = (dt * 2) / N;
+      for (let k = 0; k < N; k++) {
+        const nv = (run.v * 3.6 * G[run.g]() * gFd()) / KV;
+        run.n = Math.max(1500, nv);
+        if (run.g < 5 && nv >= gNs() && run.sh <= 0) { run.g++; run.sh = 0.25; continue; }
+        if (run.sh > 0) { run.sh -= h; run.F = 0; } else run.F = run.n >= RED ? 0 : force(run.n, run.g);
+        const a = (run.F - fres(run.v, M)) / M;
+        run.v = Math.max(0, run.v + a * h); run.t += h;
+        if (t100 == null && run.v * 3.6 >= 100) t100 = run.t;
+        if (run.t > 60 || (run.g === 5 && run.sh <= 0 && run.t > 3 && a < 0.03)) { run.done = true; break; }
+      }
+      trail.push([run.v * 3.6, run.n]);
+      stats(); cv.redraw();
+      if (run.done) { run = null; }
+    });
+  })();
+})();
+</script>
+</body>
+</html>

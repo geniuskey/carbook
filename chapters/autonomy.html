@@ -1,0 +1,1090 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>자율주행 시스템과 안전 · CarBook</title>
+<meta name="description" content="센서에서 액추에이터까지 자율주행 스택의 지연 예산, 엔드투엔드 학습, ODD와 최소 위험 기동, ISO 26262 ASIL과 이중화, SOTIF, RSS 안전 거리, 주행 거리 검증의 통계, V2X를 시뮬레이터로 익힌다.">
+<link rel="canonical" href="https://carbook.euiyun.com/chapters/autonomy.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="CarBook">
+<meta property="og:title" content="자율주행 시스템과 안전 · CarBook">
+<meta property="og:description" content="센서에서 액추에이터까지 자율주행 스택의 지연 예산, 엔드투엔드 학습, ODD와 최소 위험 기동, ISO 26262 ASIL과 이중화, SOTIF, RSS 안전 거리, 주행 거리 검증의 통계, V2X를 시뮬레이터로 익힌다.">
+<meta property="og:url" content="https://carbook.euiyun.com/chapters/autonomy.html">
+<meta property="og:image" content="https://carbook.euiyun.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TechArticle","headline":"자율주행 시스템과 안전","name":"자율주행 시스템과 안전 · CarBook","url":"https://carbook.euiyun.com/chapters/autonomy.html","mainEntityOfPage":"https://carbook.euiyun.com/chapters/autonomy.html","inLanguage":"ko","isAccessibleForFree":true,"learningResourceType":"interactive textbook chapter","position":21,"image":"https://carbook.euiyun.com/og.png","dateModified":"2026-10-02","isPartOf":{"@type":"Book","@id":"https://carbook.euiyun.com/#book","name":"CarBook — 인터랙티브 자동차 교과서","url":"https://carbook.euiyun.com/"},"publisher":{"@type":"Organization","name":"CarBook","url":"https://carbook.euiyun.com/"},"description":"센서에서 액추에이터까지 자율주행 스택의 지연 예산, 엔드투엔드 학습, ODD와 최소 위험 기동, ISO 26262 ASIL과 이중화, SOTIF, RSS 안전 거리, 주행 거리 검증의 통계, V2X를 시뮬레이터로 익힌다."},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"CarBook","item":"https://carbook.euiyun.com/"},{"@type":"ListItem","position":2,"name":"21 자율주행 시스템과 안전","item":"https://carbook.euiyun.com/chapters/autonomy.html"}]}]}</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="../css/style.css">
+<script src="../js/common.js"></script>
+<style>
+  .asil-wrap { padding: 14px 18px 16px; overflow-x: auto; }
+  .asil-tbl { width: 100%; border-collapse: collapse; font-size: 14px; text-align: center; min-width: 280px; }
+  .asil-tbl th, .asil-tbl td { border: 1px solid var(--border); padding: 6px 4px; }
+  .asil-tbl th { background: var(--surface); color: var(--text-dim); font-weight: 600; }
+  .asil-tbl th.on { color: var(--accent); background: var(--accent-soft); }
+  .asil-tbl td { font-family: var(--mono); font-weight: 600; color: var(--text); }
+  .asil-tbl td.g0 { color: var(--text-faint); font-weight: 400; }
+  .asil-tbl td.g1 { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .asil-tbl td.g2 { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+  .asil-tbl td.g3 { background: color-mix(in srgb, var(--accent) 38%, transparent); }
+  .asil-tbl td.g4 { background: color-mix(in srgb, var(--accent) 58%, transparent); }
+  .asil-tbl td.hit { outline: 3px solid var(--text); outline-offset: -3px; }
+  .asil-desc { padding: 12px 18px; border-top: 1px solid var(--border); font-size: 14px; line-height: 1.65; color: var(--text-dim); }
+  .asil-desc b { color: var(--text); }
+</style>
+</head>
+<body data-chapter="autonomy">
+<main class="chapter">
+  <header class="chapter-hero">
+    <div class="eyebrow">Chapter 21</div>
+    <h1>자율주행 시스템과 안전</h1>
+    <p class="lead">센서, 인지, 계획, 제어를 각각 잘 만드는 것과 그것을 한 대의 차로 묶어 사람을 태우는 것은 다른 문제다. 묶는 순간 지연이 쌓이고, 부품은 고장 나고, 고장이 없어도 알고리즘은 처음 보는 상황에서 틀린다. 이 장은 앞의 네 장에서 만든 부품을 조립해 전체 시스템을 보고, 그 시스템이 충분히 안전하다는 것을 어떻게 설계하고 어떻게 증명하는지를 다룬다.</p>
+    <ul class="objectives">
+      <li>센서에서 액추에이터까지 각 단계의 주기와 지연을 더해 종단 간 반응 시간과 정지 거리를 계산한다.</li>
+      <li>모듈형 스택과 엔드투엔드 학습의 구조와 장단점을 비교한다.</li>
+      <li>ODD, 최소 위험 기동, 레벨 3과 레벨 4에서 책임이 갈리는 지점을 설명한다.</li>
+      <li>심각도·노출·제어 가능성으로 ASIL을 결정하고, 이중화 구조의 고장 확률을 계산한다.</li>
+      <li>고장이 없어도 생기는 위험(SOTIF)과 RSS 안전 거리 식을 이해한다.</li>
+      <li>주행 거리만으로 안전을 증명하기 어려운 이유를 푸아송 통계로 계산한다.</li>
+      <li>V2X가 가려진 위험을 어떻게 미리 알려 주는지, 지연과 손실이 어떤 영향을 주는지 본다.</li>
+    </ul>
+  </header>
+
+  <!-- =============================================================== 1 -->
+  <section id="stack">
+    <h2>스택을 조립하면 시간이 쌓인다</h2>
+    <p>자율주행 소프트웨어는 보통 네 단계의 사슬로 그린다. <a href="sensors.html">18장</a>의 센서가 세계를 측정하고, <a href="perception.html">19장</a>의 인지와 측위가 그 측정값을 "어디에 무엇이 있고 나는 어디에 있는가"로 바꾸며, <a href="planning.html">20장</a>의 예측·계획이 앞으로 몇 초 동안 갈 궤적을 정하고, 제어기가 그 궤적을 조향각과 가감속 명령으로 바꾼다. 마지막에는 <a href="steering.html">10장</a>의 전동 조향 장치와 <a href="brake.html">8장</a>의 브레이크, 구동 모터가 실제로 차를 움직인다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 780 250" role="img" aria-label="자율주행 스택과 각 단계의 주기">
+        <defs><marker id="au-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker></defs>
+        <g>
+          <rect x="10" y="50" width="132" height="92" rx="10" class="f-acc2-soft"/>
+          <text x="76" y="78" class="t" text-anchor="middle" font-weight="700">센서</text>
+          <text x="76" y="98" class="t-dim" text-anchor="middle">카메라·레이더·라이다</text>
+          <text x="76" y="124" class="t-mono" text-anchor="middle">10~30 Hz</text>
+          <rect x="166" y="50" width="132" height="92" rx="10" class="f-acc-soft"/>
+          <text x="232" y="78" class="t" text-anchor="middle" font-weight="700">인지·측위</text>
+          <text x="232" y="98" class="t-dim" text-anchor="middle">검출·추적·융합</text>
+          <text x="232" y="124" class="t-mono" text-anchor="middle">30~100 ms</text>
+          <rect x="322" y="50" width="132" height="92" rx="10" class="f-acc-soft"/>
+          <text x="388" y="78" class="t" text-anchor="middle" font-weight="700">예측·계획</text>
+          <text x="388" y="98" class="t-dim" text-anchor="middle">궤적 생성</text>
+          <text x="388" y="124" class="t-mono" text-anchor="middle">50~100 ms</text>
+          <rect x="478" y="50" width="132" height="92" rx="10" class="f-acc-soft"/>
+          <text x="544" y="78" class="t" text-anchor="middle" font-weight="700">제어</text>
+          <text x="544" y="98" class="t-dim" text-anchor="middle">조향·가감속 명령</text>
+          <text x="544" y="124" class="t-mono" text-anchor="middle">10~20 ms</text>
+          <rect x="634" y="50" width="136" height="92" rx="10" class="f-surface"/>
+          <text x="702" y="78" class="t" text-anchor="middle" font-weight="700">액추에이터</text>
+          <text x="702" y="98" class="t-dim" text-anchor="middle">EPS·브레이크·모터</text>
+          <text x="702" y="124" class="t-mono" text-anchor="middle">100~300 ms</text>
+        </g>
+        <g stroke="var(--accent)" stroke-width="2.5" marker-end="url(#au-ah)">
+          <line x1="144" y1="96" x2="162" y2="96"/><line x1="300" y1="96" x2="318" y2="96"/><line x1="456" y1="96" x2="474" y2="96"/><line x1="612" y1="96" x2="630" y2="96"/>
+        </g>
+        <path d="M702 144 V196 H76 V146" fill="none" class="s-line" stroke-dasharray="5 4" marker-end="url(#au-ah)"/>
+        <text x="390" y="188" class="t-dim" text-anchor="middle">차가 움직이면 세계가 바뀌고, 센서가 다시 측정한다</text>
+        <text x="390" y="232" class="t-acc" text-anchor="middle">종단 간 반응 시간 = 센서 대기 + 인지 + 계획 + 제어 + 액추에이터</text>
+        <text x="390" y="28" class="t-dim" text-anchor="middle">위에서 아래로 갈수록 빠른 주기: 판단은 천천히, 제어는 빠르게</text>
+      </svg>
+      <figcaption><b>그림 21-1.</b> 자율주행 스택과 단계별 대표 주기·지연. 전체가 하나의 큰 피드백 루프를 이룬다. 수치는 대표적인 범위이며 시스템마다 다르다.</figcaption>
+    </figure>
+
+    <p>각 단계는 자기 주기로 돈다. 카메라는 대표적으로 초당 30장 안팎, 라이다는 10~20회 회전, 계획기는 초당 10~20회, 제어기는 50~100회 정도다. 여기서 중요한 것은 처리 속도 그 자체보다 <b>지연의 합</b>이다. 앞차의 브레이크등이 켜진 순간부터 내 차의 브레이크 압력이 올라갈 때까지 걸리는 시간을 <span class="term">종단 간 반응 시간</span><span class="en">(end-to-end latency)</span>이라 한다.</p>
+
+    <div class="formula">$$T_{react} = T_{sensor} + T_{perc} + T_{plan} + T_{ctrl} + T_{act}, \qquad d_{stop} = v\,T_{react} + \frac{v^2}{2\mu g}$$
+      <div class="where">여기서 \(T_{sensor}\)는 사건이 일어난 뒤 다음 프레임이 찍힐 때까지의 대기(최악의 경우 한 주기 전체), \(T_{act}\)는 브레이크 압력이 형성되는 시간, \(v\)는 속도, \(\mu\)는 노면 마찰 계수다. 둘째 식의 첫 항이 공주 거리, 둘째 항이 제동 거리다.</div>
+    </div>
+
+    <p>반응 시간 동안 차는 감속 없이 그대로 달린다. 시속 100 km면 0.1초에 2.8 m다. 지연 100 ms를 줄이는 것은 그 속도에서 차 반 대 길이만큼의 여유를 버는 일이다. 그래서 시스템 설계자는 전체 반응 시간의 목표를 먼저 정하고 그것을 각 단계에 나누어 주는데, 이를 <span class="term">지연 예산</span><span class="en">(latency budget)</span>이라 한다.</p>
+
+    <div class="sim" id="sim-lat">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>지연 예산과 정지 거리</h3></div>
+      <div class="sim-body">
+        <div class="sim-view"><canvas id="cv-lat"></canvas></div>
+        <div class="legend">
+          <span><i style="background:var(--text-dim)"></i>센서 대기</span><span><i style="background:var(--accent-2)"></i>인지</span><span><i style="background:var(--accent)"></i>계획</span><span><i style="background:var(--warn)"></i>제어</span><span><i style="background:var(--bad)"></i>액추에이터</span><span><i style="background:var(--text-faint)"></i>사람의 인지·판단</span>
+        </div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>속도 <output id="lat-v-out"></output></span><input type="range" id="lat-v" min="30" max="130" step="5" value="100"></label>
+          <label class="ctrl"><span>센서 주기 <output id="lat-ts-out"></output></span><input type="range" id="lat-ts" min="10" max="100" step="1" value="33"></label>
+          <label class="ctrl"><span>인지 지연 <output id="lat-per-out"></output></span><input type="range" id="lat-per" min="10" max="200" step="5" value="70"></label>
+          <label class="ctrl"><span>계획 지연 <output id="lat-plan-out"></output></span><input type="range" id="lat-plan" min="10" max="200" step="5" value="80"></label>
+          <label class="ctrl"><span>제어 지연 <output id="lat-ctl-out"></output></span><input type="range" id="lat-ctl" min="5" max="50" step="1" value="15"></label>
+          <label class="ctrl"><span>액추에이터 지연 <output id="lat-act-out"></output></span><input type="range" id="lat-act" min="50" max="400" step="10" value="180"></label>
+          <label class="ctrl"><span>사람 반응 시간 <output id="lat-hum-out"></output></span><input type="range" id="lat-hum" min="0.6" max="2.5" step="0.1" value="1.2"></label>
+          <div class="ctrl"><span>노면</span><div class="seg" id="lat-mu"><button data-value="0.9" class="on">마른</button><button data-value="0.5">젖은</button><button data-value="0.25">눈</button></div></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">시스템 반응 시간</span><span class="v" id="lat-o-t">—</span></div>
+        <div class="stat"><span class="k">공주 거리</span><span class="v" id="lat-o-d">—</span></div>
+        <div class="stat"><span class="k">정지 거리 (시스템)</span><span class="v" id="lat-o-stop">—</span></div>
+        <div class="stat"><span class="k">정지 거리 (사람)</span><span class="v" id="lat-o-hum">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 인지와 계획 지연을 각각 200 ms까지 올려 보면 시스템의 이점이 사람과 비슷한 수준으로 줄어든다. 반대로 소프트웨어를 아무리 줄여도 액추에이터 지연은 남는다. 눈길에서는 제동 거리가 압도적이어서 반응 시간의 비중이 작아진다. 사람 쪽 막대에도 같은 액추에이터 지연을 더했다.</div>
+    </div>
+
+    <div class="callout tip">
+      <strong>계산 예: 시속 100 km에서의 380 ms</strong>
+      <p>센서 대기 33 ms, 인지 70 ms, 계획 80 ms, 제어 15 ms, 브레이크 압력 형성 180 ms를 더하면 약 0.38 s다. 시속 100 km(27.8 m/s)에서 공주 거리는 \(27.8 \times 0.38 \approx 10.5\) m다. 마른 노면(\(\mu = 0.9\))의 제동 거리 \(27.8^2 / (2 \times 0.9 \times 9.81) \approx 43.7\) m를 더하면 정지 거리는 약 54 m다. 반응에 1.2 s가 걸리는 사람은 같은 조건에서 공주 거리만 약 38 m여서 정지 거리가 약 82 m가 된다.</p>
+    </div>
+
+    <p>지연에는 평균만 있는 것이 아니다. 어떤 프레임은 장면이 복잡해서 인지가 두 배 오래 걸리고, 운영체제가 다른 작업을 끼워 넣으면 계획이 한 주기를 건너뛴다. 안전을 따질 때는 평균이 아니라 <b>최악의 경우</b>가 기준이 된다. 그래서 자율주행 컴퓨터는 실시간 운영체제, 고정된 실행 주기, 각 단계의 시간 초과 감시를 쓰고, 센서 데이터에는 측정 시각을 붙여 뒤 단계가 "이 정보는 몇 ms 전의 세계인가"를 알고 보정하게 한다. <a href="planning.html">20장</a>에서 본 예측은 이 지연 동안 세계가 얼마나 움직였을지를 메우는 역할도 한다.</p>
+  </section>
+
+  <!-- =============================================================== 2 -->
+  <section id="e2e">
+    <h2>모듈형과 엔드투엔드, 그리고 컴퓨터</h2>
+    <p>그림 21-1처럼 단계마다 사람이 정한 인터페이스(객체 목록, 차로, 궤적)를 두는 방식을 <span class="term">모듈형 스택</span>이라 한다. 각 모듈을 따로 개발하고 따로 시험할 수 있고, 사고가 났을 때 "인지가 보행자를 놓쳤는가, 계획이 잘못 판단했는가"를 추적할 수 있다. 약점은 인터페이스가 정보를 버린다는 점이다. 인지가 "차량, 위치, 속도"만 넘기면, 그 차의 앞바퀴가 이미 꺾여 있다거나 운전자가 이쪽을 보고 있다는 단서는 계획 단계에 도달하지 못한다. 또 앞 단계의 오류가 뒤로 그대로 전파된다.</p>
+    <p><span class="term">엔드투엔드 학습</span><span class="en">(end-to-end learning)</span>은 센서 입력에서 궤적 또는 조향·가감속까지를 하나의 신경망으로 잇고 전체를 한꺼번에 학습한다. 가장 단순한 형태는 <span class="term">모방 학습</span><span class="en">(imitation learning)</span>으로, 사람이 운전한 기록에서 "이 장면에서 사람은 이렇게 갔다"를 정답으로 삼는다. 중간 표현을 사람이 정하지 않으므로 필요한 정보가 끝까지 흐르고, 데이터가 늘면 성능이 따라 오른다. 실제 시스템은 양 극단 사이에 있다. 내부적으로 조감도<span class="en">(BEV)</span> 특징, 객체, 지도 같은 중간 출력을 유지하면서 전체를 함께 미분 가능하게 학습하는 구조가 많다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 780 290" role="img" aria-label="모듈형과 엔드투엔드 구조 비교">
+        <defs><marker id="au-ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--text-dim)"/></marker></defs>
+        <text x="16" y="26" class="t" font-weight="700">모듈형</text>
+        <g>
+          <rect x="16" y="40" width="100" height="56" rx="8" class="f-surface"/><text x="66" y="73" class="t" text-anchor="middle">센서</text>
+          <rect x="176" y="40" width="110" height="56" rx="8" class="f-acc2-soft"/><text x="231" y="73" class="t" text-anchor="middle">인지</text>
+          <rect x="346" y="40" width="110" height="56" rx="8" class="f-acc2-soft"/><text x="401" y="73" class="t" text-anchor="middle">예측</text>
+          <rect x="516" y="40" width="110" height="56" rx="8" class="f-acc2-soft"/><text x="571" y="73" class="t" text-anchor="middle">계획</text>
+          <rect x="686" y="40" width="80" height="56" rx="8" class="f-surface"/><text x="726" y="73" class="t" text-anchor="middle">제어</text>
+        </g>
+        <g class="s-line" marker-end="url(#au-ah3)"><line x1="118" y1="68" x2="172" y2="68"/><line x1="288" y1="68" x2="342" y2="68"/><line x1="458" y1="68" x2="512" y2="68"/><line x1="628" y1="68" x2="682" y2="68"/></g>
+        <g class="t-mono" text-anchor="middle"><text x="145" y="58">영상</text><text x="315" y="58">객체</text><text x="485" y="58">미래 경로</text><text x="655" y="58">궤적</text></g>
+        <text x="390" y="120" class="t-dim" text-anchor="middle">사람이 정한 인터페이스: 따로 시험하고 원인을 추적할 수 있다. 인터페이스 밖의 정보는 사라진다.</text>
+        <line x1="16" y1="140" x2="766" y2="140" class="s-axis" stroke-dasharray="3 5"/>
+        <text x="16" y="170" class="t" font-weight="700">엔드투엔드</text>
+        <rect x="16" y="184" width="100" height="56" rx="8" class="f-surface"/><text x="66" y="217" class="t" text-anchor="middle">센서</text>
+        <rect x="176" y="184" width="450" height="56" rx="8" class="f-acc-soft"/>
+        <text x="401" y="208" class="t" text-anchor="middle" font-weight="700">하나의 신경망</text>
+        <text x="401" y="228" class="t-dim" text-anchor="middle">학습된 내부 표현 (BEV 특징 등)</text>
+        <rect x="686" y="184" width="80" height="56" rx="8" class="f-surface"/><text x="726" y="217" class="t" text-anchor="middle">제어</text>
+        <g class="s-line" marker-end="url(#au-ah3)"><line x1="118" y1="212" x2="172" y2="212"/><line x1="628" y1="212" x2="682" y2="212"/></g>
+        <path d="M655 244 C 600 276, 240 276, 190 244" fill="none" class="s-acc" stroke-dasharray="5 4" marker-end="url(#au-ah)"/>
+        <text x="420" y="284" class="t-acc" text-anchor="middle">궤적 오차가 입력 쪽까지 역전파된다</text>
+      </svg>
+      <figcaption><b>그림 21-2.</b> 모듈형 스택은 단계 사이에 사람이 읽을 수 있는 인터페이스를 두고, 엔드투엔드는 최종 출력의 오차로 전체를 한꺼번에 학습한다.</figcaption>
+    </figure>
+
+    <div class="table-wrap"><table>
+      <thead><tr><th></th><th>모듈형</th><th>엔드투엔드</th></tr></thead>
+      <tbody>
+        <tr><td>정보 손실</td><td>인터페이스에서 발생</td><td>적다. 필요한 특징을 스스로 학습</td></tr>
+        <tr><td>해석 가능성</td><td>높다. 단계별 출력을 볼 수 있다</td><td>낮다. 왜 그렇게 갔는지 설명이 어렵다</td></tr>
+        <tr><td>검증</td><td>모듈별 요구 사항과 시험 가능</td><td>전체를 통계적으로 평가해야 한다</td></tr>
+        <tr><td>개선 방식</td><td>규칙과 모듈을 사람이 수정</td><td>데이터를 더 모아 다시 학습</td></tr>
+        <tr><td>드문 상황</td><td>규칙이 없으면 대응 불가</td><td>학습 분포 밖에서 예측 불가능하게 실패</td></tr>
+      </tbody>
+    </table></div>
+
+    <p>모방 학습에는 고유한 함정이 있다. 사람의 운전 기록에는 차로 가운데를 잘 달리는 장면만 있고, 차로를 벗어났다가 돌아오는 장면은 거의 없다. 신경망이 작은 실수로 기록에 없던 위치에 놓이면 무엇을 할지 배운 적이 없어 오차가 커지고, 그 결과 더 낯선 상태로 밀려난다. 이를 <span class="term">분포 이동</span><span class="en">(distribution shift)</span>이라 한다. 또 "앞차가 멈추면 나도 멈춘다" 대신 "내 속도가 줄고 있으면 계속 줄인다" 같은 엉뚱한 상관관계를 배울 수도 있다. 시뮬레이터 안에서 자기 행동의 결과를 겪게 하는 폐루프 학습, 교란을 준 데이터 증강, 충돌·규칙 위반에 대한 추가 손실이 대응책으로 쓰인다.</p>
+
+    <h3>데이터 엔진과 섀도 모드</h3>
+    <p>학습 기반 시스템의 성능은 모델 구조만큼이나 데이터를 모으는 체계에 달려 있다. 흔히 <span class="term">데이터 엔진</span>이라 부르는 순환은 다음과 같다. 차량이 주행하며 어려운 장면을 골라 올린다. 사람이나 대형 오프라인 모델이 정답을 붙인다. 다시 학습한다. 시뮬레이션과 재생 시험으로 회귀를 확인한다. 배포한다. 어려운 장면을 고르는 방법 가운데 하나가 <span class="term">섀도 모드</span><span class="en">(shadow mode)</span>다. 새 소프트웨어를 차에 싣되 액추에이터에는 연결하지 않고, 사람이 운전하는 동안 뒤에서 "나라면 이렇게 했다"만 계산한다. 사람의 행동과 크게 어긋난 순간이 수집 대상이 된다. 위험 없이 넓은 범위의 실제 도로를 시험할 수 있지만, 시스템이 실제로 조작했다면 주변 차들이 어떻게 반응했을지는 알 수 없다는 한계가 있다.</p>
+
+    <h3>컴퓨팅 플랫폼</h3>
+    <p>이 모든 연산은 차 안의 컴퓨터가 정해진 시간 안에 끝내야 한다. 자율주행용 <span class="term">SoC</span><span class="en">(System on Chip)</span>는 범용 CPU 코어, 신경망 추론 가속기(GPU 또는 전용 NPU), 영상 신호 처리기, 안전 감시용 마이크로컨트롤러를 한데 묶는다. 추론 성능은 흔히 초당 연산 수 TOPS<span class="en">(Tera Operations Per Second)</span>로 표시하는데, 운전자 보조 수준은 대표적으로 수~수십 TOPS, 고도 자동화는 수백 TOPS 이상을 쓴다. 다만 TOPS는 정밀도와 메모리 대역폭에 따라 실효 성능이 크게 달라지므로 서로 다른 칩을 숫자만으로 비교하기는 어렵다.</p>
+    <p>전력도 제약이다. 소비 전력은 대표적으로 수십 W에서 수백 W이고, 그만큼의 열을 냉각수 회로로 빼내야 한다. 전기차에서는 주행 거리와 바로 연결된다(<a href="battery.html">16장</a>). 차량 내 전원과 통신 구조는 <a href="electrical.html">13장</a>에서 다뤘다.</p>
+    <div class="callout tip">
+      <strong>계산 예: 컴퓨터가 먹는 주행 거리</strong>
+      <p>컴퓨터와 센서가 합쳐 300 W를 쓰고 도심 평균 속도가 시속 30 km라면 1 km당 \(300 / 30 = 10\) Wh, 100 km당 1 kWh다. 전비가 100 km당 15 kWh인 차라면 약 7 %가 늘어난다. 같은 300 W라도 고속도로에서 시속 100 km로 달리면 100 km당 0.3 kWh, 약 2 %로 줄어든다. 느리게 오래 달리는 도심 로보택시에서 연산 전력이 더 아픈 이유다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 3 -->
+  <section id="odd">
+    <h2>ODD와 책임의 경계</h2>
+    <p>어떤 자율주행 시스템도 "모든 곳, 모든 조건"에서 작동하도록 설계되지는 않는다. 시스템이 작동하도록 설계된 조건의 집합을 <span class="term">운영 설계 영역</span><span class="en">(Operational Design Domain, ODD)</span>이라 한다. 도로 종류(자동차 전용 도로, 도심), 지리적 범위, 속도 범위, 시간대, 날씨, 노면 상태, 차선 표시 유무 등이 여기에 들어간다. ODD를 좁게 잡을수록 만나게 될 상황의 종류가 줄어 안전을 입증하기 쉬워지고, 넓힐수록 쓸모가 커진다. 자율주행 개발의 진행은 대부분 ODD를 조금씩 넓혀 가는 과정이다.</p>
+    <p><a href="adas.html">17장</a>에서 본 자동화 레벨은 결국 "문제가 생겼을 때 누가 수습하는가"로 갈린다. 레벨 2는 사람이 항상 감시하므로 수습도 사람이 한다. <b>레벨 3</b>은 ODD 안에서 시스템이 운전하고 사람은 전방을 보지 않아도 되지만, 시스템이 요청하면 정해진 시간 안에 운전을 넘겨받아야 한다. <b>레벨 4</b>는 사람이 넘겨받지 않아도 시스템이 스스로 안전한 상태까지 간다. 레벨 3에서 까다로운 지점은 넘겨받는 시간이다. 다른 일을 하던 사람이 상황을 파악하고 운전대를 잡는 데는 수 초가 걸린다. 국제 규정의 한 예는 제어권 전환 요청 뒤 최소 10초가 지나기 전에는 비상 기동을 시작하지 않도록 정하고 있다. 그 10초 동안 시스템은 계속 안전하게 운전할 수 있어야 하므로, 레벨 3 시스템도 갑작스러운 고장을 사람에게 떠넘길 수 없다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 780 300" role="img" aria-label="자동 주행에서 최소 위험 상태까지의 상태 전이">
+        <rect x="20" y="30" width="170" height="70" rx="12" class="f-acc-soft"/>
+        <text x="105" y="60" class="t" text-anchor="middle" font-weight="700">자동 주행</text>
+        <text x="105" y="80" class="t-dim" text-anchor="middle">ODD 안, 고장 없음</text>
+        <rect x="300" y="30" width="180" height="70" rx="12" class="f-acc2-soft"/>
+        <text x="390" y="60" class="t" text-anchor="middle" font-weight="700">제어권 전환 요청</text>
+        <text x="390" y="80" class="t-dim" text-anchor="middle">레벨 3: 경고, 수 초~10 s</text>
+        <rect x="590" y="30" width="170" height="70" rx="12" class="f-surface"/>
+        <text x="675" y="60" class="t" text-anchor="middle" font-weight="700">수동 운전</text>
+        <text x="675" y="80" class="t-dim" text-anchor="middle">사람이 책임</text>
+        <rect x="300" y="170" width="180" height="70" rx="12" class="f-acc-soft"/>
+        <text x="390" y="200" class="t" text-anchor="middle" font-weight="700">최소 위험 기동 (MRM)</text>
+        <text x="390" y="220" class="t-dim" text-anchor="middle">감속, 차로 유지 또는 갓길 이동</text>
+        <rect x="590" y="170" width="170" height="70" rx="12" class="f-surface"/>
+        <text x="675" y="200" class="t" text-anchor="middle" font-weight="700">최소 위험 상태</text>
+        <text x="675" y="220" class="t-dim" text-anchor="middle">정차, 비상등, 호출</text>
+        <g class="s-line" marker-end="url(#au-ah3)">
+          <line x1="192" y1="65" x2="296" y2="65"/><line x1="482" y1="65" x2="586" y2="65"/>
+          <line x1="390" y1="102" x2="390" y2="166"/><line x1="482" y1="205" x2="586" y2="205"/>
+          <path d="M105 102 V205 H296" fill="none"/>
+        </g>
+        <text x="244" y="54" class="t-mono" text-anchor="middle">ODD 이탈 예고</text>
+        <text x="534" y="54" class="t-mono" text-anchor="middle">인수</text>
+        <text x="398" y="138" class="t-mono">무응답</text>
+        <text x="200" y="196" class="t-mono" text-anchor="middle">레벨 4 또는 중대 고장</text>
+        <text x="390" y="278" class="t-dim" text-anchor="middle">최소 위험 상태에서는 원격 지원이나 현장 출동으로 복구한다</text>
+      </svg>
+      <figcaption><b>그림 21-3.</b> ODD를 벗어나거나 고장이 났을 때의 상태 전이. 레벨 3은 먼저 사람에게 요청하고, 레벨 4는 곧바로 최소 위험 기동으로 간다.</figcaption>
+    </figure>
+
+    <p>사람이 넘겨받지 않거나 넘겨받을 사람이 없을 때 시스템이 수행하는 동작을 <span class="term">최소 위험 기동</span><span class="en">(Minimal Risk Maneuver, MRM)</span>, 그 결과로 도달하는 상태를 최소 위험 상태<span class="en">(Minimal Risk Condition)</span>라 한다. 가장 단순한 MRM은 비상등을 켜고 차로 안에서 부드럽게 정지하는 것이다. 하지만 고속도로 본선에 서 있는 차는 그 자체가 위험이므로, 더 나은 MRM은 갓길이나 안전한 장소까지 이동해 정차한다. 그러려면 주 컴퓨터나 주 센서가 죽은 상태에서도 수십 초 동안 차로 변경과 정차를 수행할 수 있는 예비 계통이 필요하다. 이것이 다음 절의 이중화로 이어진다.</p>
+    <p>운전석에 사람이 없는 레벨 4 차량은 스스로 판단하기 어려운 상황, 예를 들어 공사 구간에서 수신호를 따라 중앙선을 넘어야 하는 경우에 <span class="term">원격 지원</span><span class="en">(remote assistance)</span>을 요청한다. 관제 센터의 사람은 보통 차를 직접 조종하지 않는다. 통신 지연과 끊김이 있는 무선망으로 조향을 직접 맡기기는 위험하기 때문이다. 대신 "이 경로로 지나가도 된다", "저 물체는 무시해도 된다" 같은 상위 수준의 힌트를 주고, 실제 주행과 충돌 회피는 차량이 계속 책임진다.</p>
+  </section>
+
+  <!-- =============================================================== 4 -->
+  <section id="fusa">
+    <h2>기능 안전: 고장이 나도 안전하게</h2>
+    <p>전자 부품은 언젠가 고장 난다. 메모리의 비트가 뒤집히고, 커넥터가 빠지고, 소프트웨어에는 버그가 있다. <span class="term">기능 안전</span><span class="en">(functional safety)</span>은 전기·전자 시스템의 오동작이 사람을 다치게 하지 않도록 하는 체계이고, 자동차에서는 국제 표준 <b>ISO 26262</b>가 이를 다룬다. 출발점은 <span class="term">위험원 분석 및 위험 평가</span><span class="en">(HARA)</span>다. 기능마다 "어떤 오동작이 어떤 상황에서 어떤 사고로 이어지는가"를 나열하고, 각각을 세 가지 척도로 평가한다.</p>
+    <ul>
+      <li><b>심각도 S</b><span class="en">(Severity)</span>: 사고가 나면 얼마나 크게 다치는가. S0(부상 없음)부터 S3(생명을 위협하거나 치명적)까지.</li>
+      <li><b>노출 E</b><span class="en">(Exposure)</span>: 그 오동작이 위험해지는 주행 상황에 얼마나 자주 놓이는가. E0(사실상 없음)부터 E4(높은 확률, 거의 매 주행)까지.</li>
+      <li><b>제어 가능성 C</b><span class="en">(Controllability)</span>: 운전자나 주변 사람이 사고를 피할 수 있는가. C0(일반적으로 제어 가능)부터 C3(제어가 어렵거나 불가능)까지.</li>
+    </ul>
+    <p>세 등급의 조합이 <span class="term">ASIL</span><span class="en">(Automotive Safety Integrity Level)</span>을 정한다. 낮은 쪽부터 QM(일반 품질 관리로 충분), A, B, C, D다. 표준의 표는 규칙이 단순하다. S, E, C의 숫자를 더해 10이면 D, 9면 C, 8이면 B, 7이면 A, 그 아래는 QM이다. 어느 하나가 한 단계 낮아지면 ASIL도 한 단계 내려간다. ASIL이 높을수록 개발 절차, 검증 범위, 하드웨어 고장률 목표가 엄격해진다.</p>
+
+    <div class="sim" id="sim-asil">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>ASIL 결정기</h3></div>
+      <div class="sim-body">
+        <div class="sim-controls">
+          <div class="ctrl"><span>심각도 S</span><div class="seg" id="asil-s"><button data-value="0">S0</button><button data-value="1">S1</button><button data-value="2">S2</button><button data-value="3" class="on">S3</button></div></div>
+          <div class="ctrl"><span>노출 E</span><div class="seg" id="asil-e"><button data-value="0">E0</button><button data-value="1">E1</button><button data-value="2">E2</button><button data-value="3">E3</button><button data-value="4" class="on">E4</button></div></div>
+          <div class="ctrl"><span>제어 가능성 C</span><div class="seg" id="asil-c"><button data-value="0">C0</button><button data-value="1">C1</button><button data-value="2">C2</button><button data-value="3" class="on">C3</button></div></div>
+          <div class="ctrl"><span>예시 위험원</span><div class="ctrl-row" id="asil-presets">
+            <button class="btn" data-p="3,4,3">고속 주행 중 의도치 않은 급조향</button>
+            <button class="btn" data-p="2,4,2">고속도로에서 의도치 않은 급제동</button>
+            <button class="btn" data-p="2,3,2">후진 중 후방 영상 멈춤</button>
+            <button class="btn" data-p="1,3,1">주차 보조 중 저속 접촉</button>
+          </div></div>
+        </div>
+        <div class="asil-wrap" id="asil-table"></div>
+        <div class="asil-desc" id="asil-desc"></div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">결정된 등급</span><span class="v" id="asil-o-g">—</span></div>
+        <div class="stat"><span class="k">S + E + C</span><span class="v" id="asil-o-sum">—</span></div>
+        <div class="stat"><span class="k">하드웨어 고장률 목표</span><span class="v" id="asil-o-fit">—</span></div>
+        <div class="stat"><span class="k">단일 고장 검출률 목표</span><span class="v" id="asil-o-spf">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: S3·E4·C3에서 하나씩만 한 단계 내려 보면 어느 축을 내리든 D → C로 똑같이 내려간다. 운전자가 손을 떼고 있는 자율주행에서는 "운전자가 제어할 수 있다"고 가정할 수 없어 C가 C3으로 고정되는 경우가 많고, 그만큼 등급이 올라간다. 예시 위험원의 등급은 설명용이며 실제 값은 제조사의 분석마다 다르다.</div>
+    </div>
+
+    <p>ASIL D의 무작위 하드웨어 고장 목표는 대표적으로 시간당 \(10^{-8}\) 미만, 즉 10 FIT 미만이다. FIT<span class="en">(Failures In Time)</span>은 10억 시간당 고장 수다. 차 한 대가 하루 한 시간씩 달린다면 평균 27만 년에 한 번꼴이다. 부품 하나로 이 수준을 달성하기는 어렵다. 그래서 두 가지 수단을 쓴다. 하나는 <b>진단</b>이다. 고장을 검출해 안전한 상태로 전환하면 그 고장은 위험한 고장으로 세지 않는다. 다른 하나는 <b>이중화</b>다.</p>
+
+    <h3>fail-safe와 fail-operational</h3>
+    <p>전통적인 차량 전자 장치는 <span class="term">fail-safe</span>로 설계된다. 고장을 감지하면 기능을 끄고 경고등을 켠다. 전동 조향 보조가 꺼지면 운전대가 무거워질 뿐 사람이 기계적 연결을 통해 계속 조향할 수 있다. 운전자가 안전한 상태로 가는 길을 맡는 셈이다. 운전자가 없거나 주의를 기울이지 않는 자율주행에서는 기능을 꺼 버리는 것이 안전하지 않다. 시속 100 km로 달리는 차의 조향이 꺼지면 그것이 곧 사고다. 고장 뒤에도 최소 위험 기동을 마칠 때까지 기능을 유지해야 하고, 이것을 <span class="term">fail-operational</span>이라 한다. 성능을 낮춘 채 유지하는 경우는 fail-degraded라 한다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 780 310" role="img" aria-label="전원, 컴퓨터, 조향, 제동의 이중화 구조">
+        <rect x="16" y="26" width="150" height="56" rx="8" class="f-acc2-soft"/><text x="91" y="50" class="t" text-anchor="middle" font-weight="700">전원 A</text><text x="91" y="68" class="t-dim" text-anchor="middle">DC-DC + 배터리</text>
+        <rect x="16" y="226" width="150" height="56" rx="8" class="f-acc-soft"/><text x="91" y="250" class="t" text-anchor="middle" font-weight="700">전원 B</text><text x="91" y="268" class="t-dim" text-anchor="middle">예비 배터리</text>
+        <rect x="216" y="26" width="160" height="56" rx="8" class="f-acc2-soft"/><text x="296" y="50" class="t" text-anchor="middle" font-weight="700">센서 묶음 A</text><text x="296" y="68" class="t-dim" text-anchor="middle">카메라·라이다</text>
+        <rect x="216" y="226" width="160" height="56" rx="8" class="f-acc-soft"/><text x="296" y="250" class="t" text-anchor="middle" font-weight="700">센서 묶음 B</text><text x="296" y="268" class="t-dim" text-anchor="middle">레이더·예비 카메라</text>
+        <rect x="216" y="104" width="160" height="42" rx="8" class="f-acc2-soft"/><text x="296" y="130" class="t" text-anchor="middle" font-weight="700">주 컴퓨터</text>
+        <rect x="216" y="162" width="160" height="42" rx="8" class="f-acc-soft"/><text x="296" y="188" class="t" text-anchor="middle" font-weight="700">예비 컴퓨터</text>
+        <rect x="446" y="60" width="150" height="80" rx="8" class="f-surface"/><text x="521" y="86" class="t" text-anchor="middle" font-weight="700">조향 (EPS)</text><text x="521" y="106" class="t-dim" text-anchor="middle">2중 권선 모터</text><text x="521" y="124" class="t-dim" text-anchor="middle">2중 인버터·센서</text>
+        <rect x="446" y="170" width="150" height="80" rx="8" class="f-surface"/><text x="521" y="196" class="t" text-anchor="middle" font-weight="700">제동</text><text x="521" y="216" class="t-dim" text-anchor="middle">전동 부스터 +</text><text x="521" y="234" class="t-dim" text-anchor="middle">ESC 유닛</text>
+        <rect x="660" y="116" width="104" height="78" rx="8" class="f-surface"/><text x="712" y="150" class="t" text-anchor="middle" font-weight="700">차량 운동</text><text x="712" y="170" class="t-dim" text-anchor="middle">MRM 완수</text>
+        <g fill="none" stroke="var(--accent-2)" stroke-width="2">
+          <path d="M166 54 H190 V125 H216"/><path d="M296 82 V104"/><path d="M376 125 H420 V86 H446"/><path d="M420 125 V196 H446"/>
+        </g>
+        <g fill="none" stroke="var(--accent)" stroke-width="2">
+          <path d="M166 254 H190 V183 H216"/><path d="M296 226 V204"/><path d="M376 183 H408 V114 H446"/><path d="M408 183 V224 H446"/>
+        </g>
+        <g class="s-line" marker-end="url(#au-ah3)"><line x1="598" y1="110" x2="656" y2="140"/><line x1="598" y1="204" x2="656" y2="172"/></g>
+        <text x="390" y="304" class="t-dim" text-anchor="middle">파란 계통과 주황 계통 가운데 어느 한쪽이 통째로 죽어도 조향과 제동이 남는다</text>
+      </svg>
+      <figcaption><b>그림 21-4.</b> fail-operational 구조의 예. 전원, 센서, 컴퓨터, 통신을 두 계통으로 나누고, 조향과 제동 액추에이터는 양쪽에서 모두 구동할 수 있게 한다.</figcaption>
+    </figure>
+
+    <p>이중화의 대상은 사슬 전체다. <b>전원</b>은 독립된 두 공급 경로를 두어 한쪽이 단락돼도 다른 쪽이 살아 있게 한다. <b>컴퓨터</b>는 주 컴퓨터와, 성능은 낮아도 정차까지는 수행할 수 있는 예비 컴퓨터를 둔다. <b>조향</b>은 모터 권선과 인버터, 토크·각도 센서를 두 벌로 만들어 한 벌이 죽어도 절반의 힘으로 조향한다. <b>제동</b>은 전동 부스터와 ESC 유압 유닛이 서로의 예비가 된다. 통신선과 센서도 계통을 나눈다. 이때 두 계통이 같은 원인으로 한꺼번에 죽지 않게 하는 것이 핵심이다. 같은 전원선, 같은 커넥터, 같은 소프트웨어 버그, 같은 침수 위치가 <span class="term">공통 원인 고장</span><span class="en">(common cause failure)</span>을 만든다. 그래서 설계 방식이 다른 칩, 다른 알고리즘, 다른 센서 원리를 섞는 <b>다양성</b>을 함께 쓴다.</p>
+
+    <div class="formula">$$P_{single} = 1 - e^{-\lambda T} \approx \lambda T, \qquad P_{1oo2} \approx \big[(1-\beta)\lambda T\big]^2 + \beta\lambda T$$
+      <div class="where">여기서 \(\lambda\)는 채널 하나의 고장률(1/h), \(T\)는 임무 시간, \(\beta\)는 전체 고장 가운데 두 채널을 동시에 죽이는 공통 원인의 비율이다. 1oo2는 "둘 중 하나만 살아 있으면 된다"는 구조다.</div>
+    </div>
+    <p>식의 둘째 항이 중요하다. 독립 고장은 제곱으로 줄지만 공통 원인 항 \(\beta\lambda T\)는 그대로 남는다. \(\beta\)가 몇 퍼센트만 되어도 이중화의 이득은 \(1/\beta\)배 근처에서 멈춘다. 채널을 세 개로 늘려도 이 한계는 넘지 못한다.</p>
+
+    <div class="sim" id="sim-red">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>이중화와 고장 확률</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-red"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>구조</span><div class="seg" id="red-arch"><button data-value="single">단일</button><button data-value="1oo2" class="on">1oo2</button><button data-value="2oo3">2oo3</button></div></div>
+          <label class="ctrl"><span>채널 고장률 λ <output id="red-lam-out"></output></span><input type="range" id="red-lam" min="-7" max="-2" step="0.1" value="-4"></label>
+          <label class="ctrl"><span>임무 시간 T <output id="red-t-out"></output></span><input type="range" id="red-t" min="0" max="4" step="0.05" value="1"></label>
+          <label class="ctrl"><span>공통 원인 비율 β <output id="red-beta-out"></output></span><input type="range" id="red-beta" min="0" max="20" step="0.5" value="2"></label>
+          <button class="btn primary" id="red-run">고장 주입 20만 회 실행</button>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">시스템 고장 확률</span><span class="v" id="red-o-p">—</span></div>
+        <div class="stat"><span class="k">단일 채널이라면</span><span class="v" id="red-o-single">—</span></div>
+        <div class="stat"><span class="k">이중화 이득</span><span class="v" id="red-o-gain">—</span></div>
+        <div class="stat"><span class="k">몬테카를로 결과</span><span class="v" id="red-o-mc">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: β를 0으로 두면 1oo2의 이득이 수천 배지만, β를 5 %로만 올려도 약 20배에서 멈춘다. 2oo3은 세 채널의 다수결로 어느 채널이 틀렸는지 가려낼 수 있는 대신, 두 개만 죽어도 기능을 잃으므로 기능 상실 확률은 1oo2보다 높다. λ를 작게 하고 고장 주입을 실행하면 20만 번을 돌려도 한 번도 고장이 안 나오는데, 이 문제는 뒤의 검증 절에서 다시 만난다.</div>
+    </div>
+
+    <div class="callout deep">
+      <strong>ASIL 분해</strong>
+      <p>ASIL D 요구 사항 하나를 충분히 독립적인 두 요소에 나누어 맡기면 각 요소는 더 낮은 등급으로 개발할 수 있다. 예를 들어 D를 B(D) + B(D)로 나눈다. 인지처럼 ASIL D 수준으로 증명하기 어려운 신경망을 쓰는 기능에서, 서로 다른 센서와 서로 다른 알고리즘으로 된 두 경로가 교차 감시하는 구조가 이 원리에 기대고 있다. 전제는 두 경로의 독립성이며, 독립성을 보이는 분석이 따로 요구된다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 5 -->
+  <section id="sotif">
+    <h2>SOTIF: 고장이 없어도 틀린다</h2>
+    <p>ISO 26262는 "설계대로 동작하지 않을 때"를 다룬다. 그런데 자율주행의 사고 가운데 상당수는 모든 부품이 설계대로 동작했는데도 일어난다. 카메라는 정상인데 역광 속의 흰 트레일러를 하늘과 구분하지 못했고, 레이더는 정상인데 정지한 차를 고가 도로의 반사와 함께 걸러 버렸다. 고장이 아니라 <b>성능의 한계</b>와 <b>명세의 빈틈</b>이다. 이런 위험을 다루는 표준이 <b>ISO 21448</b>, 흔히 <span class="term">SOTIF</span><span class="en">(Safety Of The Intended Functionality)</span>라 부르는 것이다.</p>
+    <p>SOTIF는 가능한 모든 주행 시나리오를 두 축으로 나눈다. 우리가 <b>아는가 모르는가</b>, 그리고 그 시나리오에서 시스템이 <b>안전한가 위험한가</b>다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 780 320" role="img" aria-label="SOTIF 시나리오 4분면">
+        <text x="250" y="24" class="t" text-anchor="middle" font-weight="700">알려진 시나리오</text>
+        <text x="590" y="24" class="t" text-anchor="middle" font-weight="700">알려지지 않은 시나리오</text>
+        <text x="30" y="105" class="t" text-anchor="middle" font-weight="700" transform="rotate(-90 30 105)">안전</text>
+        <text x="30" y="235" class="t" text-anchor="middle" font-weight="700" transform="rotate(-90 30 235)">위험</text>
+        <rect x="60" y="36" width="380" height="130" rx="10" class="f-surface"/>
+        <text x="250" y="80" class="t" text-anchor="middle" font-weight="700">영역 1: 알려진 안전</text>
+        <text x="250" y="104" class="t-dim" text-anchor="middle">시험으로 확인된 정상 동작</text>
+        <text x="250" y="124" class="t-dim" text-anchor="middle">목표: 가능한 한 넓힌다</text>
+        <rect x="60" y="172" width="380" height="130" rx="10" class="f-acc2-soft"/>
+        <text x="250" y="216" class="t" text-anchor="middle" font-weight="700">영역 2: 알려진 위험</text>
+        <text x="250" y="240" class="t-dim" text-anchor="middle">역광, 폭우, 공사 구간처럼 식별된 약점</text>
+        <text x="250" y="260" class="t-dim" text-anchor="middle">대응: 기능 개선 또는 ODD에서 제외</text>
+        <rect x="446" y="36" width="318" height="130" rx="10" class="f-surface"/>
+        <text x="605" y="80" class="t" text-anchor="middle" font-weight="700">영역 4: 알려지지 않은 안전</text>
+        <text x="605" y="104" class="t-dim" text-anchor="middle">본 적은 없지만 잘 처리되는 상황</text>
+        <rect x="446" y="172" width="318" height="130" rx="10" class="f-acc-soft"/>
+        <text x="605" y="216" class="t-acc" text-anchor="middle" font-weight="700">영역 3: 알려지지 않은 위험</text>
+        <text x="605" y="240" class="t-dim" text-anchor="middle">아직 아무도 떠올리지 못한 실패</text>
+        <text x="605" y="260" class="t-dim" text-anchor="middle">대응: 주행·시뮬레이션으로 발견해 영역 2로</text>
+        <path d="M470 286 H430" fill="none" class="s-acc" marker-end="url(#au-ah)"/>
+        <path d="M250 176 V160" fill="none" class="s-acc" marker-end="url(#au-ah)"/>
+      </svg>
+      <figcaption><b>그림 21-5.</b> SOTIF의 네 영역. 개발은 영역 3을 발견해 영역 2로 옮기고, 영역 2를 고쳐 영역 1로 옮기는 과정이다. 영역 3의 남은 크기가 잔여 위험이다.</figcaption>
+    </figure>
+
+    <p>문제는 영역 3이다. 모르는 것을 얼마나 모르는지 알아야 한다. 도로 위의 상황은 <span class="term">롱테일</span><span class="en">(long tail)</span> 분포를 따른다. 앞차를 따라가는 상황, 신호 대기, 차로 변경이 대부분을 차지하고, 그 뒤로 "도로에 떨어진 매트리스", "휠체어를 타고 오리를 쫓는 사람", "트럭 뒤에 실린 신호등" 같은 드문 상황이 끝없이 이어진다. 각각은 극히 드물지만 종류가 너무 많아서 합치면 무시할 수 없다.</p>
+    <p>아래 시뮬레이터는 2,000종류의 시나리오가 순위 \(i\)에 대해 \(p_i \propto 1/i^{s}\)의 확률로 나타난다고 놓고 주행을 시작한다. 새로운 종류를 만날 때마다 칸이 칠해진다. 처음에는 빠르게 채워지다가 곧 느려진다. 눈여겨볼 값은 <b>미발견 확률</b>, 즉 다음 상황이 아직 한 번도 본 적 없는 종류일 확률이다. 이 값이 영역 3의 크기에 해당한다.</p>
+
+    <div class="sim" id="sim-lt">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>롱테일에서 시나리오 발견하기</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-lt"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>꼬리 지수 s <output id="lt-s-out"></output></span><input type="range" id="lt-s" min="0.6" max="1.6" step="0.05" value="1.1"></label>
+          <button class="btn primary" id="lt-run">주행 시작</button>
+          <button class="btn" id="lt-reset">초기화</button>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">주행 거리</span><span class="v" id="lt-o-n">—</span></div>
+        <div class="stat"><span class="k">발견한 종류</span><span class="v" id="lt-o-u">—</span></div>
+        <div class="stat"><span class="k">미발견 확률</span><span class="v" id="lt-o-rem">—</span></div>
+        <div class="stat"><span class="k">다음 새 종류까지</span><span class="v" id="lt-o-next">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 가로축이 로그 눈금이라는 점에 주의한다. 주행 거리를 10배 늘려야 비슷한 수의 새 종류가 나온다. s를 1.6으로 올리면(꼬리가 얇다) 미발견 확률은 빨리 줄지만 칸은 거의 채워지지 않고, s를 0.6으로 내리면(꼬리가 두껍다) 칸은 빨리 차지만 드문 상황이 전체에서 차지하는 몫이 커진다. 1 km마다 상황 하나를 만난다고 가정했고, 점선은 기댓값의 이론 곡선이다.</div>
+    </div>
+
+    <p>SOTIF의 대응은 세 갈래다. 첫째, 약점을 일으키는 <span class="term">촉발 조건</span><span class="en">(triggering condition)</span>을 체계적으로 찾는다. 센서 원리별 한계(<a href="sensors.html">18장</a>), 알고리즘의 가정, 사람의 오용을 표로 훑는다. 둘째, 찾은 약점은 기능을 고치거나 ODD에서 뺀다. 폭우에서 성능을 보장할 수 없으면 폭우에서는 작동하지 않게 한다. 셋째, 잔여 위험이 수용 기준보다 낮다는 것을 주행과 시뮬레이션으로 뒷받침한다. 셋째가 가장 어렵고, 뒤의 검증 절의 주제다.</p>
+  </section>
+
+  <!-- =============================================================== 6 -->
+  <section id="rss">
+    <h2>RSS: 안전을 수식으로 정의하기</h2>
+    <p>학습된 계획기가 내놓은 궤적이 안전한지를 통계로만 말하면 "대체로 안전하다" 이상을 말하기 어렵다. 다른 접근은 안전을 <b>규칙으로 정의</b>하고, 계획기가 무엇을 내놓든 그 규칙을 어기지 않는지 따로 검사하는 것이다. <span class="term">RSS</span><span class="en">(Responsibility-Sensitive Safety)</span>는 그런 정식화의 대표적인 예다. "조심해서 운전한다"는 상식을 몇 개의 수식으로 옮기고, 모든 차가 이 규칙을 지키면 사고가 나지 않으며, 사고가 났다면 규칙을 어긴 쪽에 책임이 있다고 본다.</p>
+    <p>가장 기본이 되는 것이 종방향 안전 거리다. 최악의 경우를 가정한다. 앞차가 지금 이 순간 낼 수 있는 최대 감속도 \(b_{max}\)로 멈춘다. 뒤차는 반응 시간 \(\rho\) 동안 그것을 모르고 오히려 최대 \(a_{max}\)로 가속하다가, 그 뒤에 최소한 보장되는 감속도 \(b_{min}\)으로 제동한다. 그래도 부딪히지 않으려면 처음 간격이 다음보다 커야 한다.</p>
+
+    <div class="formula">$$d_{min} = \left[\, v_r\rho + \tfrac{1}{2}a_{max}\rho^2 + \frac{(v_r + \rho\,a_{max})^2}{2\,b_{min}} - \frac{v_f^2}{2\,b_{max}} \,\right]_+$$
+      <div class="where">여기서 \(v_r\)은 뒤차(자차) 속도, \(v_f\)는 앞차 속도, \(\rho\)는 반응 시간, \(a_{max}\)는 반응 시간 동안의 최대 가속도, \(b_{min}\)은 뒤차의 최소 제동 감속도, \(b_{max}\)는 앞차의 최대 제동 감속도이고, \([x]_+\)는 음수면 0으로 둔다는 뜻이다. 앞의 세 항은 뒤차가 멈출 때까지 가는 거리, 마지막 항은 앞차가 멈출 때까지 가는 거리다.</div>
+    </div>
+
+    <div class="sim" id="sim-rss">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>RSS 종방향 안전 거리</h3></div>
+      <div class="sim-body">
+        <div class="sim-view"><canvas id="cv-rss"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>자차 속도 <output id="rss-vr-out"></output></span><input type="range" id="rss-vr" min="20" max="130" step="5" value="100"></label>
+          <label class="ctrl"><span>앞차 속도 <output id="rss-vf-out"></output></span><input type="range" id="rss-vf" min="0" max="130" step="5" value="100"></label>
+          <label class="ctrl"><span>현재 간격 <output id="rss-gap-out"></output></span><input type="range" id="rss-gap" min="5" max="150" step="1" value="50"></label>
+          <label class="ctrl"><span>반응 시간 ρ <output id="rss-rho-out"></output></span><input type="range" id="rss-rho" min="0.1" max="2" step="0.1" value="0.5"></label>
+          <label class="ctrl"><span>반응 중 가속 a<sub>max</sub> <output id="rss-a-out"></output></span><input type="range" id="rss-a" min="0" max="4" step="0.5" value="2"></label>
+          <label class="ctrl"><span>자차 최소 제동 b<sub>min</sub> <output id="rss-bmin-out"></output></span><input type="range" id="rss-bmin" min="2" max="9" step="0.5" value="4"></label>
+          <label class="ctrl"><span>앞차 최대 제동 b<sub>max</sub> <output id="rss-bmax-out"></output></span><input type="range" id="rss-bmax" min="4" max="10" step="0.5" value="8"></label>
+          <div class="ctrl-row"><button class="btn primary" id="rss-play">앞차 급제동 재생</button><button class="btn" id="rss-reset">처음으로</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">RSS 최소 안전 거리</span><span class="v" id="rss-o-d">—</span></div>
+        <div class="stat"><span class="k">현재 간격</span><span class="v" id="rss-o-gap">—</span></div>
+        <div class="stat"><span class="k">정지 후 남는 간격</span><span class="v" id="rss-o-end">—</span></div>
+        <div class="stat"><span class="k">판정</span><span class="v" id="rss-o-res">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 현재 간격을 음영으로 표시된 RSS 거리보다 짧게 두고 재생하면 충돌한다. 간격을 RSS 거리에 정확히 맞추면 두 차가 범퍼가 닿을 듯 멈춘다. b<sub>min</sub>을 b<sub>max</sub>와 같게 올리면 필요한 거리가 크게 줄어든다. "내 차가 앞차만큼 강하게 멈출 수 있다"고 가정할 수 있느냐가 간격을 좌우한다. 위 도로의 차 크기는 보이도록 키운 것이고 거리 눈금이 기준이다.</div>
+    </div>
+
+    <div class="callout tip">
+      <strong>계산 예: 시속 100 km로 나란히 달릴 때</strong>
+      <p>두 차 모두 27.8 m/s, \(\rho = 0.5\) s, \(a_{max} = 2\), \(b_{min} = 4\), \(b_{max} = 8\) m/s²로 둔다. 반응 시간 동안 뒤차는 \(27.8 \times 0.5 + 0.5 \times 2 \times 0.25 = 14.1\) m를 가고 속도는 28.8 m/s가 된다. 제동 거리는 \(28.8^2 / 8 = 103.5\) m다. 앞차는 \(27.8^2 / 16 = 48.2\) m만에 선다. 따라서 \(d_{min} = 14.1 + 103.5 - 48.2 \approx 69\) m, 시간으로는 약 2.5초 간격이다. 사람이 흔히 유지하는 1~2초 간격보다 길다. 파라미터를 보수적으로 잡을수록 안전하지만 차는 소심해지고 도로 용량은 줄어든다.</div>
+    </div>
+
+    <p>RSS는 종방향 거리 외에도 횡방향 안전 거리, 우선권은 "주어지는 것이지 취하는 것이 아니다"라는 규칙, 시야가 가려진 곳에서의 속도 제한, 위험한 상황에서의 적절한 대응을 정의한다. 이런 규칙 기반 검사기는 학습 기반 계획기 뒤에 놓여 궤적을 통과시키거나 거부하는 <b>안전 덮개</b>로 쓰인다. 계획기 자체는 증명하기 어려워도 덮개는 작고 결정적이어서 높은 ASIL로 개발할 수 있다. 한계도 있다. 규칙은 인지 결과가 옳다는 전제 위에 서 있으므로 보지 못한 물체에 대해서는 아무것도 보장하지 못하고, 파라미터 값을 어떻게 정할지는 사회적 합의의 문제로 남는다.</p>
+  </section>
+
+  <!-- =============================================================== 7 -->
+  <section id="validation">
+    <h2>검증: 몇 km를 달려야 하는가</h2>
+    <p>"사람보다 안전하다"를 보이는 가장 직관적인 방법은 많이 달려 보는 것이다. 문제는 사람이 생각보다 안전하다는 점이다. 사망 사고는 대표적으로 1억 km당 0.5~1건 수준이고, 부상 사고는 수십 건, 신고되는 모든 사고는 수백 건 수준이다(나라와 도로 종류에 따라 크게 다르다). 사건이 이렇게 드물면 통계는 잔인해진다.</p>
+    <p>사고가 서로 독립이고 일정한 비율 \(\lambda\)(건/km)로 일어난다면 \(n\) km를 달리는 동안의 사고 건수는 평균 \(\lambda n\)인 푸아송 분포를 따른다. 사고가 한 건도 없을 확률은 \(e^{-\lambda n}\)이다. 우리가 원하는 것은 그 반대 방향의 추론이다. \(n\) km를 무사고로 달렸을 때 "실제 사고율이 \(\lambda\)보다 낮다"고 신뢰 수준 \(C\)로 말하려면, 사고율이 \(\lambda\)인 시스템이 운 좋게 무사고로 통과할 확률이 \(1-C\) 이하여야 한다.</p>
+
+    <div class="formula">$$e^{-\lambda n} \le 1 - C \;\;\Rightarrow\;\; n \ge \frac{-\ln(1-C)}{\lambda}$$
+      <div class="where">여기서 \(\lambda\)는 넘지 않음을 보이려는 사고율, \(C\)는 신뢰 수준이다. \(C = 95\,\%\)이면 \(-\ln 0.05 \approx 3.0\)이어서 평균 사고 간격의 3배를 무사고로 달려야 한다. 사고가 \(k\)건 났다면 푸아송 누적 확률 \(\sum_{i=0}^{k} e^{-\lambda n}(\lambda n)^i/i!\)이 \(1-C\) 이하가 되는 \(n\)을 찾는다.</div>
+    </div>
+
+    <div class="sim" id="sim-mil">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>몇 km를 달려야 증명되는가</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-mil"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>목표 사고율 <output id="mil-rate-out"></output></span><input type="range" id="mil-rate" min="-1" max="3" step="0.05" value="-0.15"></label>
+          <div class="ctrl"><span>신뢰 수준</span><div class="seg" id="mil-conf"><button data-value="0.9">90 %</button><button data-value="0.95" class="on">95 %</button><button data-value="0.99">99 %</button></div></div>
+          <label class="ctrl"><span>시험 중 발생한 사고 <output id="mil-k-out"></output></span><input type="range" id="mil-k" min="0" max="5" step="1" value="0"></label>
+          <label class="ctrl"><span>시험 차량 <output id="mil-fleet-out"></output></span><input type="range" id="mil-fleet" min="0" max="4" step="0.05" value="2"></label>
+          <label class="ctrl"><span>대당 하루 주행 <output id="mil-day-out"></output></span><input type="range" id="mil-day" min="50" max="1000" step="10" value="960"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">필요 주행 거리</span><span class="v" id="mil-o-n">—</span></div>
+        <div class="stat"><span class="k">평균 사고 간격의</span><span class="v" id="mil-o-ratio">—</span></div>
+        <div class="stat"><span class="k">소요 기간</span><span class="v" id="mil-o-yr">—</span></div>
+        <div class="stat"><span class="k">지구 둘레로</span><span class="v" id="mil-o-earth">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 사고율을 1억 km당 0.7건(사망 사고 수준)에 두면 차 100대가 하루 24시간 평균 시속 40 km로 달려도 10년이 넘게 걸린다. 사고율을 300건(모든 신고 사고 수준)으로 올리면 며칠로 줄어든다. 드문 사건일수록 증명이 어렵다. 그래프는 사고율이 정확히 목표값인 시스템이 시험을 통과해 버릴 확률이고, 이 값이 1−C 아래로 내려가는 지점이 필요 거리다.</div>
+    </div>
+
+    <div class="callout tip">
+      <strong>계산 예: 100대로 12년</strong>
+      <p>사망 사고율이 1억 km당 0.7건(\(\lambda = 7 \times 10^{-9}\)/km)보다 낮다는 것을 95 % 신뢰 수준으로 보이려면 \(n = 3.0 / (7\times10^{-9}) \approx 4.3\)억 km를 사망 사고 없이 달려야 한다. 시험차 100대가 하루 960 km씩 달리면 하루 9만 6천 km이고, \(4.3\times10^8 / 9.6\times10^4 \approx 4{,}460\)일, 약 12년이다. 이것은 "사람과 비슷하다"를 보이는 데 드는 거리다. "사람보다 20 % 안전하다"처럼 작은 차이를 통계적으로 구분하려면 수십 배가 더 필요하다. 게다가 소프트웨어를 한 번 고치면 엄밀하게는 처음부터 다시 세어야 한다.</p>
+    </div>
+
+    <p>그래서 주행 거리만으로는 증명할 수 없고, 여러 증거를 쌓아 <span class="term">안전 논증</span><span class="en">(safety case)</span>을 구성한다.</p>
+    <ul>
+      <li><b>시나리오 기반 시험.</b> 무작위로 달리며 드문 상황을 기다리는 대신, 위험한 상황을 직접 만들어 시험한다. "앞차 끼어들기"라는 논리 시나리오를 정하고 상대 속도, 끼어드는 거리, 노면 마찰 같은 파라미터의 범위를 정한 뒤, 그 공간을 격자나 표본으로 훑는다. 실패 경계 근처를 집중적으로 찾는 탐색도 쓴다.</li>
+      <li><b>시뮬레이션.</b> 실제 도로 1 km는 대부분 아무 일도 일어나지 않지만 시뮬레이션은 사건만 골라 수천 배 빠르게 돌릴 수 있다. 기록된 센서 데이터를 다시 흘려보내는 재생<span class="en">(log replay)</span>, 주변 차량이 자차의 행동에 반응하는 폐루프 시뮬레이션, 센서 신호까지 합성하는 방식이 있다. 실제 구간을 측량해 그대로 옮긴 가상 환경을 <span class="term">디지털 트윈</span>이라 한다. 시뮬레이션의 결과는 시뮬레이터가 현실을 얼마나 닮았는지만큼만 믿을 수 있으므로, 같은 시나리오를 시험장에서 실제로 돌려 일치하는지 확인하는 과정이 필요하다.</li>
+      <li><b>폐쇄 시험장과 실도로.</b> 시험장은 시뮬레이션의 정확도를 확인하고 물리적으로 까다로운 상황을 재현한다. 실도로 주행은 통계 증명보다 "생각하지 못한 시나리오"를 발견하는 역할이 크다. 앞 절의 롱테일 곡선이 그 발견 속도다.</li>
+    </ul>
+
+    <h3>개입 횟수는 무엇을 말해 주는가</h3>
+    <p>시험 주행에서 안전 요원이 자동 주행을 해제한 횟수, 즉 <span class="term">개입</span><span class="en">(disengagement)</span> 사이의 평균 주행 거리가 진척 지표로 자주 인용된다. 같은 회사의 같은 지역에서 추세를 보는 데는 쓸모가 있지만 회사 간 비교에는 맞지 않는다. 한적한 교외 도로와 복잡한 도심은 난이도가 다르고, 무엇을 개입으로 셀지의 기준이 회사마다 다르며, 조심스러운 안전 요원일수록 개입이 많다. 개입했을 때 정말 사고가 났을지는 그 장면을 시뮬레이션으로 되돌려 봐야 알 수 있다. 숫자를 좋게 만들려고 쉬운 길만 달릴 유인도 생긴다. 지표가 목표가 되면 지표로서의 가치를 잃는다는 전형적인 사례다.</p>
+  </section>
+
+  <!-- =============================================================== 8 -->
+  <section id="v2x">
+    <h2>V2X와 보안: 차 밖과 연결하기</h2>
+    <p>차에 달린 센서는 직선으로만 본다. 건물 모퉁이 뒤, 대형 트럭 앞, 언덕 너머는 어떤 센서로도 보이지 않는다. <span class="term">V2X</span><span class="en">(Vehicle-to-Everything)</span>는 차량이 다른 차량(V2V), 신호등 같은 도로 시설(V2I), 보행자 단말(V2P), 통신망(V2N)과 무선으로 정보를 주고받는 기술이다. 각 차량이 자기 위치·속도·방향을 초당 10회 정도 방송하면, 받는 쪽은 눈에 보이기 전에 상대의 존재를 안다.</p>
+    <p>무선 기술로는 무선랜 계열의 DSRC와 이동통신 계열의 <span class="term">C-V2X</span><span class="en">(Cellular V2X)</span>가 있다. C-V2X는 기지국을 거치지 않고 차량끼리 직접 주고받는 방식과 기지국을 거치는 방식을 함께 쓴다. 직접 통신의 도달 거리는 대표적으로 수백 m, 지연은 수십 ms 수준이다. 응용은 단계적으로 확장된다. 자기 상태를 알리는 기본 안전 메시지, 신호등의 현재 신호와 잔여 시간, 한 차량이나 도로변 센서가 본 물체 목록을 나눠 주는 <span class="term">협력 인지</span>, 그리고 여러 차량이 가속과 제동을 맞추는 협력 주행이 있다. <span class="term">군집 주행</span><span class="en">(platooning)</span>은 트럭들이 통신으로 앞차의 제동 명령을 직접 받아 반응 시간을 줄이고, 그만큼 좁은 간격으로 달려 공기 저항을 줄인다(<a href="aero.html">12장</a>).</p>
+
+    <div class="sim" id="sim-v2x">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>가려진 교차로와 V2X</h3></div>
+      <div class="sim-body">
+        <div class="sim-view"><canvas id="cv-v2x"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>V2X</span><div class="seg" id="v2x-mode"><button data-value="off" class="on">끔 (센서만)</button><button data-value="on">켬</button></div></div>
+          <label class="ctrl"><span>자차 속도 <output id="v2x-v-out"></output></span><input type="range" id="v2x-v" min="30" max="80" step="5" value="50"></label>
+          <label class="ctrl"><span>교차 차량 속도 <output id="v2x-vc-out"></output></span><input type="range" id="v2x-vc" min="20" max="80" step="5" value="50"></label>
+          <label class="ctrl"><span>건물과 도로 사이 <output id="v2x-sb-out"></output></span><input type="range" id="v2x-sb" min="1" max="20" step="1" value="4"></label>
+          <label class="ctrl"><span>통신 지연 <output id="v2x-lat-out"></output></span><input type="range" id="v2x-lat" min="0" max="3000" step="50" value="100"></label>
+          <label class="ctrl"><span>패킷 손실 <output id="v2x-loss-out"></output></span><input type="range" id="v2x-loss" min="0" max="99" step="1" value="10"></label>
+          <div class="ctrl-row"><button class="btn primary" id="v2x-play">재생</button><button class="btn" id="v2x-reset">처음으로</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">위험을 안 시점</span><span class="v" id="v2x-o-aware">—</span></div>
+        <div class="stat"><span class="k">최대 감속도</span><span class="v" id="v2x-o-a">—</span></div>
+        <div class="stat"><span class="k">결과</span><span class="v" id="v2x-o-res">—</span></div>
+        <div class="stat"><span class="k">200회 반복 충돌률</span><span class="v" id="v2x-o-mc">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: V2X를 끄고 시속 50 km로 재생하면 건물 모퉁이를 지나서야 상대가 보이고, 최대 제동으로도 서지 못한다. 켜면 멀리서 알고 부드럽게 감속해 정지선에 선다. 건물과 도로 사이를 넓히면 센서만으로도 충분해진다. V2X를 켠 채 통신 지연을 3초 가까이 올리고 손실을 99 %로 두면 메시지가 제때 오지 않아 다시 위험해진다. 교차 차량은 양보하지 않고 그대로 지나간다고 가정했다.</div>
+    </div>
+
+    <p>V2X는 보조 수단이지 기반이 될 수는 없다. 모든 차와 보행자가 단말을 갖추지는 않았고, 메시지는 지연되거나 사라지며, 보낸 쪽의 위치가 틀릴 수도 있다. 그래서 설계 원칙은 "V2X 정보가 있으면 더 일찍, 더 부드럽게 대응하되, 없어도 안전해야 한다"가 된다. 수신한 메시지는 하나의 센서 입력으로서 <a href="perception.html">19장</a>의 융합에 들어가고, 자체 센서와 어긋나면 신뢰도를 낮춘다.</p>
+
+    <h3>사이버 보안과 OTA</h3>
+    <p>바깥과 연결되는 순간 차는 공격 대상이 된다. 원격으로 제동과 조향을 조작할 수 있는 차는 그 자체가 안전 문제이므로, 보안은 기능 안전과 따로 떼어 생각할 수 없다. 자동차 사이버 보안은 ISO/SAE 21434 표준과 국제 규정이 다루며, 제조사가 개발부터 폐차까지 위협을 분석하고 대응하는 관리 체계를 갖추도록 요구한다. 차량 안의 기술적 수단은 층층이 쌓는다.</p>
+    <ul>
+      <li><b>경계 분리.</b> 외부 통신 모듈과 인포테인먼트를 주행 제어 네트워크에서 분리하고 게이트웨이가 허용된 메시지만 통과시킨다(<a href="electrical.html">13장</a>).</li>
+      <li><b>메시지 인증.</b> 차량 내부 통신에 인증 코드를 붙여 위조된 조향·제동 명령을 걸러 낸다. V2X 메시지는 전자 서명으로 발신자를 확인하되, 위치 추적을 막기 위해 인증서를 주기적으로 바꾼다.</li>
+      <li><b>보안 부팅.</b> 전원을 켤 때마다 소프트웨어의 서명을 하드웨어 보안 모듈에 들어 있는 키로 검증해 변조된 코드는 실행하지 않는다.</li>
+      <li><b>침입 탐지.</b> 평소와 다른 통신 패턴을 감지해 기록하고 보고한다.</li>
+    </ul>
+    <p><span class="term">OTA</span><span class="en">(Over-The-Air)</span> 무선 업데이트는 발견된 취약점과 결함을 정비소 방문 없이 고치는 수단이자, 자율주행 소프트웨어를 계속 개선하는 통로다. 동시에 가장 강력한 공격 경로이기도 하다. 그래서 업데이트 패키지는 서명되고, 설치 전 검증되며, 저장 공간을 둘로 나누어 새 버전이 부팅에 실패하면 이전 버전으로 되돌린다. 주행 기능을 바꾸는 업데이트는 그 변경이 기존 안전 논증을 깨지 않는지 다시 검증해야 하며, 어떤 차에 어떤 버전이 설치돼 있는지를 추적 관리해야 한다.</p>
+  </section>
+
+  <!-- =============================================================== 9 -->
+  <section id="society">
+    <h2>사회 속의 자율주행</h2>
+    <h3>두 갈래의 접근</h3>
+    <p>현재의 개발은 출발점이 다른 두 갈래로 나뉜다. 하나는 <b>로보택시</b>다. 처음부터 운전자가 없는 레벨 4를 목표로, 제한된 지역 안에서 서비스한다. 차량 한 대에 라이다·레이더·카메라를 여러 벌 싣고, 그 지역의 정밀 지도를 만들고, 원격 지원 센터와 정비 거점을 운영한다. 차량은 운영사가 소유하고 관리하므로 센서 세척과 교정, 소프트웨어 버전을 통제할 수 있고, 비싼 하드웨어 비용은 운전자 인건비를 대체하는 것으로 회수한다. 확장의 병목은 새 도시마다 필요한 지도 작성과 검증, 운영 기반이다.</p>
+    <p>다른 하나는 <b>개인 승용차</b>다. 소비자가 살 수 있는 가격의 센서로 레벨 2 운전자 보조에서 시작해, 수많은 차량에서 모은 데이터로 기능과 ODD를 점차 넓힌다. 어디서나 켤 수 있지만 사람이 계속 감시해야 하고, 감시 의무를 없애는 순간 앞에서 본 이중화, 안전 논증, 책임 문제를 모두 만난다. 한쪽은 좁은 ODD에서 완전한 자율로 출발해 영역을 넓히고, 다른 쪽은 넓은 ODD에서 부분 자동화로 출발해 자율의 수준을 높인다. 두 길이 어디에서 만날지는 아직 정해지지 않았다.</p>
+
+    <div class="table-wrap"><table>
+      <thead><tr><th></th><th>로보택시</th><th>개인 승용차</th></tr></thead>
+      <tbody>
+        <tr><td>목표 레벨</td><td>레벨 4 (운전자 없음)</td><td>레벨 2에서 시작해 3 이상으로</td></tr>
+        <tr><td>ODD</td><td>지정된 지역, 점진적 확대</td><td>넓은 도로망, 사람이 감시</td></tr>
+        <tr><td>센서</td><td>다중 라이다·레이더·카메라, 이중화</td><td>비용 제약, 카메라·레이더 중심</td></tr>
+        <tr><td>지도</td><td>사전 구축한 정밀 지도 의존</td><td>일반 지도 + 실시간 인지 비중이 큼</td></tr>
+        <tr><td>예외 대응</td><td>MRM + 원격 지원</td><td>운전자에게 인계</td></tr>
+        <tr><td>사고 책임</td><td>운영사·제조사</td><td>감시 의무가 있는 동안은 운전자</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>윤리와 법, 책임</h3>
+    <p>자율주행의 윤리라 하면 "한 명을 칠 것인가 다섯 명을 칠 것인가" 하는 딜레마가 먼저 떠오르지만, 실제 설계에서 그런 선택이 등장하는 일은 드물다. 차는 누구를 칠지 고르기 전에 제동을 한다. 실제의 윤리적 결정은 훨씬 평범한 곳에 있다. 주차된 차 옆을 얼마나 띄우고 지날지, 가려진 횡단보도 앞에서 얼마나 감속할지, RSS의 파라미터를 얼마나 보수적으로 잡을지가 모두 탑승자의 편의와 다른 도로 이용자의 위험 사이에서 위험을 나누는 결정이다. "얼마나 안전하면 충분한가"도 같은 종류의 물음이다. 평균적인 사람보다 조금 나은 수준이면 되는지, 주의 깊은 숙련 운전자 수준이어야 하는지에 따라 앞 절의 필요 주행 거리가 몇 배씩 달라진다.</p>
+    <p>법적 책임은 레벨에 따라 옮겨 간다. 사람이 감시 의무를 지는 레벨 2에서는 사고의 일차 책임이 운전자에게 있다. 시스템이 운전 주체가 되는 레벨 3 이상에서는 작동 중의 사고 책임이 제조사나 운영사 쪽으로 이동하는 방향으로 각국의 제도가 만들어지고 있다. 그러려면 사고 순간에 누가 운전하고 있었는지를 가려야 하므로, 자동 주행의 작동 여부, 전환 요청, 운전자 조작을 기록하는 장치가 요구된다. 형사 책임, 보험, 소프트웨어 업데이트 뒤의 책임, 원격 지원자의 지위 같은 문제는 나라마다 다르고 지금도 정리되는 중이다.</p>
+
+    <h3>남은 과제</h3>
+    <ul>
+      <li><b>롱테일.</b> 드문 상황은 끝이 없다. 새로운 상황에서도 상식적으로 행동하는 일반화 능력이 필요하고, 대규모 사전 학습 모델을 주행에 결합하려는 시도가 이어지고 있다.</li>
+      <li><b>학습 시스템의 검증.</b> 신경망이 왜 그 출력을 냈는지 설명하기 어렵고, 요구 사항에서 코드까지 추적하는 기존 안전 표준의 방식이 그대로 들어맞지 않는다. 규칙 기반 안전 덮개, 다양성을 가진 이중 경로, 통계적 논증을 조합하는 방법이 다듬어지고 있다.</li>
+      <li><b>악천후와 센서 한계.</b> 폭우, 폭설, 짙은 안개에서는 사람도 운전이 어렵지만, 사람은 못 가겠다고 판단하고 멈춘다. 시스템도 자기 한계를 아는 것이 먼저다.</li>
+      <li><b>사람과의 상호작용.</b> 눈짓과 손짓으로 이루어지던 양보와 합류를 기계가 어떻게 주고받을지, 그리고 레벨 2·3에서 사람이 지루한 감시를 계속할 수 있는지가 문제다. 자동화가 잘 작동할수록 사람의 주의는 풀어진다.</li>
+      <li><b>비용과 확장.</b> 센서와 컴퓨터, 이중화된 액추에이터의 가격, 그리고 지역을 넓힐 때마다 드는 검증 비용이 보급 속도를 정한다.</li>
+    </ul>
+    <p>자율주행은 하나의 발명이 아니라, 이 책의 앞 장들에서 다룬 기계·전기·제어 기술 위에 인지와 판단을 얹고, 그 전체가 안전하다는 것을 사회가 받아들일 수 있는 방식으로 보이는 긴 과정이다. 책에 나온 용어는 <a href="glossary.html">22장</a>에서 한꺼번에 찾아볼 수 있다.</p>
+  </section>
+
+  <!-- =============================================================== summary -->
+  <section class="keypoints" id="summary">
+    <h2>핵심 정리</h2>
+    <ol>
+      <li>종단 간 반응 시간은 센서 대기·인지·계획·제어·액추에이터 지연의 합이고, 그동안 차는 감속 없이 \(v\,T_{react}\)만큼 간다. 안전에서는 평균이 아니라 최악의 지연이 기준이다.</li>
+      <li>모듈형 스택은 해석과 검증이 쉽고 인터페이스에서 정보를 잃는다. 엔드투엔드 학습은 정보를 끝까지 흘리지만 분포 밖에서의 동작을 설명하고 검증하기 어렵다. 실제 시스템은 그 사이에 있다.</li>
+      <li>ODD는 시스템이 작동하도록 설계된 조건의 집합이다. 레벨 3은 사람에게 인계를 요청하고, 레벨 4는 스스로 최소 위험 기동을 수행해 최소 위험 상태에 도달한다.</li>
+      <li>ISO 26262는 심각도 S, 노출 E, 제어 가능성 C로 ASIL(QM, A~D)을 정한다. 운전자가 수습할 수 없는 자율주행은 fail-safe가 아니라 fail-operational이어야 하고, 전원·컴퓨터·조향·제동을 이중화한다.</li>
+      <li>이중화의 이득은 공통 원인 고장 비율 β에 의해 제한된다. 독립성과 다양성이 이중화의 실제 가치를 정한다.</li>
+      <li>SOTIF(ISO 21448)는 고장 없이도 성능 한계로 생기는 위험을 다룬다. 알려지지 않은 위험 시나리오를 발견해 줄이는 것이 목표이며, 롱테일 때문에 발견 속도는 주행 거리의 로그에 가깝게 느려진다.</li>
+      <li>RSS는 최악의 가정 아래 안전 거리를 수식으로 정의해, 학습 기반 계획기 뒤에서 궤적을 검사하는 결정적 안전 덮개로 쓰인다.</li>
+      <li>사고율 λ 이하임을 신뢰 수준 C로 보이려면 \(-\ln(1-C)/\lambda\) km를 무사고로 달려야 한다. 사망 사고 수준에서는 수억 km가 필요해, 시나리오 기반 시험과 시뮬레이션을 결합한 안전 논증이 필수다.</li>
+    </ol>
+  </section>
+
+  <!-- =============================================================== quiz -->
+  <section class="quiz-sec" id="quiz">
+    <h2>확인 퀴즈</h2>
+    <div class="quiz">
+      <div class="quiz-q"><p>시속 72 km(20 m/s)로 달리는 차의 종단 간 반응 시간이 0.4 s에서 0.25 s로 줄었다. 공주 거리는 얼마나 줄어드는가?</p><div class="opts">
+        <button class="opt">1.5 m</button><button class="opt" data-correct>3 m</button><button class="opt">5 m</button><button class="opt">8 m</button>
+      </div><div class="quiz-exp">공주 거리는 \(v\,T\)다. \(20 \times (0.4 - 0.25) = 3\) m 줄어든다. 제동 거리 \(v^2/(2\mu g)\)는 반응 시간과 무관하므로 그대로다.</div></div>
+
+      <div class="quiz-q"><p>어떤 위험원이 S3, E3, C3으로 평가되었다. ASIL은?</p><div class="opts">
+        <button class="opt">ASIL A</button><button class="opt">ASIL B</button><button class="opt" data-correct>ASIL C</button><button class="opt">ASIL D</button>
+      </div><div class="quiz-exp">S + E + C = 9이면 ASIL C다. 세 값이 모두 최고(S3, E4, C3, 합 10)일 때만 D가 되고, 어느 하나가 한 단계 낮아질 때마다 등급이 하나씩 내려간다.</div></div>
+
+      <div class="quiz-q"><p>운전자가 전방을 보지 않는 자율주행 차의 조향 계통을 fail-safe가 아니라 fail-operational로 만들어야 하는 이유는?</p><div class="opts">
+        <button class="opt">fail-safe 설계는 비용이 더 들기 때문에</button>
+        <button class="opt" data-correct>기능을 끄는 것만으로는 안전한 상태가 되지 않고, 정차할 때까지 조향을 유지해야 하기 때문에</button>
+        <button class="opt">fail-operational이면 고장 진단이 필요 없기 때문에</button>
+        <button class="opt">조향 모터의 고장률이 다른 부품보다 특별히 높기 때문에</button>
+      </div><div class="quiz-exp">fail-safe는 기능을 끈 뒤 사람이 수습한다는 전제에 선다. 사람이 즉시 넘겨받을 수 없으면 꺼진 조향은 곧 사고이므로, 고장 뒤에도 최소 위험 기동을 마칠 때까지 기능이 남아 있어야 한다.</div></div>
+
+      <div class="quiz-q"><p>채널 고장 확률이 \(10^{-3}\)인 장치를 1oo2로 이중화했다. 공통 원인 비율 β가 10 %일 때 시스템 고장 확률에 가장 가까운 값은?</p><div class="opts">
+        <button class="opt">\(10^{-6}\)</button><button class="opt">\(10^{-5}\)</button><button class="opt" data-correct>\(10^{-4}\)</button><button class="opt">\(10^{-3}\)</button>
+      </div><div class="quiz-exp">독립 고장 항은 \((0.9\times10^{-3})^2 \approx 8\times10^{-7}\)이고 공통 원인 항은 \(0.1\times10^{-3} = 10^{-4}\)이다. 공통 원인 항이 지배해 약 \(10^{-4}\)가 된다. 이중화의 이득은 약 10배, 곧 \(1/\beta\)에서 멈춘다.</div></div>
+
+      <div class="quiz-q"><p>다음 중 SOTIF(ISO 21448)가 다루는 위험의 예로 가장 알맞은 것은?</p><div class="opts">
+        <button class="opt">메모리 비트 오류로 제동 명령이 잘못 계산되었다</button>
+        <button class="opt">전원 커넥터가 빠져 조향 ECU가 꺼졌다</button>
+        <button class="opt" data-correct>카메라는 정상이지만 역광 속의 흰 트레일러를 검출하지 못했다</button>
+        <button class="opt">해커가 원격으로 가속 명령을 주입했다</button>
+      </div><div class="quiz-exp">SOTIF는 고장이 없는 상태에서 센서·알고리즘의 성능 한계나 명세의 빈틈으로 생기는 위험을 다룬다. 비트 오류와 전원 상실은 기능 안전(ISO 26262), 원격 공격은 사이버 보안의 영역이다.</div></div>
+
+      <div class="quiz-q"><p>1,000만 km당 1건인 사고율보다 낮다는 것을 95 % 신뢰 수준으로 보이려면 무사고로 약 몇 km를 달려야 하는가?</p><div class="opts">
+        <button class="opt">1,000만 km</button><button class="opt" data-correct>3,000만 km</button><button class="opt">1억 km</button><button class="opt">9,500만 km</button>
+      </div><div class="quiz-exp">\(n = -\ln(1-0.95)/\lambda \approx 3.0 \times 10^7\) km다. 평균 사고 간격만큼 달려서는 부족하다. 사고율이 정확히 목표값인 시스템도 그 거리를 무사고로 통과할 확률이 \(e^{-1} \approx 37\,\%\)나 되기 때문이다.</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  const css = getComputedStyle(document.documentElement);
+  const FONT = css.getPropertyValue("--font") || "sans-serif", MONO = css.getPropertyValue("--mono") || "monospace";
+  const f = (px, bold) => (bold ? "600 " : "") + px + "px " + FONT;
+  const fm = (px) => px + "px " + MONO;
+  const $ = (id) => document.getElementById(id);
+  const ms = (x) => x + " ms";
+  const prob = (p) => (p <= 0 ? "0" : p >= 0.001 ? (p * 100).toPrecision(3) + " %" : p.toExponential(2).replace("e", "e"));
+  const kmK = (v) => {
+    if (v >= 1e12) return CB.fmt(v / 1e12) + "조";
+    if (v >= 1e8) return CB.fmt(v / 1e8) + "억";
+    if (v >= 1e4) return CB.fmt(v / 1e4) + "만";
+    return CB.fmt(v);
+  };
+
+  /* ------------------------------------------------------------ 1. 지연 예산 */
+  (function latency() {
+    let cv;
+    const upd = () => { stats(); if (cv) cv.redraw(); };
+    const v = CB.range("lat-v", (x) => x + " km/h", upd), ts = CB.range("lat-ts", ms, upd), per = CB.range("lat-per", ms, upd);
+    const plan = CB.range("lat-plan", ms, upd), ctl = CB.range("lat-ctl", ms, upd), act = CB.range("lat-act", ms, upd);
+    const hum = CB.range("lat-hum", (x) => x.toFixed(1) + " s", upd), mu = CB.seg("lat-mu", upd);
+    function calc() {
+      const v0 = CB.ms(v()), parts = [ts(), per(), plan(), ctl(), act()].map((x) => x / 1000);
+      const T = parts.reduce((a, b) => a + b, 0), Th = hum() + act() / 1000;
+      const brake = (v0 * v0) / (2 * Number(mu()) * CB.G);
+      return { v0, parts, T, Th, brake, dSys: v0 * T, dHum: v0 * Th };
+    }
+    function stats() {
+      const c = calc();
+      CB.stat("lat-o-t", (c.T * 1000).toFixed(0) + "<small>ms</small>");
+      CB.stat("lat-o-d", c.dSys.toFixed(1) + "<small>m</small>");
+      CB.stat("lat-o-stop", (c.dSys + c.brake).toFixed(1) + "<small>m</small>");
+      CB.stat("lat-o-hum", (c.dHum + c.brake).toFixed(1) + "<small>m</small>");
+    }
+    cv = CB.canvas("#cv-lat", (ctx, w, h) => {
+      const P = CB.palette(), c = calc(), cols = [P.dim, P.accent2, P.accent, P.warn, P.bad];
+      const lm = 50, rm = 14, pw = w - lm - rm;
+      const tMax = Math.max(c.T, c.Th) * 1.12, X = (t) => lm + (t / tMax) * pw;
+      const bh = Math.min(24, h * 0.08), y1 = 14, y2 = y1 + bh + 10;
+      ctx.font = f(12); ctx.textBaseline = "middle"; ctx.textAlign = "left"; ctx.fillStyle = P.dim;
+      ctx.fillText("시스템", 4, y1 + bh / 2); ctx.fillText("사람", 4, y2 + bh / 2);
+      let t = 0;
+      c.parts.forEach((d, i) => { ctx.fillStyle = cols[i]; ctx.fillRect(X(t), y1, Math.max(1, X(t + d) - X(t) - 1), bh); t += d; });
+      ctx.fillStyle = P.faint; ctx.fillRect(X(0), y2, X(hum()) - X(0) - 1, bh);
+      ctx.fillStyle = P.bad; ctx.fillRect(X(hum()), y2, X(c.Th) - X(hum()), bh);
+      ctx.fillStyle = P.text; ctx.font = fm(11);
+      ctx.fillText((c.T * 1000).toFixed(0) + " ms", Math.min(X(c.T) + 5, w - 54), y1 + bh / 2);
+      ctx.textAlign = "right"; ctx.fillText((c.Th * 1000).toFixed(0) + " ms", w - 2, y2 - 5 + bh + 12 > h ? y2 : y2 + bh / 2);
+      const ya = y2 + bh + 6, stepT = tMax > 2.2 ? 0.5 : tMax > 1 ? 0.2 : 0.1;
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(lm, ya); ctx.lineTo(lm + pw, ya); ctx.stroke();
+      ctx.fillStyle = P.dim; ctx.textAlign = "center"; ctx.textBaseline = "top";
+      for (let k = 0; k * stepT <= tMax; k++) { const x = X(k * stepT); ctx.beginPath(); ctx.moveTo(x, ya); ctx.lineTo(x, ya + 4); ctx.stroke(); ctx.fillText((k * stepT).toFixed(1) + (k === 0 ? " s" : ""), x, ya + 6); }
+
+      const yr = ya + 34, dMax = (Math.max(c.dSys, c.dHum) + c.brake) * 1.06, XD = (d) => lm + (d / dMax) * pw;
+      const yb = h - 26, lh = (yb - yr) / 2, rh = Math.max(14, lh * 0.5), carL = Math.max(16, Math.min(30, lh * 0.7));
+      [["시스템", c.dSys, P.accent], ["사람", c.dHum, P.dim]].forEach(([name, dr, col], i) => {
+        const y = yr + i * lh + (lh - rh) / 2 + 6;
+        ctx.fillStyle = P.surface; ctx.fillRect(lm, y, pw, rh);
+        ctx.globalAlpha = 0.55; ctx.fillStyle = P.warn; ctx.fillRect(XD(0), y, XD(dr) - XD(0), rh);
+        ctx.fillStyle = P.bad; ctx.fillRect(XD(dr), y, XD(dr + c.brake) - XD(dr), rh); ctx.globalAlpha = 1;
+        CB.carTop(ctx, XD(dr + c.brake) - carL / 2, y + rh / 2, 0, { len: carL, color: col, brake: true });
+        ctx.font = f(12); ctx.fillStyle = P.dim; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(name, 4, y + rh / 2);
+        ctx.font = fm(11); ctx.fillStyle = P.text; ctx.textBaseline = "bottom";
+        ctx.fillText("공주 " + dr.toFixed(1) + " + 제동 " + c.brake.toFixed(1) + " = " + (dr + c.brake).toFixed(1) + " m", lm + 2, y - 3);
+      });
+      ctx.strokeStyle = P.axis; ctx.beginPath(); ctx.moveTo(lm, yb); ctx.lineTo(lm + pw, yb); ctx.stroke();
+      const stepD = dMax > 240 ? 50 : dMax > 100 ? 20 : 10;
+      ctx.fillStyle = P.dim; ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.font = fm(11);
+      for (let d = 0; d <= dMax; d += stepD) { const x = XD(d); ctx.beginPath(); ctx.moveTo(x, yb); ctx.lineTo(x, yb + 4); ctx.stroke(); ctx.fillText(d + (d === 0 ? " m" : ""), x, yb + 6); }
+    }, { aspect: 0.46, minHeight: 300, maxHeight: 380 });
+    stats();
+  })();
+
+  /* ------------------------------------------------------------ 2. ASIL 결정기 */
+  (function asil() {
+    const GR = ["QM", "A", "B", "C", "D"];
+    const SD = ["부상 없음", "가벼운 부상 또는 중등도 부상", "중상, 생존 가능성이 높음", "생명을 위협하거나 치명적인 부상"];
+    const ED = ["사실상 일어나지 않는 상황", "매우 낮은 확률", "낮은 확률 (운전 시간의 1 % 미만)", "중간 확률 (운전 시간의 1~10 %)", "높은 확률 (거의 매 주행)"];
+    const CD = ["일반적으로 제어 가능", "쉽게 제어 가능 (운전자의 99 % 이상)", "보통은 제어 가능 (운전자의 90 % 이상)", "제어가 어렵거나 불가능"];
+    const FIT = ["요구 없음", "권고 없음", "&lt; 100<small>FIT</small>", "&lt; 100<small>FIT</small>", "&lt; 10<small>FIT</small>"];
+    const SPF = ["—", "—", "≥ 90<small>%</small>", "≥ 97<small>%</small>", "≥ 99<small>%</small>"];
+    const grade = (s, e, c) => (s < 1 || e < 1 || c < 1 ? 0 : Math.max(0, s + e + c - 6));
+    let html = '<table class="asil-tbl"><thead><tr><th>S</th><th>E</th><th id="asil-h-1">C1</th><th id="asil-h-2">C2</th><th id="asil-h-3">C3</th></tr></thead><tbody>';
+    for (let s = 1; s <= 3; s++) for (let e = 1; e <= 4; e++) {
+      html += "<tr>" + (e === 1 ? '<th rowspan="4" id="asil-hs-' + s + '">S' + s + "</th>" : "") + '<th id="asil-he-' + s + "-" + e + '">E' + e + "</th>";
+      for (let c = 1; c <= 3; c++) { const g = grade(s, e, c); html += '<td class="g' + g + '" id="asil-c-' + s + "-" + e + "-" + c + '">' + GR[g] + "</td>"; }
+      html += "</tr>";
+    }
+    $("asil-table").innerHTML = html + "</tbody></table>";
+    const cells = [...$("asil-table").querySelectorAll("td, th")];
+    function update() {
+      const s = Number(S()), e = Number(E()), c = Number(C()), g = grade(s, e, c);
+      cells.forEach((el) => el.classList.remove("hit", "on"));
+      if (s && e && c) {
+        $("asil-c-" + s + "-" + e + "-" + c).classList.add("hit");
+        $("asil-hs-" + s).classList.add("on"); $("asil-he-" + s + "-" + e).classList.add("on"); $("asil-h-" + c).classList.add("on");
+      }
+      CB.stat("asil-o-g", g ? "ASIL " + GR[g] : "QM");
+      CB.stat("asil-o-sum", s && e && c ? String(s + e + c) : "해당 없음");
+      CB.stat("asil-o-fit", FIT[g]); CB.stat("asil-o-spf", SPF[g]);
+      $("asil-desc").innerHTML = "<b>S" + s + "</b> " + SD[s] + " · <b>E" + e + "</b> " + ED[e] + " · <b>C" + c + "</b> " + CD[c] +
+        (s && e && c ? "" : "<br>S0, E0, C0 가운데 하나라도 해당하면 ASIL을 부여하지 않는다(QM).");
+    }
+    const S = CB.seg("asil-s", update), E = CB.seg("asil-e", update), C = CB.seg("asil-c", update);
+    $("asil-presets").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+      const [s, e, c] = b.dataset.p.split(",");
+      S.set(s, false); E.set(e, false); C.set(c, false); update();
+    }));
+    update();
+  })();
+
+  /* ------------------------------------------------------------ 3. 이중화 */
+  (function redundancy() {
+    let cv, mc = null;
+    const upd = () => { mc = null; stats(); if (cv) cv.redraw(); };
+    const arch = CB.seg("red-arch", upd);
+    const lamR = CB.range("red-lam", (x) => Math.pow(10, x).toExponential(1).replace("e", "e") + " /h", upd);
+    const tR = CB.range("red-t", (x) => CB.fmt(Math.pow(10, x), 2) + " h", upd);
+    const betaR = CB.range("red-beta", (x) => x.toFixed(1) + " %", upd);
+    function pf(a, l, T, beta) {
+      if (a === "single") return -Math.expm1(-l * T);
+      const pi = -Math.expm1(-(1 - beta) * l * T), pc = -Math.expm1(-beta * l * T);
+      const q = a === "1oo2" ? pi * pi : 3 * pi * pi * (1 - pi) + pi * pi * pi;
+      return q + pc - q * pc;
+    }
+    const cur = () => ({ a: arch(), l: Math.pow(10, lamR()), T: Math.pow(10, tR()), beta: betaR() / 100 });
+    function stats() {
+      const c = cur(), p = pf(c.a, c.l, c.T, c.beta), ps = pf("single", c.l, c.T, 0);
+      CB.stat("red-o-p", prob(p)); CB.stat("red-o-single", prob(ps));
+      CB.stat("red-o-gain", c.a === "single" ? "—" : CB.fmt(ps / p, 3) + "<small>배</small>");
+      CB.stat("red-o-mc", mc ? mc.k + "<small>/ " + mc.N.toLocaleString("en-US") + "</small>" : "—");
+    }
+    function runMC() {
+      const c = cur(), N = 200000, n = c.a === "single" ? 1 : c.a === "1oo2" ? 2 : 3;
+      const li = c.a === "single" ? c.l : (1 - c.beta) * c.l, lc = c.a === "single" ? 0 : c.beta * c.l;
+      const ex = (r) => (r > 0 ? -Math.log(1 - Math.random()) / r : Infinity);
+      let k = 0, sample = null;
+      for (let i = 0; i < N; i++) {
+        const t = []; for (let j = 0; j < n; j++) t.push(ex(li));
+        const tc = ex(lc), failed = t.map((x) => x < c.T), nf = failed.filter(Boolean).length;
+        const sys = tc < c.T || (c.a === "single" ? nf >= 1 : nf >= 2);
+        if (sys) { k++; if (!sample || !sample.sys) sample = { failed, cc: tc < c.T, sys: true }; }
+        else if (!sample) sample = { failed, cc: false, sys: false };
+        else if (!sample.sys && nf > sample.failed.filter(Boolean).length) sample = { failed, cc: false, sys: false };
+      }
+      mc = { k, N, sample };
+      stats(); cv.redraw();
+    }
+    $("red-run").addEventListener("click", runMC);
+    function blocks(ctx, b, c, P) {
+      const n = c.a === "single" ? 1 : c.a === "1oo2" ? 2 : 3, s = mc && mc.sample;
+      const bw = Math.min(110, b.w * 0.34), bhh = Math.min(34, (b.h - 30) / 3 - 8), cx = b.x + b.w * 0.36, x0 = b.x + 14, xv = b.x + b.w * 0.72, cy = b.y + b.h / 2;
+      const ys = []; for (let i = 0; i < n; i++) ys.push(cy + (i - (n - 1) / 2) * (bhh + 12));
+      ctx.lineWidth = 1.5; ctx.font = f(12); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      const vw = Math.min(70, b.w * 0.2), sysFail = s && s.sys;
+      ys.forEach((y, i) => {
+        const dead = s && (s.failed[i] || s.cc);
+        ctx.strokeStyle = P.dim; ctx.beginPath(); ctx.moveTo(x0, cy); ctx.lineTo(x0 + 12, cy); ctx.lineTo(x0 + 12, y); ctx.lineTo(cx - bw / 2, y); ctx.stroke();
+        if (n > 1) { ctx.beginPath(); ctx.moveTo(cx + bw / 2, y); ctx.lineTo(xv - vw / 2 - 10, y); ctx.lineTo(xv - vw / 2 - 10, cy); ctx.lineTo(xv - vw / 2, cy); ctx.stroke(); }
+        ctx.fillStyle = dead ? P.bad : P.surface; ctx.globalAlpha = dead ? 0.35 : 1; ctx.fillRect(cx - bw / 2, y - bhh / 2, bw, bhh); ctx.globalAlpha = 1;
+        ctx.strokeStyle = dead ? P.bad : P.accent2; ctx.strokeRect(cx - bw / 2, y - bhh / 2, bw, bhh);
+        ctx.fillStyle = P.text; ctx.fillText("채널 " + "ABC"[i] + (dead ? " ✕" : ""), cx, y);
+      });
+      const xo = n > 1 ? xv + vw / 2 : cx + bw / 2;
+      if (n > 1) {
+        ctx.fillStyle = P.surface; ctx.fillRect(xv - vw / 2, cy - bhh / 2, vw, bhh); ctx.strokeStyle = P.accent; ctx.strokeRect(xv - vw / 2, cy - bhh / 2, vw, bhh);
+        ctx.fillStyle = P.text; ctx.fillText(n === 2 ? "전환" : "다수결", xv, cy);
+      }
+      CB.arrow(ctx, xo, cy, b.x + b.w - 8, cy, s ? (sysFail ? P.bad : P.ok) : P.dim, 2);
+      if (n > 1 && c.beta > 0) {
+        ctx.setLineDash([4, 4]); ctx.strokeStyle = s && s.cc ? P.bad : P.warn;
+        ctx.strokeRect(cx - bw / 2 - 7, ys[0] - bhh / 2 - 7, bw + 14, ys[n - 1] - ys[0] + bhh + 14); ctx.setLineDash([]);
+        ctx.fillStyle = s && s.cc ? P.bad : P.warn; ctx.textBaseline = "bottom"; ctx.fillText("공통 원인 β", cx, ys[0] - bhh / 2 - 9);
+      }
+      ctx.textBaseline = "top"; ctx.fillStyle = s ? (sysFail ? P.bad : P.ok) : P.dim; ctx.textAlign = "center";
+      ctx.fillText(s ? (sysFail ? "표본: 기능 상실" : "표본: 기능 유지") : c.a === "single" ? "고장 = 기능 상실" : n === 2 ? "둘 다 죽어야 상실" : "둘 이상 죽으면 상실", b.x + b.w / 2, b.y + b.h - 18);
+    }
+    cv = CB.canvas("#cv-red", (ctx, w, h) => {
+      const P = CB.palette(), c = cur(), wide = w >= 560;
+      const bb = wide ? { x: 0, y: 0, w: w * 0.42, h } : { x: 0, y: 0, w, h: h * 0.4 };
+      const cb = wide ? { x: w * 0.42 + 56, y: 16, w: w * 0.58 - 56 - 16, h: h - 16 - 46 } : { x: 56, y: h * 0.4 + 10, w: w - 56 - 16, h: h * 0.6 - 10 - 46 };
+      blocks(ctx, bb, c, P);
+      const mk = (a) => { const d = []; for (let e = 0; e <= 4.001; e += 0.1) d.push([Math.pow(10, e), pf(a, c.l, Math.pow(10, e), c.beta)]); return d; };
+      const col = { single: P.dim, "1oo2": P.accent, "2oo3": P.accent2 };
+      CB.chart(ctx, cb, {
+        x: [1, 1e4], y: [1e-12, 1], logX: true, logY: true, xLabel: "임무 시간 T (h)", yLabel: wide ? "" : "",
+        yFmt: (v) => v.toExponential(0).replace("e", "e"), yTicks: [1e-12, 1e-9, 1e-6, 1e-3, 1],
+        series: ["single", "1oo2", "2oo3"].map((a) => ({ data: mk(a), color: col[a], width: a === c.a ? 3 : 1.4, dash: a === c.a ? [] : [5, 4] })),
+        vlines: [{ x: c.T }], points: [{ x: c.T, y: Math.max(1e-12, pf(c.a, c.l, c.T, c.beta)), color: col[c.a], r: 5 }],
+      });
+      ctx.font = f(11); ctx.textBaseline = "top"; ctx.textAlign = "left";
+      [["단일", P.dim], ["1oo2", P.accent], ["2oo3", P.accent2]].forEach(([n, cl], i) => { ctx.fillStyle = cl; ctx.fillText(n, cb.x + 8 + i * 44, cb.y + 4); });
+    }, { aspect: 0.5, minHeight: 380, maxHeight: 420 });
+    stats();
+  })();
+
+  /* ------------------------------------------------------------ 6. 롱테일 발견 */
+  (function longtail() {
+    const N = 2000, COLS = 50, ROWS = 40, NMAX = 1e7;
+    let p, cdf, found, uniq, total, rem, hist, theory, running = false, cv;
+    const sR = CB.range("lt-s", (x) => x.toFixed(2), () => { reset(); });
+    function reset() {
+      const s = sR(); p = new Float64Array(N); cdf = new Float64Array(N);
+      let z = 0; for (let i = 0; i < N; i++) { p[i] = 1 / Math.pow(i + 1, s); z += p[i]; }
+      let acc = 0; for (let i = 0; i < N; i++) { p[i] /= z; acc += p[i]; cdf[i] = acc; }
+      found = new Uint8Array(N); uniq = 0; total = 0; rem = 1; hist = [[1, 0]]; running = false;
+      theory = []; for (let e = 0; e <= 7.001; e += 0.125) { const n = Math.pow(10, e); let u = 0; for (let i = 0; i < N; i++) u -= Math.expm1(-n * p[i]); theory.push([n, u]); }
+      $("lt-run").textContent = "주행 시작";
+      stats(); if (cv) cv.redraw();
+    }
+    function draw1() {
+      const u = Math.random(); let lo = 0, hi = N - 1;
+      while (lo < hi) { const m = (lo + hi) >> 1; if (cdf[m] < u) lo = m + 1; else hi = m; }
+      if (!found[lo]) { found[lo] = 1; uniq++; rem -= p[lo]; }
+    }
+    function stats() {
+      CB.stat("lt-o-n", kmK(total) + "<small>km</small>");
+      CB.stat("lt-o-u", uniq + "<small>/ " + N + "</small>");
+      CB.stat("lt-o-rem", prob(Math.max(0, rem)));
+      CB.stat("lt-o-next", rem > 1e-12 ? kmK(1 / rem) + "<small>km</small>" : "—");
+    }
+    $("lt-run").addEventListener("click", () => {
+      if (total >= NMAX) reset();
+      running = !running; $("lt-run").textContent = running ? "일시 정지" : "계속 주행";
+    });
+    $("lt-reset").addEventListener("click", reset);
+    cv = CB.canvas("#cv-lt", (ctx, w, h) => {
+      if (!p) return;
+      const P = CB.palette(), wide = w >= 560;
+      const gb = wide ? { x: 12, y: 30, w: w * 0.4 - 20, h: h - 46 } : { x: 12, y: 28, w: w - 24, h: h * 0.4 - 30 };
+      const cb = wide ? { x: w * 0.4 + 58, y: 18, w: w * 0.6 - 58 - 16, h: h - 18 - 46 } : { x: 58, y: h * 0.4 + 16, w: w - 58 - 16, h: h * 0.6 - 16 - 46 };
+      const cols = wide ? COLS : 80, rows = Math.ceil(N / cols);
+      const cw = gb.w / cols, ch = Math.min(gb.h / rows, cw * 1.4);
+      ctx.font = f(11); ctx.fillStyle = P.dim; ctx.textAlign = "left"; ctx.textBaseline = "bottom";
+      ctx.fillText("흔한 상황 ← 순위 → 드문 상황", gb.x, gb.y - 6);
+      for (let i = 0; i < N; i++) {
+        ctx.fillStyle = found[i] ? P.accent : P.border;
+        ctx.fillRect(gb.x + (i % cols) * cw, gb.y + Math.floor(i / cols) * ch, Math.max(1, cw - 1), Math.max(1, ch - 1));
+      }
+      CB.chart(ctx, cb, {
+        x: [1, NMAX], y: [0, N], logX: true, xLabel: "주행 거리 (km)", xFmt: kmK, yTicks: [0, 500, 1000, 1500, 2000],
+        series: [{ data: theory, color: P.dim, width: 1.4, dash: [5, 4] }, { data: hist, color: P.accent, width: 2.5 }],
+        points: total > 0 ? [{ x: Math.max(1, total), y: uniq, color: P.accent, r: 4 }] : [],
+      });
+      ctx.font = f(11); ctx.fillStyle = P.dim; ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText("발견한 시나리오 종류", cb.x + 6, cb.y + 4);
+    }, { aspect: 0.5, minHeight: 400, maxHeight: 430 });
+    CB.loop(cv.canvas, () => {
+      if (!running) return;
+      const batch = Math.min(NMAX - total, CB.clamp(Math.ceil(total * 0.04), 4, 250000));
+      for (let i = 0; i < batch; i++) draw1();
+      total += batch; hist.push([total, uniq]);
+      if (total >= NMAX) { running = false; $("lt-run").textContent = "다시 시작"; }
+      stats(); cv.redraw();
+    });
+    reset();
+  })();
+
+  /* ------------------------------------------------------------ 4. RSS */
+  (function rss() {
+    let cv, t = 0, playing = false, tr = null;
+    const upd = () => { t = 0; playing = false; build(); stats(); if (cv) cv.redraw(); };
+    const kmh = (x) => x + " km/h", a2 = (x) => x.toFixed(1) + " m/s²";
+    const vr = CB.range("rss-vr", kmh, upd), vf = CB.range("rss-vf", kmh, upd), gap = CB.range("rss-gap", (x) => x + " m", upd);
+    const rho = CB.range("rss-rho", (x) => x.toFixed(1) + " s", upd), aM = CB.range("rss-a", a2, upd);
+    const bmin = CB.range("rss-bmin", a2, upd), bmax = CB.range("rss-bmax", a2, upd);
+    function at(tt) {
+      const v0 = CB.ms(vr()), f0 = CB.ms(vf()), r = rho(), a = aM(), b1 = bmin(), b2 = bmax();
+      const tf = f0 / b2, xf = gap() + (tt < tf ? f0 * tt - 0.5 * b2 * tt * tt : (f0 * f0) / (2 * b2)), vF = Math.max(0, f0 - b2 * tt);
+      let xr, vR;
+      if (tt < r) { xr = v0 * tt + 0.5 * a * tt * tt; vR = v0 + a * tt; }
+      else { const v1 = v0 + a * r, x1 = v0 * r + 0.5 * a * r * r, ts = v1 / b1, u = Math.min(tt - r, ts); xr = x1 + v1 * u - 0.5 * b1 * u * u; vR = v1 - b1 * u; }
+      return { xr, vR, xf, vF };
+    }
+    function build() {
+      const v0 = CB.ms(vr()), f0 = CB.ms(vf()), r = rho(), a = aM(), v1 = v0 + a * r;
+      const dmin = Math.max(0, v0 * r + 0.5 * a * r * r + (v1 * v1) / (2 * bmin()) - (f0 * f0) / (2 * bmax()));
+      const Tend = Math.max(f0 / bmax(), r + v1 / bmin());
+      const data = []; let tcol = null, gmin = Infinity;
+      for (let tt = 0; tt <= Tend + 1e-9; tt += 0.02) {
+        const s = at(tt), g = s.xf - s.xr;
+        if (g <= 0) { tcol = tt; data.push([tt, 0]); break; }
+        gmin = Math.min(gmin, g); data.push([tt, g]);
+      }
+      const e = at(tcol != null ? tcol : Tend);
+      tr = { dmin, Tend: tcol != null ? tcol : Tend, data, tcol, gmin, impact: tcol != null ? e.vR - e.vF : 0, endGap: e.xf - e.xr, xmax: Math.max(e.xf, e.xr, gap()) + 14 };
+    }
+    function stats() {
+      const g = gap();
+      CB.stat("rss-o-d", tr.dmin.toFixed(1) + "<small>m</small>");
+      CB.stat("rss-o-gap", g + "<small>m · " + (CB.ms(vr()) > 0 ? (g / CB.ms(vr())).toFixed(1) : "—") + " s</small>");
+      CB.stat("rss-o-end", tr.tcol != null ? "충돌<small>상대 " + CB.kmh(tr.impact).toFixed(0) + " km/h</small>" : tr.endGap.toFixed(1) + "<small>m</small>");
+      CB.stat("rss-o-res", g >= tr.dmin ? "안전" : tr.tcol != null ? "위험" : "RSS 미달");
+    }
+    $("rss-play").addEventListener("click", () => { t = 0; playing = true; });
+    $("rss-reset").addEventListener("click", () => { t = 0; playing = false; cv.redraw(); });
+    cv = CB.canvas("#cv-rss", (ctx, w, h) => {
+      if (!tr) return;
+      const P = CB.palette(), s = at(t), xmin = -9, sc = (w - 16) / (tr.xmax - xmin), X = (x) => 8 + (x - xmin) * sc;
+      const rh = Math.min(64, h * 0.24), ry = 30, cyy = ry + rh / 2, carL = Math.max(18, 4.5 * sc);
+      ctx.fillStyle = P.surface; ctx.fillRect(0, ry, w, rh);
+      ctx.strokeStyle = P.faint; ctx.setLineDash([10, 10]); ctx.beginPath(); ctx.moveTo(0, ry + 4); ctx.lineTo(w, ry + 4); ctx.moveTo(0, ry + rh - 4); ctx.lineTo(w, ry + rh - 4); ctx.stroke(); ctx.setLineDash([]);
+      if (t === 0) {
+        ctx.globalAlpha = 0.28; ctx.fillStyle = gap() >= tr.dmin ? P.ok : P.bad;
+        ctx.fillRect(X(gap() - tr.dmin), ry + 8, X(gap()) - X(gap() - tr.dmin), rh - 16); ctx.globalAlpha = 1;
+        ctx.font = f(11); ctx.fillStyle = P.dim; ctx.textAlign = "right"; ctx.textBaseline = "bottom";
+        ctx.fillText("RSS 최소 거리 " + tr.dmin.toFixed(0) + " m", Math.max(110, X(gap()) - 2), ry - 3);
+      }
+      const hit = tr.tcol != null && t >= tr.tcol;
+      CB.carTop(ctx, X(s.xr) - carL / 2, cyy, 0, { len: carL, color: P.accent, brake: t > rho() });
+      CB.carTop(ctx, X(s.xf) + carL / 2, cyy, 0, { len: carL, color: hit ? P.bad : P.dim, brake: t > 0 });
+      ctx.font = fm(11); ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillStyle = P.text;
+      ctx.fillText(CB.kmh(s.vR).toFixed(0) + " km/h", CB.clamp(X(s.xr) - carL / 2, 34, w - 34), ry + rh + 4);
+      ctx.fillText(CB.kmh(s.vF).toFixed(0) + " km/h", CB.clamp(X(s.xf) + carL / 2, 34, w - 34), ry + rh + 18);
+      if (s.xf - s.xr > 0.5 && t > 0) {
+        ctx.strokeStyle = P.text; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(s.xr), ry + 10); ctx.lineTo(X(s.xf), ry + 10); ctx.stroke();
+        ctx.textBaseline = "bottom"; ctx.fillText((s.xf - s.xr).toFixed(1) + " m", CB.clamp((X(s.xr) + X(s.xf)) / 2, 30, w - 30), ry - 3);
+      }
+      const cb = { x: 56, y: ry + rh + 48, w: w - 56 - 16, h: h - (ry + rh + 48) - 46 };
+      CB.chart(ctx, cb, {
+        x: [0, Math.max(1, tr.Tend * 1.05)], y: [0, Math.max(10, gap(), tr.endGap) * 1.1], xLabel: "시간 (s)", yLabel: "간격 (m)",
+        series: [{ data: tr.data, color: P.accent, width: 2.5 }],
+        vlines: [{ x: rho(), label: "ρ" }], points: [{ x: Math.min(t, tr.Tend), y: Math.max(0, s.xf - s.xr), color: hit ? P.bad : P.accent, r: 5 }],
+      });
+    }, { aspect: 0.52, minHeight: 320, maxHeight: 400 });
+    CB.loop(cv.canvas, (dt) => {
+      if (!playing) return;
+      t = Math.min(tr.Tend, t + dt);
+      if (t >= tr.Tend) playing = false;
+      cv.redraw();
+    });
+    build(); stats(); cv.redraw();
+  })();
+
+  /* ------------------------------------------------------------ 5. 필요 주행 거리 */
+  (function miles() {
+    let cv;
+    const upd = () => { stats(); if (cv) cv.redraw(); };
+    const rateR = CB.range("mil-rate", (x) => CB.fmt(Math.pow(10, x), 2) + " 건/억 km", upd);
+    const conf = CB.seg("mil-conf", upd), kR = CB.range("mil-k", (x) => x + " 건", upd);
+    const fleetR = CB.range("mil-fleet", (x) => Math.round(Math.pow(10, x)).toLocaleString("en-US") + " 대", upd);
+    const dayR = CB.range("mil-day", (x) => x + " km", upd);
+    function cdf(k, m) { let term = Math.exp(-m), s = term; for (let i = 1; i <= k; i++) { term *= m / i; s += term; } return s; }
+    function calc() {
+      const lam = Math.pow(10, rateR()) / 1e8, C = Number(conf()), k = kR();
+      let lo = 0, hi = 60;
+      for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (cdf(k, m) > 1 - C) lo = m; else hi = m; }
+      const m = (lo + hi) / 2, n = m / lam, perDay = Math.round(Math.pow(10, fleetR())) * dayR();
+      return { lam, C, k, m, n, days: n / perDay };
+    }
+    function stats() {
+      const c = calc(), yr = c.days / 365;
+      CB.stat("mil-o-n", kmK(c.n) + "<small>km</small>");
+      CB.stat("mil-o-ratio", c.m.toFixed(2) + "<small>배</small>");
+      CB.stat("mil-o-yr", yr >= 1 ? CB.fmt(yr, 3) + "<small>년</small>" : CB.fmt(c.days, 3) + "<small>일</small>");
+      CB.stat("mil-o-earth", kmK(c.n / 40075) + "<small>바퀴</small>");
+    }
+    cv = CB.canvas("#cv-mil", (ctx, w, h) => {
+      const P = CB.palette(), c = calc(), x0 = c.n / 300, x1 = c.n * 6, data = [];
+      for (let e = Math.log10(x0); e <= Math.log10(x1) + 1e-9; e += 0.02) { const x = Math.pow(10, e); data.push([x, cdf(c.k, c.lam * x)]); }
+      const ch = CB.chart(ctx, null, {
+        x: [x0, x1], y: [0, 1], logX: true, xLabel: "주행 거리 (km)", yLabel: "통과 확률", xFmt: kmK,
+        series: [{ data, color: P.accent, width: 2.5 }],
+        hlines: [{ y: 1 - c.C, color: P.bad, label: "1 − C = " + (1 - c.C).toFixed(2) }],
+        vlines: [{ x: c.n, color: P.accent2 }, { x: 1 / c.lam, color: P.faint }],
+        points: [{ x: c.n, y: 1 - c.C, color: P.accent2, r: 5 }],
+      });
+      ctx.font = f(11); ctx.textBaseline = "top";
+      ctx.fillStyle = P.accent2; ctx.textAlign = "left"; ctx.fillText("필요 거리", Math.min(ch.X(c.n) + 5, w - 60), ch.box.y + 4);
+      ctx.fillStyle = P.dim; ctx.textAlign = "right"; ctx.fillText("평균 사고 간격", ch.X(1 / c.lam) - 5, ch.box.y + 22);
+    }, { aspect: 0.56, minHeight: 280, maxHeight: 380 });
+    stats();
+  })();
+
+  /* ------------------------------------------------------------ 7. V2X 교차로 */
+  (function v2x() {
+    const HW = 3.5, LANE = 1.75, X0 = -70, STOP = -HW - 1 - 2.25, AMAX = 8, DT = 0.02;
+    let cv, tr = null, t = 0, playing = false;
+    const upd = () => { t = 0; playing = false; tr = sim(false); stats(true); if (cv) cv.redraw(); };
+    const mode = CB.seg("v2x-mode", upd);
+    const vR = CB.range("v2x-v", (x) => x + " km/h", upd), vcR = CB.range("v2x-vc", (x) => x + " km/h", upd);
+    const sbR = CB.range("v2x-sb", (x) => x + " m", upd), latR = CB.range("v2x-lat", (x) => (x / 1000).toFixed(2) + " s", upd);
+    const lossR = CB.range("v2x-loss", (x) => x + " %", upd);
+    function visible(xe, yo, s) {
+      if (xe >= -s || yo <= s) return true;
+      return LANE + ((yo - LANE) * (-s - xe)) / (LANE - xe) <= s;
+    }
+    function sim(lite) {
+      const v0 = CB.ms(vR()), vc = CB.ms(vcR()), s = HW + sbR(), on = mode() === "on";
+      const tc = (LANE - X0) / v0, yo0 = LANE + vc * tc;
+      let tV2x = Infinity;
+      if (on) for (let k = 0; k < 400; k++) if (Math.random() * 100 >= lossR()) { tV2x = k * 0.1 + latR() / 1000; break; }
+      let xe = X0, ve = v0, yo = yo0, tvis = null, aware = false, tAware = null, dAware = null, via = "", aPeak = 0, hit = false, braking = false;
+      const fr = [];
+      for (let tt = 0; tt < tc + 7; tt += DT) {
+        const vis = visible(xe, yo, s);
+        if (vis && tvis == null) tvis = tt;
+        if (!aware) {
+          const bySensor = tvis != null && tt >= tvis + 0.3, byV2x = tt >= tV2x;
+          if (bySensor || byV2x) { aware = true; tAware = tt; dAware = -HW - xe; via = byV2x && !bySensor ? "V2X" : "센서"; }
+        }
+        let a = 0;
+        const cleared = yo < -HW - 3;
+        if (aware && !cleared && xe < HW) {
+          const d = STOP - xe, need = d > 0.05 ? (ve * ve) / (2 * d) : ve > 0.05 ? AMAX : 0;
+          if (need >= 2 || braking) { braking = true; a = -Math.min(AMAX, need); }
+          if (d <= 0.05 && ve <= 0.05) { a = 0; ve = 0; }
+        } else if (cleared && ve < v0) a = 2;
+        aPeak = Math.max(aPeak, -a);
+        ve = CB.clamp(ve + a * DT, 0, v0); xe += ve * DT; yo -= vc * DT;
+        if (Math.abs(xe - LANE) < 3.15 && Math.abs(yo - LANE) < 3.15) hit = true;
+        if (!lite) fr.push({ xe, ve, yo, vis, aware, br: a < -0.1, v2x: aware && via === "V2X" });
+        if (hit) break;
+      }
+      return { fr, hit, tAware, dAware, via, aPeak, s, T: fr.length * DT };
+    }
+    function stats(withMC) {
+      CB.stat("v2x-o-aware", tr.tAware == null ? "—" : Math.max(0, tr.dAware).toFixed(0) + "<small>m 전 · " + tr.via + "</small>");
+      CB.stat("v2x-o-a", tr.aPeak.toFixed(1) + "<small>m/s² · " + (tr.aPeak / CB.G).toFixed(2) + " g</small>");
+      CB.stat("v2x-o-res", tr.hit ? "충돌" : tr.aPeak > 5 ? "급제동 회피" : "여유 있게 정지");
+      if (withMC) { let k = 0; for (let i = 0; i < 200; i++) if (sim(true).hit) k++; CB.stat("v2x-o-mc", (k / 2).toFixed(0) + "<small>%</small>"); }
+    }
+    $("v2x-play").addEventListener("click", () => { tr = sim(false); stats(false); t = 0; playing = true; });
+    $("v2x-reset").addEventListener("click", () => { t = 0; playing = false; cv.redraw(); });
+    cv = CB.canvas("#cv-v2x", (ctx, w, h) => {
+      if (!tr) return;
+      const P = CB.palette(), sc = Math.min(w / 100, h / 62), ox = w / 2 - (-25) * sc, oy = h / 2 - 14 * sc;
+      const X = (x) => ox + x * sc, Y = (y) => oy + y * sc;
+      const i = Math.min(tr.fr.length - 1, Math.floor(t / DT)), s = tr.fr[i], sb = tr.s;
+      ctx.fillStyle = P.surface;
+      ctx.fillRect(0, Y(-HW), w, 2 * HW * sc); ctx.fillRect(X(-HW), 0, 2 * HW * sc, h);
+      ctx.strokeStyle = P.faint; ctx.setLineDash([8, 8]); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, Y(0)); ctx.lineTo(X(-HW), Y(0)); ctx.moveTo(X(HW), Y(0)); ctx.lineTo(w, Y(0));
+      ctx.moveTo(X(0), 0); ctx.lineTo(X(0), Y(-HW)); ctx.moveTo(X(0), Y(HW)); ctx.lineTo(X(0), h); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = P.text; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X(-HW - 1), Y(0)); ctx.lineTo(X(-HW - 1), Y(HW)); ctx.stroke();
+      ctx.fillStyle = P.border;
+      ctx.fillRect(0, Y(sb), X(-sb), h - Y(sb));
+      ctx.globalAlpha = 0.45; ctx.fillRect(0, 0, X(-sb), Y(-sb)); ctx.fillRect(X(sb), 0, w - X(sb), Y(-sb)); ctx.fillRect(X(sb), Y(sb), w - X(sb), h - Y(sb)); ctx.globalAlpha = 1;
+      ctx.font = f(12); ctx.fillStyle = P.dim; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      if (X(-sb) > 60 && h - Y(sb) > 24) ctx.fillText("건물", X(-sb) / 2, (Y(sb) + h) / 2);
+      const carL = Math.max(14, 4.5 * sc), ex = X(s.xe), ey = Y(LANE), cx = X(LANE), cy = Y(s.yo);
+      ctx.lineWidth = 1.5; ctx.strokeStyle = s.vis ? P.ok : P.bad; ctx.setLineDash(s.vis ? [] : [5, 5]);
+      ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(cx, cy); ctx.stroke(); ctx.setLineDash([]);
+      if (mode() === "on") {
+        ctx.strokeStyle = P.accent2; ctx.lineWidth = 1.2;
+        const ph = (t * 1.5) % 1;
+        for (let k = 0; k < 3; k++) { const r = (k + ph) * 9 * sc; ctx.globalAlpha = Math.max(0, 1 - (k + ph) / 3); ctx.beginPath(); ctx.arc(cx, Math.min(cy, h + 40), r, 0, Math.PI * 2); ctx.stroke(); }
+        ctx.globalAlpha = 1;
+      }
+      CB.carTop(ctx, cx, cy, -Math.PI / 2, { len: carL, color: tr.hit && i === tr.fr.length - 1 ? P.bad : P.dim });
+      CB.carTop(ctx, ex, ey, 0, { len: carL, color: P.accent, brake: s.br });
+      ctx.font = fm(11); ctx.fillStyle = P.text; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+      ctx.fillText(CB.kmh(s.ve).toFixed(0) + " km/h", CB.clamp(ex, 34, w - 34), Y(-HW) - 4);
+      ctx.font = f(12); ctx.textAlign = "left"; ctx.textBaseline = "top";
+      ctx.fillStyle = s.aware ? P.accent : P.dim;
+      ctx.fillText(s.aware ? (s.v2x ? "V2X 메시지로 인지" : "센서로 인지") : s.vis ? "시야 확보, 인지 처리 중" : "시야가 가려짐", 8, 8);
+      if (cy > h) { ctx.fillStyle = P.dim; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; ctx.fillText("↑ 교차 차량 접근 중 (" + ((s.yo - LANE)).toFixed(0) + " m)", CB.clamp(cx, 90, w - 90), h - 6); }
+    }, { aspect: 0.62, minHeight: 240, maxHeight: 470 });
+    CB.loop(cv.canvas, (dt) => {
+      if (!playing) { if (mode() === "on") { t += 0; } return; }
+      t = Math.min(tr.T - DT, t + dt);
+      if (t >= tr.T - DT) playing = false;
+      cv.redraw();
+    });
+    upd();
+  })();
+})();
+</script>
+</body>
+</html>

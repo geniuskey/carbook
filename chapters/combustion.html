@@ -1,0 +1,1268 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>흡기·연료·점화·배기 · CarBook</title>
+<meta name="description" content="공연비와 람다, 연료 분사와 산소 센서 폐루프 제어, 점화 시기와 노킹, 터보차저, BSFC 맵, 삼원 촉매와 배출가스 후처리를 시뮬레이터로 배운다.">
+<link rel="canonical" href="https://carbook.euiyun.com/chapters/combustion.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="CarBook">
+<meta property="og:title" content="흡기·연료·점화·배기 · CarBook">
+<meta property="og:description" content="공연비와 람다, 연료 분사와 산소 센서 폐루프 제어, 점화 시기와 노킹, 터보차저, BSFC 맵, 삼원 촉매와 배출가스 후처리를 시뮬레이터로 배운다.">
+<meta property="og:url" content="https://carbook.euiyun.com/chapters/combustion.html">
+<meta property="og:image" content="https://carbook.euiyun.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TechArticle","headline":"흡기·연료·점화·배기","name":"흡기·연료·점화·배기 · CarBook","url":"https://carbook.euiyun.com/chapters/combustion.html","mainEntityOfPage":"https://carbook.euiyun.com/chapters/combustion.html","inLanguage":"ko","isAccessibleForFree":true,"learningResourceType":"interactive textbook chapter","position":4,"image":"https://carbook.euiyun.com/og.png","dateModified":"2026-10-02","isPartOf":{"@type":"Book","@id":"https://carbook.euiyun.com/#book","name":"CarBook — 인터랙티브 자동차 교과서","url":"https://carbook.euiyun.com/"},"publisher":{"@type":"Organization","name":"CarBook","url":"https://carbook.euiyun.com/"},"description":"공연비와 람다, 연료 분사와 산소 센서 폐루프 제어, 점화 시기와 노킹, 터보차저, BSFC 맵, 삼원 촉매와 배출가스 후처리를 시뮬레이터로 배운다."},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"CarBook","item":"https://carbook.euiyun.com/"},{"@type":"ListItem","position":2,"name":"04 흡기·연료·점화·배기","item":"https://carbook.euiyun.com/chapters/combustion.html"}]}]}</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="../css/style.css">
+<script src="../js/common.js"></script>
+<style>
+  .fig-lg svg .t, .fig-lg svg .t-acc { font-size: 15px; }
+  .fig-lg svg .t-dim { font-size: 13.5px; }
+  .fig-lg svg .t-mono { font-size: 12.5px; }
+  .legend i.sw { width: 12px; height: 12px; border-radius: 3px; }
+  #cv-bs { cursor: crosshair; }
+</style>
+</head>
+<body data-chapter="combustion">
+<main class="chapter">
+  <header class="chapter-hero">
+    <div class="eyebrow">Chapter 04</div>
+    <h1>흡기·연료·점화·배기</h1>
+    <p class="lead"><a href="engine.html">3장</a>에서 실린더 안의 4행정과 크랭크 기구를 보았다. 이 장은 그 실린더를 둘러싼 네 계통을 다룬다. 공기를 얼마나 넣을지(흡기), 연료를 얼마나 언제 뿌릴지(연료), 언제 불을 붙일지(점화), 타고 남은 가스를 어떻게 깨끗하게 내보낼지(배기). 엔진의 출력·연비·배출가스는 이 네 가지를 매 사이클마다 얼마나 정확히 맞추느냐로 정해진다.</p>
+    <ul class="objectives">
+      <li>엔진 출력이 흡입 공기량으로 정해지는 이유를 체적 효율 식으로 설명한다.</li>
+      <li>공연비와 람다(λ)를 정의하고, 농후·희박에 따라 출력·연비·배출물이 어떻게 달라지는지 안다.</li>
+      <li>인젝터 펄스폭을 계산하고, 산소 센서 피드백이 λ=1을 유지하는 원리를 이해한다.</li>
+      <li>점화 진각과 MBT, 노킹과 옥탄가의 관계를 실린더 압력 곡선으로 설명한다.</li>
+      <li>터보차저의 구성과 터보 랙, 다운사이징의 논리를 BSFC 맵으로 설명한다.</li>
+      <li>삼원 촉매, 미립자 필터, EGR, SCR의 역할과 가솔린·디젤 연소의 차이를 안다.</li>
+    </ul>
+  </header>
+
+  <!-- =============================================================== 1 -->
+  <section id="air">
+    <h2>엔진은 공기 펌프다</h2>
+    <p>연료는 탱크에 얼마든지 있다. 부족한 것은 늘 공기다. 가솔린 1 g을 완전히 태우려면 공기 약 14.7 g이 필요하고, 부피로 따지면 연료 1 L에 공기 약 9,000 L가 든다. 그래서 엔진이 낼 수 있는 출력은 <b>1초에 실린더로 빨아들일 수 있는 공기의 질량</b>으로 정해진다. 가속 페달은 연료 밸브가 아니라 공기 밸브다. 운전자가 공기량을 정하면 엔진 제어기(ECU)가 그에 맞는 연료를 계산해 넣는다.</p>
+    <p>4행정 엔진은 크랭크축 2회전에 한 번 배기량 \(V_d\)만큼의 부피를 들이마신다. 실제로 들어온 공기 질량이 "흡기관 밀도의 공기가 배기량을 꽉 채웠을 때"의 몇 배인지를 <span class="term">체적 효율</span><span class="en">(Volumetric Efficiency)</span> \(\eta_v\)라 한다.</p>
+    <div class="formula">$$\dot m_{a} = \eta_v\,\rho_{i}\,V_d\,\frac{N}{2},\qquad \rho_i = \frac{p_{i}}{R\,T_{i}}$$
+      <div class="where">\(\dot m_a\): 공기 질량 유량(kg/s), \(\rho_i\): 흡기 매니폴드 안 공기 밀도, \(p_i, T_i\): 매니폴드 절대 압력과 온도, \(R\) = 287 J/(kg·K), \(N\): 회전수(rev/s). 자연흡기 엔진의 \(\eta_v\)는 대표적으로 약 0.8~0.95이고, 밸브 타이밍과 흡기 관성 효과가 맞는 회전수에서 가장 높다.</div>
+    </div>
+    <p>이 식에서 출력을 키우는 방법이 전부 나온다. 배기량 \(V_d\)를 키우거나, 회전수 \(N\)을 올리거나, 밸브와 포트를 다듬어 \(\eta_v\)를 올리거나, 과급으로 밀도 \(\rho_i\)를 올린다. 반대로 출력을 <b>줄이는</b> 방법은 가솔린 엔진에서는 사실상 하나, 밀도를 낮추는 것이다. 그 일을 하는 부품이 <span class="term">스로틀 밸브</span><span class="en">(Throttle Valve)</span>다.</p>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 760 250" role="img" aria-label="흡기 경로: 에어 필터에서 실린더까지">
+        <defs><marker id="cb4-ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="var(--accent-2)"/></marker></defs>
+        <rect x="14" y="70" width="90" height="70" rx="8" class="f-surface"/><text x="59" y="100" class="t" text-anchor="middle">에어</text><text x="59" y="120" class="t" text-anchor="middle">필터</text>
+        <rect x="104" y="92" width="110" height="26" class="f-acc2-soft"/>
+        <rect x="136" y="82" width="34" height="46" rx="5" class="f-elev"/><text x="153" y="72" class="t-dim" text-anchor="middle">공기량 센서(MAF)</text>
+        <rect x="214" y="80" width="70" height="50" rx="6" class="f-elev"/>
+        <line x1="232" y1="124" x2="266" y2="86" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="249" cy="105" r="4" fill="var(--text)"/>
+        <text x="249" y="150" class="t-acc" text-anchor="middle">스로틀 밸브</text>
+        <rect x="284" y="92" width="40" height="26" class="f-acc2-soft"/>
+        <rect x="324" y="56" width="150" height="98" rx="14" class="f-acc2-soft"/>
+        <text x="399" y="96" class="t" text-anchor="middle">서지 탱크 /</text><text x="399" y="116" class="t" text-anchor="middle">흡기 매니폴드</text>
+        <rect x="380" y="34" width="38" height="22" rx="4" class="f-elev"/><text x="399" y="26" class="t-dim" text-anchor="middle">압력 센서(MAP)</text>
+        <g class="f-acc2-soft"><rect x="474" y="62" width="110" height="16"/><rect x="474" y="86" width="110" height="16"/><rect x="474" y="110" width="110" height="16"/><rect x="474" y="134" width="110" height="16"/></g>
+        <text x="529" y="52" class="t-dim" text-anchor="middle">흡기 러너</text>
+        <rect x="584" y="48" width="150" height="116" rx="8" class="f-surface"/>
+        <g class="f-elev"><circle cx="622" cy="78" r="13"/><circle cx="622" cy="106" r="13"/><circle cx="622" cy="134" r="13"/><circle cx="662" cy="92" r="13"/></g>
+        <text x="692" y="140" class="t" text-anchor="middle">실린더</text>
+        <line x1="30" y1="105" x2="96" y2="105" stroke="var(--accent-2)" stroke-width="2" marker-end="url(#cb4-ar)" opacity="0"/>
+        <line x1="24" y1="196" x2="244" y2="196" class="s-line"/><line x1="24" y1="190" x2="24" y2="202" class="s-line"/><line x1="244" y1="190" x2="244" y2="202" class="s-line"/>
+        <text x="134" y="218" class="t-dim" text-anchor="middle">스로틀 앞: 대기압 ≈ 100 kPa</text>
+        <line x1="254" y1="196" x2="734" y2="196" class="s-acc"/><line x1="254" y1="190" x2="254" y2="202" class="s-acc"/><line x1="734" y1="190" x2="734" y2="202" class="s-acc"/>
+        <text x="494" y="218" class="t-acc" text-anchor="middle">스로틀 뒤: 공회전 약 30 kPa ~ 전개 약 100 kPa</text>
+        <text x="494" y="240" class="t-dim" text-anchor="middle">과급 엔진은 150~250 kPa까지 올라간다</text>
+      </svg>
+      <figcaption><b>그림 4-1.</b> 흡기 경로. 스로틀이 통로를 좁히면 그 뒤 매니폴드 압력이 대기압보다 낮아지고, 실린더는 묽은(밀도가 낮은) 공기를 같은 부피만큼 들이마신다.</figcaption>
+    </figure>
+
+    <p>스로틀을 조금만 열면 매니폴드 압력<span class="en">(Manifold Absolute Pressure, MAP)</span>이 30~40 kPa까지 떨어진다. 실린더가 빨아들이는 부피는 그대로인데 밀도가 1/3이므로 공기 질량도, 연료도, 토크도 1/3이 된다. 간단하지만 대가가 있다. 피스톤이 대기압보다 낮은 압력에 맞서 내려가며 공기를 빨아들여야 하므로 일을 잃는다. 이 <span class="term">펌핑 손실</span><span class="en">(Pumping Loss)</span>이 가솔린 엔진의 저부하 효율이 나쁜 가장 큰 이유이고, 뒤에서 볼 다운사이징과 하이브리드(<a href="hybrid.html">14장</a>)가 노리는 지점이다.</p>
+    <p>ECU는 공기량을 두 가지 방법으로 안다. 열선으로 질량 유량을 직접 재는 <b>MAF 센서</b>, 또는 매니폴드 압력과 온도를 재서 위 식으로 계산하는 <b>속도–밀도</b><span class="en">(Speed-Density)</span> 방식이다. 둘을 함께 쓰는 엔진도 많다.</p>
+    <div class="callout tip">
+      <strong>계산 예: 2.0 L 엔진이 3,000 rpm 전부하에서 내는 출력</strong>
+      <p>\(\eta_v = 0.9\), 매니폴드 100 kPa·25 °C(\(\rho_i\) = 1.17 kg/m³), \(N\) = 50 rev/s라면 \(\dot m_a = 0.9 \times 1.17 \times 0.002 \times 25 = 0.053\) kg/s, 초당 약 53 g(약 45 L)의 공기다. 연료는 53/14.7 = 3.6 g/s, 연료의 화학 에너지는 3.6 g/s × 43 kJ/g ≈ 155 kW. 제동 열효율을 35 %로 잡으면 축 출력은 약 <b>54 kW</b>, 토크는 54,000/(2π × 50) ≈ <b>172 N·m</b>다. 공기량만 알면 출력이 거의 정해진다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 2 -->
+  <section id="afr">
+    <h2>공연비와 람다</h2>
+    <p>공기와 연료의 질량비를 <span class="term">공연비</span><span class="en">(Air–Fuel Ratio, AFR)</span>라 한다. 연료의 탄소와 수소가 공기 중 산소와 남김없이 반응해 CO₂와 H₂O만 되는 비율이 <span class="term">이론 공연비</span><span class="en">(Stoichiometric AFR)</span>이고, 가솔린은 약 14.7:1이다(에탄올이 10 % 섞인 연료는 약 14.1, 경유는 약 14.5). 연료마다 값이 다르므로 실제 공연비를 이론 공연비로 나눈 <span class="term">공기 과잉률</span> λ(람다)를 쓰면 편하다.</p>
+    <div class="formula">$$\lambda = \frac{(m_a/m_f)_{\text{actual}}}{(m_a/m_f)_{\text{stoich}}},\qquad \lambda \lt 1:\ \text{rich},\quad \lambda = 1:\ \text{stoichiometric},\quad \lambda \gt 1:\ \text{lean}$$
+      <div class="where">λ &lt; 1은 공기에 비해 연료가 많은 농후(Rich), λ &gt; 1은 연료가 적은 희박(Lean) 혼합기다. 가솔린에서 λ = 0.9는 공연비 13.2, λ = 1.1은 16.2에 해당한다.</div>
+    </div>
+    <p>같은 공기량에서 λ를 바꾸면 세 가지가 함께 움직인다.</p>
+    <ul>
+      <li><b>출력</b>은 λ ≈ 0.85~0.9에서 최대다. 산소가 한정되어 있으므로 연료를 조금 남게 넣어야 모든 산소를 쓸 수 있고, 연소 속도도 이 부근에서 가장 빠르다.</li>
+      <li><b>연료 소비율</b>은 균질 혼합기에서 λ ≈ 1.05~1.15에서 최소다. 공기가 남으면 연료가 모두 타고, 연소 온도가 낮아 열손실이 줄고 비열비가 커진다. 더 희박해지면 연소가 느려지고 실화(Misfire)가 생겨 다시 나빠진다.</li>
+      <li><b>배출물</b>: 일산화탄소(CO)와 탄화수소(HC)는 산소가 모자란 농후 쪽에서 급증한다. 질소산화물(NOx)은 고온에서 산소가 남을 때 많이 생기므로 λ ≈ 1.05~1.1에서 최대다.</li>
+    </ul>
+    <p>그런데 현대 가솔린 엔진은 최고 출력점도 최고 연비점도 아닌 <b>λ = 1</b>을 거의 항상 고집한다. 이유는 엔진이 아니라 배기관에 있다. 세 가지 배출물을 한꺼번에 정화하는 삼원 촉매가 λ = 1 주변의 아주 좁은 창에서만 제대로 작동하기 때문이다(자세한 내용은 <a href="#exhaust">배기 후처리</a> 절).</p>
+
+    <div class="sim" id="sim-afr">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>공연비 다이얼: λ가 출력·연비·배출물을 정한다</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view">
+          <div class="legend"><span><i style="background:var(--accent)"></i>토크</span><span><i style="background:var(--accent-2)"></i>연료 소비율(BSFC)</span></div>
+          <canvas id="cv-af1"></canvas>
+          <div class="legend"><span><i style="background:var(--warn)"></i>CO</span><span><i style="background:var(--ok)"></i>HC</span><span><i style="background:var(--bad)"></i>NOx</span><span>(점선: 엔진 출구, 실선: 촉매 뒤)</span></div>
+          <canvas id="cv-af2"></canvas>
+          <canvas id="cv-af3"></canvas>
+        </div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>공기 과잉률 λ <output id="af-lam-out"></output></span><input type="range" id="af-lam" min="0.7" max="1.4" value="1" step="0.002"></label>
+          <div class="ctrl-row"><button class="btn" id="af-b1">최대 출력</button><button class="btn primary" id="af-b2">λ = 1</button><button class="btn" id="af-b3">최고 연비</button></div>
+          <label class="check"><input type="checkbox" id="af-cat" checked> 삼원 촉매 통과 후 배출 표시</label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">공연비 (가솔린)</span><span class="v" id="o-af-afr">—</span></div>
+        <div class="stat"><span class="k">토크 (λ=1 대비)</span><span class="v" id="o-af-tq">—</span></div>
+        <div class="stat"><span class="k">연료 소비율 (λ=1 대비)</span><span class="v" id="o-af-bsfc">—</span></div>
+        <div class="stat"><span class="k">CO</span><span class="v" id="o-af-co">—</span></div>
+        <div class="stat"><span class="k">HC</span><span class="v" id="o-af-hc">—</span></div>
+        <div class="stat"><span class="k">NOx</span><span class="v" id="o-af-nox">—</span></div>
+        <div class="stat"><span class="k">촉매 정화율 (셋 중 최저)</span><span class="v" id="o-af-win">—</span></div>
+      </div>
+      <div class="sim-note">같은 공기량에서 연료량만 바꾼 모델이다. 위: 토크와 연료 소비율. 가운데: 세 배출물(각자의 최댓값으로 정규화). 아래: 삼원 촉매의 성분별 정화율을 λ = 0.95~1.05로 확대한 것, 음영이 세 성분 모두 80 % 이상 정화되는 λ 창. 해볼 것: '최고 연비'를 누르면 연료 소비율은 줄지만 NOx 정화율이 무너져 배기구 NOx가 치솟는다. '최대 출력'에서는 CO와 HC가 빠져나간다. λ를 0.99~1.00 사이에서 조금씩 움직여 창의 폭을 느껴 보자.</div>
+    </div>
+
+    <div class="table-wrap"><table>
+      <thead><tr><th>운전 상황</th><th>목표 λ</th><th>이유</th></tr></thead>
+      <tbody>
+        <tr><td>정속·부분 부하(대부분의 시간)</td><td class="num">1.00</td><td>삼원 촉매 정화 창 유지</td></tr>
+        <tr><td>냉간 시동 직후</td><td class="num">0.8~0.95</td><td>차가운 벽에 붙은 연료가 기화하지 않으므로 여유 있게 분사</td></tr>
+        <tr><td>고회전 전부하</td><td class="num">0.85~0.95</td><td>최대 출력, 남는 연료의 기화열로 배기 온도를 낮춰 부품 보호(최신 규제 엔진은 λ=1 유지 추세)</td></tr>
+        <tr><td>감속(연료 차단)</td><td class="num">∞</td><td>페달을 떼고 엔진이 바퀴에 끌려 돌 때 분사를 멈춘다</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- =============================================================== 3 -->
+  <section id="fuel">
+    <h2>연료 분사와 폐루프 제어</h2>
+    <p>ECU의 연료 계산은 단순하다. 이번 사이클에 한 실린더가 들이마실 공기 질량 \(m_a\)를 구하고, 목표 λ가 되도록 연료 질량 \(m_f\)를 정한 뒤, 그만큼이 나오도록 <span class="term">인젝터</span><span class="en">(Injector)</span>를 여는 시간을 계산한다. 인젝터는 솔레노이드로 바늘을 들어 올리는 밸브이고, 연료 압력이 일정하면 분사량은 열려 있는 시간에 비례한다. 이 시간이 <span class="term">펄스폭</span><span class="en">(Pulse Width)</span>이다.</p>
+    <div class="formula">$$m_f = \frac{m_a}{14.7\,\lambda},\qquad t_{inj} = \frac{m_f}{\dot q_{inj}} + t_{dead},\qquad \dot q_{inj} \propto \sqrt{\Delta p}$$
+      <div class="where">\(\dot q_{inj}\): 인젝터 정적 유량(g/s), \(t_{dead}\): 바늘이 열리고 닫히는 데 걸리는 무효 시간(대표적으로 0.3~1 ms), \(\Delta p\): 연료 압력과 분사되는 곳 압력의 차.</div>
+    </div>
+
+    <h3>포트 분사와 직분사</h3>
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 760 300" role="img" aria-label="포트 분사와 직분사 비교">
+        <g transform="translate(40,20)">
+          <text x="150" y="6" class="t" text-anchor="middle" style="font-weight:700">포트 분사 (PFI)</text>
+          <path d="M70 110 L70 250 L230 250 L230 110" class="f-surface"/>
+          <rect x="74" y="190" width="152" height="40" rx="4" class="f-elev"/><text x="150" y="215" class="t-dim" text-anchor="middle">피스톤</text>
+          <path d="M-10 40 L60 40 Q110 44 118 108 L88 108 Q84 72 60 70 L-10 70 Z" class="f-acc2-soft"/>
+          <path d="M310 40 L240 40 Q190 44 182 108 L212 108 Q216 72 240 70 L310 70 Z" class="f-surface"/>
+          <line x1="103" y1="60" x2="103" y2="118" stroke="var(--text)" stroke-width="3"/><line x1="86" y1="120" x2="120" y2="120" stroke="var(--text)" stroke-width="4" stroke-linecap="round"/>
+          <line x1="197" y1="60" x2="197" y2="106" stroke="var(--text)" stroke-width="3"/><line x1="180" y1="108" x2="214" y2="108" stroke="var(--text)" stroke-width="4" stroke-linecap="round"/>
+          <rect x="143" y="84" width="14" height="26" rx="3" fill="var(--text-dim)"/><text x="150" y="78" class="t-mono" text-anchor="middle">점화 플러그</text>
+          <g transform="translate(44,26) rotate(38)"><rect x="-7" y="-34" width="14" height="34" rx="3" fill="var(--accent)"/></g>
+          <path d="M48 32 L78 62 L96 50 Z" fill="var(--accent)" opacity="0.35"/>
+          <text x="20" y="-4" class="t-acc" text-anchor="middle">인젝터</text>
+          <g fill="var(--accent)" opacity="0.6"><circle cx="110" cy="140" r="3"/><circle cx="130" cy="156" r="3"/><circle cx="160" cy="146" r="3"/><circle cx="186" cy="164" r="3"/><circle cx="144" cy="174" r="3"/><circle cx="96" cy="170" r="3"/><circle cx="204" cy="140" r="3"/></g>
+          <text x="150" y="272" class="t-dim" text-anchor="middle">3~5 bar, 흡기 밸브 앞에 분사</text>
+        </g>
+        <g transform="translate(420,20)">
+          <text x="150" y="6" class="t" text-anchor="middle" style="font-weight:700">직분사 (GDI)</text>
+          <path d="M70 110 L70 250 L230 250 L230 110" class="f-surface"/>
+          <rect x="74" y="190" width="152" height="40" rx="4" class="f-elev"/><text x="150" y="215" class="t-dim" text-anchor="middle">피스톤</text>
+          <path d="M-10 40 L60 40 Q110 44 118 108 L88 108 Q84 72 60 70 L-10 70 Z" class="f-acc2-soft"/>
+          <path d="M310 40 L240 40 Q190 44 182 108 L212 108 Q216 72 240 70 L310 70 Z" class="f-surface"/>
+          <line x1="103" y1="60" x2="103" y2="118" stroke="var(--text)" stroke-width="3"/><line x1="86" y1="120" x2="120" y2="120" stroke="var(--text)" stroke-width="4" stroke-linecap="round"/>
+          <line x1="197" y1="60" x2="197" y2="106" stroke="var(--text)" stroke-width="3"/><line x1="180" y1="108" x2="214" y2="108" stroke="var(--text)" stroke-width="4" stroke-linecap="round"/>
+          <rect x="158" y="84" width="14" height="26" rx="3" fill="var(--text-dim)"/>
+          <rect x="130" y="72" width="14" height="38" rx="3" fill="var(--accent)"/>
+          <path d="M137 110 L96 178 L178 178 Z" fill="var(--accent)" opacity="0.35"/>
+          <text x="137" y="64" class="t-acc" text-anchor="middle">고압 인젝터</text>
+          <text x="150" y="272" class="t-dim" text-anchor="middle">200~350 bar, 실린더 안에 직접 분사</text>
+        </g>
+      </svg>
+      <figcaption><b>그림 4-2.</b> 포트 분사(왼쪽)는 흡기 포트에서 연료와 공기를 미리 섞어 들여보낸다. 직분사(오른쪽)는 공기만 들이마신 뒤 실린더 안에 고압으로 뿌린다.</figcaption>
+    </figure>
+    <p><span class="term">포트 분사</span><span class="en">(Port Fuel Injection, PFI)</span>는 3~5 bar의 낮은 압력으로 흡기 밸브 뒤통수에 연료를 뿌린다. 밸브가 닫혀 있는 동안 뜨거운 밸브 위에서 연료가 기화하고, 밸브가 열리면 공기와 함께 빨려 들어가므로 혼합이 잘되고 구조가 싸다. <span class="term">직분사</span><span class="en">(Gasoline Direct Injection, GDI)</span>는 캠으로 구동하는 고압 펌프로 200~350 bar를 만들어 실린더 안에 직접 뿌린다. 연료가 실린더 안에서 기화하며 열을 빼앗아 혼합기 온도를 낮추므로 공기가 더 많이 들어오고 노킹에 강해진다. 그만큼 압축비나 과급압을 높일 수 있어 터보 엔진과 궁합이 좋다. 대신 섞일 시간이 짧아 미세 입자(PM)가 더 나오고, 흡기 밸브를 연료로 씻어 주지 못해 카본이 쌓이기 쉽다. 두 방식을 모두 달아 상황에 따라 나눠 쓰는 엔진도 있다.</p>
+
+    <div class="sim" id="sim-inj">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>인젝터와 분사량: 공기량 → 연료량 → 펄스폭</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-inj"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>엔진 회전수 <output id="inj-rpm-out"></output></span><input type="range" id="inj-rpm" min="800" max="6500" value="2000" step="100"></label>
+          <label class="ctrl"><span>매니폴드 압력(부하) <output id="inj-map-out"></output></span><input type="range" id="inj-map" min="25" max="200" value="60" step="5"></label>
+          <div class="ctrl"><span>분사 방식</span><div class="seg" id="inj-type"><button data-value="pfi" class="on">포트 분사</button><button data-value="gdi">직분사</button></div></div>
+          <label class="ctrl"><span>직분사 레일 압력 <output id="inj-rail-out"></output></span><input type="range" id="inj-rail" min="50" max="350" value="200" step="10"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">공기 (실린더·사이클당)</span><span class="v" id="o-inj-air">—</span></div>
+        <div class="stat"><span class="k">연료 (λ=1)</span><span class="v" id="o-inj-fuel">—</span></div>
+        <div class="stat"><span class="k">펄스폭</span><span class="v" id="o-inj-pw">—</span></div>
+        <div class="stat"><span class="k">분사 구간</span><span class="v" id="o-inj-ca">—</span></div>
+        <div class="stat"><span class="k">인젝터 듀티</span><span class="v" id="o-inj-duty">—</span></div>
+        <div class="stat"><span class="k">연료 유량 (4기통)</span><span class="v" id="o-inj-flow">—</span></div>
+      </div>
+      <div class="sim-note">2.0 L 4기통(실린더당 0.5 L) 모델. 가로축은 한 실린더의 크랭크각 720°(한 사이클)다. 포트 분사 인젝터는 3 g/s(3.5 bar), 직분사 인젝터는 200 bar에서 12 g/s로 가정했다. 해볼 것: 포트 분사에서 회전수와 압력을 끝까지 올리면 한 사이클(6,000 rpm에서 20 ms) 안에 필요한 연료를 다 뿌리지 못한다. 직분사로 바꾸면 펄스폭은 짧지만, 흡기 행정에서 압축 행정 초반까지의 좁은 창 안에 끝내야 한다. 레일 압력을 낮추면 창을 넘긴다.</div>
+    </div>
+
+    <h3>산소 센서와 폐루프 제어</h3>
+    <p>공기량 센서에는 몇 %의 오차가 있고, 인젝터도 개체마다 다르고, 연료 성분도 주유소마다 다르다. 계산만으로는 삼원 촉매가 요구하는 ±0.5 % 수준의 λ 정밀도를 맞출 수 없다. 그래서 ECU는 결과를 직접 본다. 배기 매니폴드에 꽂힌 <span class="term">산소 센서</span><span class="en">(O₂ Sensor, Lambda Sensor)</span>가 배기가스에 남은 산소를 재서 알려 준다.</p>
+    <p>고전적인 <b>협대역</b><span class="en">(Narrowband)</span> 센서는 지르코니아 소자 양쪽의 산소 농도 차로 전압을 만든다. 농후하면 약 0.8~0.9 V, 희박하면 약 0.1 V이고, λ = 1을 지나는 순간 계단처럼 뒤집힌다. 즉 "얼마나"는 모르고 "어느 쪽인지"만 아는 스위치다. ECU는 이 신호로 <span class="term">연료 보정</span><span class="en">(Fuel Trim)</span>을 움직인다. 희박하다고 나오면 분사량을 조금씩 늘리고, 농후로 뒤집히면 조금씩 줄인다. 배기가스가 센서까지 가는 데 시간이 걸리므로 늘 조금 지나친 뒤에야 뒤집히고, 그래서 λ는 1을 중심으로 1초에 한두 번 흔들린다. 이 흔들림은 결함이 아니라 설계다. 촉매 안의 세리아가 희박할 때 산소를 저장했다가 농후할 때 내놓으며 평균을 잡아 준다.</p>
+    <p>빠르게 움직이는 보정을 단기 연료 보정(STFT), 그 평균을 천천히 학습해 저장하는 값을 장기 연료 보정(LTFT)이라 한다. 진단기에서 LTFT가 +10 % 이상이면 "계산보다 연료를 10 % 더 넣어야 λ = 1이 된다"는 뜻이므로, 센서가 못 본 공기가 새어 들어오거나 연료 압력이 낮다고 추정할 수 있다. 최근 엔진은 λ 값을 연속으로 재는 <b>광대역</b><span class="en">(Wideband)</span> 센서를 촉매 앞에, 협대역 센서를 촉매 뒤(촉매 감시용)에 둔다.</p>
+
+    <div class="sim" id="sim-cl">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>폐루프 연료 제어: 스위칭 센서로 λ = 1 붙잡기</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-cl"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>제어 이득 <output id="cl-gain-out"></output></span><input type="range" id="cl-gain" min="0.5" max="20" value="5" step="0.5"></label>
+          <label class="ctrl"><span>배기 수송 지연 <output id="cl-delay-out"></output></span><input type="range" id="cl-delay" min="40" max="400" value="150" step="10"></label>
+          <label class="check"><input type="checkbox" id="cl-loop" checked> 폐루프(산소 센서 피드백)</label>
+          <label class="check"><input type="checkbox" id="cl-ltft"> 장기 보정(LTFT) 학습</label>
+          <button class="btn primary" id="cl-leak">외란: 공기 누설 +8 %</button>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">평균 λ (최근 3초)</span><span class="v" id="o-cl-lam">—</span></div>
+        <div class="stat"><span class="k">λ 진폭</span><span class="v" id="o-cl-amp">—</span></div>
+        <div class="stat"><span class="k">진동 주파수</span><span class="v" id="o-cl-freq">—</span></div>
+        <div class="stat"><span class="k">단기 보정 STFT</span><span class="v" id="o-cl-stft">—</span></div>
+        <div class="stat"><span class="k">장기 보정 LTFT</span><span class="v" id="o-cl-ltft">—</span></div>
+      </div>
+      <div class="sim-note">위: 실린더에 들어간 혼합기의 λ. 가운데: 지연을 거친 뒤 산소 센서가 내는 전압. 아래: 연료 보정량. 제어기는 센서가 '희박'이면 이득(%/s)만큼 분사량을 늘리고 '농후'면 줄이는 적분기다. 해볼 것: 누설 버튼을 누르면 λ가 1.08로 튀었다가 보정이 +8 % 부근으로 올라가 다시 1로 돌아온다. 폐루프를 끄고 누르면 돌아오지 않는다. 이득이나 지연을 키우면 진폭이 커진다(진폭 ≈ 이득 × 지연, 주기 ≈ 4 × 지연). LTFT 학습을 켜면 STFT가 지고 있던 짐이 서서히 LTFT로 옮겨 간다.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 4 -->
+  <section id="ignition">
+    <h2>점화: 언제 불을 붙일 것인가</h2>
+    <p>가솔린 엔진의 혼합기는 스스로 타지 않는다. <span class="term">점화 플러그</span><span class="en">(Spark Plug)</span>의 약 0.7~1.1 mm 틈에서 튀는 불꽃이 화염 핵을 만들고, 그 화염면이 연소실 끝까지 번져 간다. 압축된 혼합기의 틈을 방전시키려면 수만 볼트가 필요한데, 차의 전원은 12 V다. 이 간격을 메우는 것이 <span class="term">점화 코일</span><span class="en">(Ignition Coil)</span>이다.</p>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 760 280" role="img" aria-label="점화 코일 회로와 파형">
+        <g transform="translate(20,20)">
+          <text x="0" y="16" class="t">배터리 12 V</text>
+          <line x1="40" y1="26" x2="40" y2="60" class="s-line"/>
+          <path d="M40 60 q14 8 0 16 q14 8 0 16 q14 8 0 16 q14 8 0 16 q14 8 0 16" fill="none" stroke="var(--accent)" stroke-width="3"/>
+          <text x="-2" y="106" class="t-acc" text-anchor="end" transform="translate(30,0)"></text>
+          <text x="6" y="186" class="t-acc">1차 코일</text><text x="6" y="204" class="t-dim">수백 회, 굵은 선</text>
+          <rect x="62" y="56" width="10" height="90" fill="var(--text-dim)"/><text x="67" y="48" class="t-mono" text-anchor="middle">철심</text>
+          <path d="M94 56 q-10 3 0 6 q-10 3 0 6 q-10 3 0 6 q-10 3 0 6 q-10 3 0 6 q-10 3 0 6 q-10 3 0 6 q-10 3 0 6 q-10 3 0 6 q-10 3 0 6 q-10 3 0 6 q-10 3 0 6 q-10 3 0 6 q-10 3 0 6 q-10 3 0 6" fill="none" stroke="var(--accent-2)" stroke-width="1.6"/>
+          <text x="110" y="186" style="fill:var(--accent-2);font-weight:700" class="t">2차 코일</text><text x="110" y="204" class="t-dim">수만 회, 가는 선</text>
+          <line x1="40" y1="140" x2="40" y2="226" class="s-line"/>
+          <rect x="22" y="226" width="36" height="22" rx="4" class="f-acc-soft"/><text x="66" y="242" class="t-dim">이그나이터(스위치) ← ECU</text>
+          <line x1="94" y1="56" x2="94" y2="36" class="s-line"/><line x1="94" y1="36" x2="250" y2="36" class="s-line"/><line x1="250" y1="36" x2="250" y2="70" class="s-line"/>
+          <rect x="240" y="70" width="20" height="46" rx="3" class="f-surface"/>
+          <line x1="250" y1="116" x2="250" y2="130" stroke="var(--text)" stroke-width="3"/>
+          <path d="M250 140 L262 140 L262 126" fill="none" stroke="var(--text)" stroke-width="3"/>
+          <path d="M246 130 l5 4 l-4 3 l6 4" fill="none" stroke="var(--warn)" stroke-width="2"/>
+          <text x="270" y="98" class="t">점화 플러그</text><text x="270" y="140" class="t-dim">간극 ≈ 1 mm</text>
+        </g>
+        <g transform="translate(410,20)">
+          <line x1="20" y1="100" x2="330" y2="100" class="s-axis"/><line x1="20" y1="10" x2="20" y2="100" class="s-axis"/>
+          <polyline points="20,100 60,100 180,30 180,100 330,100" fill="none" stroke="var(--accent)" stroke-width="2.4"/>
+          <text x="24" y="20" class="t-acc">1차 전류</text><text x="120" y="50" class="t-dim" text-anchor="end">드웰 2~4 ms</text><text x="186" y="30" class="t-mono">6~10 A에서 차단</text>
+          <line x1="20" y1="230" x2="330" y2="230" class="s-axis"/><line x1="20" y1="130" x2="20" y2="230" class="s-axis"/>
+          <polyline points="20,230 180,230 183,136 190,212 250,216 262,230 330,230" fill="none" stroke="var(--accent-2)" stroke-width="2.4"/>
+          <text x="24" y="146" class="t" style="fill:var(--accent-2);font-weight:700">2차 전압</text><text x="192" y="146" class="t-mono">절연 파괴 20~40 kV</text><text x="196" y="204" class="t-dim">방전 지속 ≈ 1 ms</text>
+          <line x1="180" y1="6" x2="180" y2="236" stroke="var(--warn)" stroke-dasharray="3 3"/><text x="180" y="254" class="t-dim" text-anchor="middle">점화 시점</text>
+        </g>
+      </svg>
+      <figcaption><b>그림 4-3.</b> 점화 코일은 변압기이자 에너지 저장 장치다. 1차 코일에 전류를 흘려 자기 에너지를 모았다가(드웰), 스위치로 갑자기 끊으면 2차 코일에 수만 볼트가 유도되어 플러그 간극을 뚫는다. 요즘은 실린더마다 코일을 하나씩 플러그 위에 올린다(Coil-on-Plug).</figcaption>
+    </figure>
+
+    <h3>점화 진각과 MBT</h3>
+    <p>화염이 번지는 데는 시간이 걸린다. 불꽃이 튀고 나서 혼합기의 대부분이 타기까지 크랭크각으로 대략 40~60°가 필요하다. 그래서 불꽃은 피스톤이 상사점(TDC)에 닿기 <b>전에</b> 튀겨야 한다. 상사점 전 몇 도에 점화하는지를 <span class="term">점화 진각</span><span class="en">(Spark Advance)</span>이라 하고 °BTDC로 쓴다.</p>
+    <ul>
+      <li><b>너무 늦으면</b>(지각) 피스톤이 한참 내려간 뒤에 압력이 올라와 팽창을 덜 활용한다. 타다 만 뜨거운 가스가 배기로 빠져나가 배기 온도가 오른다.</li>
+      <li><b>너무 이르면</b>(과진각) 피스톤이 아직 올라오는 동안 압력이 솟아 압축을 거스르는 일이 커지고, 최고 압력과 온도가 높아져 열손실과 노킹 위험이 커진다.</li>
+    </ul>
+    <p>그 사이에 토크가 최대가 되는 진각이 있고, 이를 <span class="term">MBT</span><span class="en">(Minimum advance for Best Torque)</span>라 한다. 경험칙으로 MBT에서는 연료의 절반이 탄 시점(CA50)이 상사점 후 약 8~10°, 최고 압력 위치가 상사점 후 약 13~16°에 온다. 회전수가 오르면 같은 연소 시간이 더 큰 크랭크각을 차지하므로 진각을 키우고, 부하가 낮으면 혼합기가 묽어 연소가 느리므로 역시 진각을 키운다. ECU는 회전수–부하 표(점화 맵)에 이 값을 저장해 둔다.</p>
+
+    <h3>노킹과 옥탄가</h3>
+    <p>화염면이 번져 오는 동안, 아직 타지 않은 구석의 혼합기(말단 가스)는 팽창하는 연소 가스에 눌려 압력과 온도가 계속 오른다. 화염이 도착하기 전에 이 말단 가스가 스스로 발화해 버리면 압력파가 연소실을 수 kHz로 울리며 금속을 두드리는 소리가 난다. 이것이 <span class="term">노킹</span><span class="en">(Knocking)</span>이다. 심하면 피스톤과 헤드 가스켓을 망가뜨린다. 노킹은 압력과 온도가 높을수록, 그 상태가 오래갈수록 잘 생긴다. 즉 압축비가 높을수록, 과급압이 높을수록, 회전수가 낮을수록, 점화가 이를수록 위험하다.</p>
+    <p>연료가 자발화에 버티는 정도를 나타내는 수가 <span class="term">옥탄가</span><span class="en">(Octane Number)</span>다. 이소옥탄을 100, 노말헵탄을 0으로 두고 시험 엔진에서 비교해 정한다. 국내 주유소 표시는 리서치 옥탄가(RON)이고, 보통 휘발유는 91 이상, 고급 휘발유는 94 이상이다. 옥탄가가 높다고 연료의 에너지가 많은 것은 아니다. 다만 노킹 한계가 뒤로 물러나므로 <b>MBT에 더 가까이</b> 점화할 수 있고, 엔진이 그렇게 설계되어 있을 때에만 토크와 효율이 오른다. 엔진 블록의 <b>노크 센서</b>(압전 가속도계)가 노킹 진동을 감지하면 ECU는 그 실린더의 점화를 몇 도 늦추고, 조용해지면 조금씩 다시 당긴다.</p>
+
+    <div class="sim" id="sim-ig">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>점화 시기: 실린더 압력 곡선과 MBT, 노킹 한계</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-ig"></canvas><canvas id="cv-ig2"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>점화 진각 <output id="ig-adv-out"></output></span><input type="range" id="ig-adv" min="-10" max="50" value="8" step="1"></label>
+          <div class="ctrl"><span>연료 옥탄가 (RON)</span><div class="seg" id="ig-oct"><button data-value="91">91</button><button data-value="95" class="on">95</button><button data-value="98">98</button></div></div>
+          <label class="ctrl"><span>매니폴드 압력(부하) <output id="ig-map-out"></output></span><input type="range" id="ig-map" min="40" max="180" value="100" step="5"></label>
+          <div class="ctrl-row"><button class="btn primary" id="ig-mbt">MBT로 맞추기</button><button class="btn" id="ig-ecu">ECU처럼 맞추기</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">최고 압력</span><span class="v" id="o-ig-pmax">—</span></div>
+        <div class="stat"><span class="k">최고 압력 위치</span><span class="v" id="o-ig-th">—</span></div>
+        <div class="stat"><span class="k">CA50 (절반 연소)</span><span class="v" id="o-ig-ca50">—</span></div>
+        <div class="stat"><span class="k">도시 평균 유효 압력</span><span class="v" id="o-ig-imep">—</span></div>
+        <div class="stat"><span class="k">토크 (MBT 대비)</span><span class="v" id="o-ig-rel">—</span></div>
+        <div class="stat"><span class="k">노킹</span><span class="v" id="o-ig-knock">—</span></div>
+      </div>
+      <div class="sim-note">압축비 10.5, 2,000 rpm의 한 실린더를 단일 영역 모델로 계산한다(비베 연소 함수, 벽면 열손실 포함, 노킹은 말단 가스의 자발화 지연 적분으로 판정). 위: 크랭크각에 따른 실린더 압력. 점선은 점화하지 않았을 때의 압축 곡선. 아래: 진각에 따른 토크와 노킹 영역. 해볼 것: 진각을 0°에서 천천히 올리며 최고 압력 위치가 상사점 후 약 14°에 올 때 토크가 최대인지 확인하자. RON 91로 바꾸면 MBT에 닿기 전에 노킹 영역에 들어간다. 압력을 60 kPa로 낮추면 노킹 걱정 없이 MBT를 쓸 수 있고, 160 kPa(과급)로 올리면 진각을 크게 물려야 한다. 'ECU처럼 맞추기'는 MBT와 노킹 한계 중 늦은 쪽을 고른다.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 5 -->
+  <section id="boost">
+    <h2>과급: 공기를 밀어 넣는다</h2>
+    <p>첫 절의 식으로 돌아가자. 배기량과 회전수를 그대로 두고 출력을 올리려면 흡기 밀도 \(\rho_i\)를 올리면 된다. 압축기로 공기를 눌러 넣는 것이 <span class="term">과급</span><span class="en">(Forced Induction)</span>이다. 압축기를 무엇으로 돌리느냐에 따라 둘로 나뉜다.</p>
+    <ul>
+      <li><span class="term">터보차저</span><span class="en">(Turbocharger)</span>: 버려지는 배기가스로 <b>터빈</b>을 돌리고, 같은 축의 <b>컴프레서</b>가 흡기를 압축한다. 축은 대표적으로 분당 10만~25만 회전하며 엔진 오일로 뜬 베어링 위에서 돈다. 배기 에너지를 회수하므로 효율이 좋지만, 배기가 충분히 나와야 돌기 시작한다.</li>
+      <li><span class="term">슈퍼차저</span><span class="en">(Supercharger)</span>: 크랭크축의 벨트로 압축기를 직접 돌린다. 회전수에 비례해 즉시 반응하지만 구동에 엔진 출력의 일부를 쓴다. 최근에는 48 V 모터로 돌리는 전동 컴프레서가 저속 구간을 메우기도 한다.</li>
+    </ul>
+    <p>터보차저 주변에는 꼭 필요한 부품이 셋 더 있다. <span class="term">웨이스트게이트</span><span class="en">(Wastegate)</span>는 터빈을 우회하는 밸브로, 과급압이 목표에 닿으면 열려 배기를 옆으로 흘려보내 축 회전수를 제한한다. <span class="term">인터쿨러</span><span class="en">(Intercooler)</span>는 압축으로 뜨거워진 공기(압력비 2에서 100 °C를 훌쩍 넘는다)를 식혀 밀도를 되찾고 노킹을 막는다. 재순환(블로오프) 밸브는 스로틀이 갑자기 닫힐 때 갈 곳 없는 압축 공기를 컴프레서 앞으로 돌려 서지를 막는다.</p>
+    <div class="formula">$$T_2 = T_1\left[1 + \frac{1}{\eta_c}\left(\Pi_c^{(\gamma-1)/\gamma} - 1\right)\right],\qquad P_c = \dot m_a\,c_p\,(T_2 - T_1),\qquad P_t = \eta_t\,\dot m_e\,c_{p,e}\,T_3\left[1 - \Pi_t^{-(\gamma_e-1)/\gamma_e}\right]$$
+      <div class="where">\(\Pi_c\): 컴프레서 압력비, \(\eta_c\): 컴프레서 효율(약 0.7), \(P_c\): 컴프레서가 먹는 동력, \(P_t\): 터빈이 내는 동력, \(T_3\): 터빈 입구 배기 온도, \(\Pi_t\): 터빈 팽창비. 예: 25 °C 공기를 압력비 2.0으로 압축하면 \(T_2 = 298\,[1 + (2^{0.286}-1)/0.7] \approx 391\) K, 약 118 °C다. 유량 0.1 kg/s에서 컴프레서 동력은 약 9 kW.</div>
+    </div>
+    <p>터빈과 컴프레서, 그리고 엔진은 서로 꼬리를 문다. 과급압이 오르면 엔진을 지나는 공기와 배기가 늘고, 배기가 늘면 터빈 동력이 늘어 과급압이 더 오른다. 이 양성 되먹임은 회전체의 관성 때문에 시간이 걸린다. 저회전에서 가속 페달을 깊게 밟아도 축이 수만 rpm에서 십수만 rpm까지 가속되는 1초 안팎 동안은 자연흡기 수준의 토크밖에 나오지 않는다. 이것이 <span class="term">터보 랙</span><span class="en">(Turbo Lag)</span>이다. 터빈을 작게 만들면 적은 배기로도 빨리 돌아 랙이 줄지만 고회전에서 배기를 막아 배압이 오르고, 크게 만들면 그 반대다. 트윈 스크롤, 가변 지오메트리 터빈(VGT), 크고 작은 터보 두 개를 쓰는 방식은 모두 이 절충을 넓히려는 것이다.</p>
+
+    <div class="sim" id="sim-tb">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>터보차저: 배기 에너지 → 터빈 → 부스트, 그리고 랙</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-tb"></canvas><canvas id="cv-tb2"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>엔진 회전수 <output id="tb-rpm-out"></output></span><input type="range" id="tb-rpm" min="1000" max="6500" value="2500" step="100"></label>
+          <label class="ctrl"><span>스로틀 개도 <output id="tb-thr-out"></output></span><input type="range" id="tb-thr" min="0" max="100" value="15" step="1"></label>
+          <div class="ctrl"><span>터보 크기</span><div class="seg" id="tb-size"><button data-value="small" class="on">소형 터빈</button><button data-value="large">대형 터빈</button></div></div>
+          <label class="ctrl"><span>목표 과급압(게이지) <output id="tb-target-out"></output></span><input type="range" id="tb-target" min="0.4" max="1.4" value="1" step="0.1"></label>
+          <div class="ctrl-row"><button class="btn primary" id="tb-kick">급가속 (전개)</button><button class="btn" id="tb-lift">발 떼기</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">매니폴드 압력(게이지)</span><span class="v" id="o-tb-boost">—</span></div>
+        <div class="stat"><span class="k">터보 회전수</span><span class="v" id="o-tb-nt">—</span></div>
+        <div class="stat"><span class="k">공기 유량</span><span class="v" id="o-tb-air">—</span></div>
+        <div class="stat"><span class="k">웨이스트게이트 개도</span><span class="v" id="o-tb-wg">—</span></div>
+        <div class="stat"><span class="k">현재 토크</span><span class="v" id="o-tb-tq">—</span></div>
+        <div class="stat"><span class="k">자연흡기라면</span><span class="v" id="o-tb-na">—</span></div>
+      </div>
+      <div class="sim-note">2.0 L 엔진과 터보의 동력 균형을 실시간으로 적분한다(터빈 동력 − 컴프레서 동력 = 축의 회전 에너지 변화). 위: 흡기(파랑)·압축 공기(주황)·배기(빨강)의 흐름과 두 휠, 매니폴드 압력 게이지. 아래 왼쪽: 전부하 토크 곡선(자연흡기 대 터보)과 지금의 운전점. 아래 오른쪽: 최근 8초의 압력 기록. 해볼 것: 2,500 rpm, 스로틀 15 %에서 '급가속'을 누르면 토크가 자연흡기 수준으로 먼저 뛰고, 그 뒤 약 1초에 걸쳐 부스트가 따라온다. 대형 터빈으로 바꿔 같은 일을 해 보자. 1,500 rpm에서는 아무리 기다려도 부스트가 차지 않는다. 4,000 rpm 이상에서는 웨이스트게이트가 열려 압력을 목표에 묶어 둔다.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 6 -->
+  <section id="bsfc">
+    <h2>연료 소비율 지도와 다운사이징</h2>
+    <p>엔진의 효율은 하나의 숫자가 아니라 회전수와 토크에 따라 달라지는 지형이다. 그 지형을 그린 것이 <span class="term">BSFC 맵</span>이다. BSFC<span class="en">(Brake Specific Fuel Consumption, 제동 연료 소비율)</span>는 축 출력 1 kWh를 내는 데 쓴 연료의 질량(g)이며, 낮을수록 좋다. 연료의 저위 발열량 \(Q_{LHV}\)를 알면 열효율과 바로 바뀐다.</p>
+    <div class="formula">$$\mathrm{BSFC} = \frac{\dot m_f}{P_b}\ \left[\mathrm{g/kWh}\right],\qquad \eta_b = \frac{P_b}{\dot m_f\,Q_{LHV}} = \frac{3600}{\mathrm{BSFC}\cdot Q_{LHV}\,[\mathrm{MJ/kg}]}$$
+      <div class="where">가솔린 \(Q_{LHV}\) ≈ 43 MJ/kg이면 BSFC 240 g/kWh는 \(\eta_b\) = 3600/(240 × 43) ≈ 35 %. 양산 가솔린 엔진의 최저 BSFC는 대표적으로 약 205~245 g/kWh(효율 35~41 %), 승용 디젤은 약 195~210 g/kWh다.</div>
+    </div>
+    <p>지형의 모양에는 이유가 있다. 마찰과 펌핑으로 잃는 일은 토크와 거의 무관하게 일정량이 나가므로, 토크가 낮을수록 그 손실이 차지하는 비중이 커진다. 그래서 <b>저부하일수록 효율이 급격히 나쁘다</b>. 회전수가 오르면 마찰 손실이 커지고, 아주 낮으면 열손실 시간이 길어진다. 최고 효율의 '섬'은 중저속(대략 2,000~3,000 rpm), 전부하의 70~90 % 부근에 생긴다. 문제는 시속 100 km 정속 주행에 필요한 출력이 15~20 kW 정도(<a href="dynamics.html">2장</a>)여서, 150 kW 엔진은 대부분의 시간을 지도의 맨 아래 구석에서 보낸다는 점이다.</p>
+
+    <div class="sim" id="sim-bs">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>BSFC 맵: 같은 출력, 다른 연료 소비</h3></div>
+      <div class="sim-body">
+        <div class="sim-view">
+          <canvas id="cv-bs" style="touch-action:none"></canvas>
+          <div class="hint">지도 위를 끌어 운전점을 옮긴다</div>
+        </div>
+        <div class="legend" style="padding-bottom:10px"><span>BSFC (g/kWh):</span>
+          <span><i class="sw" style="background:#1a9850"></i>&lt;240</span><span><i class="sw" style="background:#66bd63"></i>~250</span><span><i class="sw" style="background:#a6d96a"></i>~260</span><span><i class="sw" style="background:#d9ef8b"></i>~280</span><span><i class="sw" style="background:#fee08b"></i>~310</span><span><i class="sw" style="background:#fdae61"></i>~350</span><span><i class="sw" style="background:#f46d43"></i>~420</span><span><i class="sw" style="background:#d73027"></i>~550</span><span><i class="sw" style="background:#a50026"></i>550+</span>
+        </div>
+        <div class="sim-controls">
+          <label class="check"><input type="checkbox" id="bs-iso" checked> 등출력선 표시</label>
+          <div class="ctrl-row"><button class="btn" id="bs-cruise">고속도로 정속 (18 kW)</button><button class="btn primary" id="bs-best">같은 출력의 최적점으로</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">운전점</span><span class="v" id="o-bs-op">—</span></div>
+        <div class="stat"><span class="k">출력</span><span class="v" id="o-bs-p">—</span></div>
+        <div class="stat"><span class="k">BSFC</span><span class="v" id="o-bs-bsfc">—</span></div>
+        <div class="stat"><span class="k">제동 열효율</span><span class="v" id="o-bs-eff">—</span></div>
+        <div class="stat"><span class="k">연료 유량</span><span class="v" id="o-bs-fuel">—</span></div>
+        <div class="stat"><span class="k">같은 출력 최적점</span><span class="v" id="o-bs-best">—</span></div>
+        <div class="stat"><span class="k">최적점으로 옮기면</span><span class="v" id="o-bs-save">—</span></div>
+      </div>
+      <div class="sim-note">2.0 L 자연흡기 가솔린 엔진의 해석 모델(도시 효율 − 마찰 − 펌핑 손실)로 그린 지도다. 굵은 선은 전부하 토크 곡선, 굵은 점선은 지금 운전점과 같은 출력을 내는 등출력선(토크 × 회전수 = 일정), 흰 테두리 원은 그 선 위에서 연료를 가장 적게 쓰는 점이다. 해볼 것: '고속도로 정속'을 누르면 3,000 rpm·57 N·m로 18 kW를 낸다. '최적점으로'를 눌러 같은 18 kW를 낮은 회전수·높은 토크로 옮기면 연료가 얼마나 줄어드는가? 변속기가 높은 단을 쓰려는 이유(<a href="transmission.html">5장</a>)이자 하이브리드가 엔진 운전점을 옮기는 이유다.</div>
+    </div>
+
+    <p>같은 출력이라면 낮은 회전수·높은 부하가 유리하다는 사실에서 <span class="term">다운사이징</span><span class="en">(Downsizing)</span>이 나온다. 2.0 L 자연흡기 엔진을 1.4 L 터보로 바꾸면, 정속 주행에 필요한 같은 토크가 작은 엔진에게는 더 높은 부하다. 스로틀을 더 열고 달리므로 펌핑 손실이 줄고, 실린더가 작고 적어 마찰도 준다. 운전점이 지도에서 효율 좋은 쪽으로 올라가는 셈이다. 최대 출력이 필요할 때는 과급으로 밀도를 올려 큰 엔진만큼의 공기를 넣는다. 직분사의 냉각 효과가 과급 엔진의 노킹을 눌러 주므로, 터보와 직분사는 대개 한 묶음으로 쓰인다.</p>
+    <div class="callout warn">
+      <strong>다운사이징의 한계</strong>
+      <p>작은 터보 엔진은 높은 부하에서 노킹 때문에 점화를 늦추고 연료를 농후하게 넣어야 하는 구간이 넓다. 인증 시험보다 가혹하게 달리는 실주행에서는 기대만큼 연비가 나오지 않는 경우가 있었고, 저속 고부하에서 점화 전에 혼합기가 먼저 타는 저속 조기 점화(LSPI)도 문제가 되었다. 실주행 배출 규제가 도입된 뒤로는 배기량을 무리하게 줄이지 않는 '적정 배기량'(Rightsizing)과 밀러 사이클, 가변 압축비 같은 기술이 함께 쓰인다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 7 -->
+  <section id="exhaust">
+    <h2>배기 계통과 후처리</h2>
+    <p>완전 연소의 산물은 CO₂와 H₂O, 그리고 그대로 지나가는 N₂다. 하지만 실제 연소는 수 밀리초 안에 끝나야 하고 벽면은 차갑기 때문에 완전하지 않다. 규제 대상인 유해 배출물은 넷이다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>배출물</th><th>생기는 이유</th><th>문제</th></tr></thead>
+      <tbody>
+        <tr><td>일산화탄소 CO</td><td>산소가 모자라 탄소가 CO₂까지 가지 못함(농후)</td><td>혈액의 산소 운반을 막는 독성</td></tr>
+        <tr><td>탄화수소 HC</td><td>벽면 근처·틈새에서 화염이 꺼져 연료가 타지 않고 남음, 실화</td><td>광화학 스모그, 일부는 발암성</td></tr>
+        <tr><td>질소산화물 NOx</td><td>약 1,800 K 이상의 고온에서 공기 중 N₂와 O₂가 반응</td><td>스모그·산성비·초미세먼지의 원인 물질</td></tr>
+        <tr><td>입자상 물질 PM</td><td>액체 연료가 덜 섞인 채 타면서 생기는 그을음(디젤, 직분사 가솔린)</td><td>호흡기 깊이 침투. 질량(PM)과 개수(PN)로 규제</td></tr>
+      </tbody>
+    </table></div>
+    <p>CO₂는 독성 배출물이 아니지만 연료 소비량에 정확히 비례하는 온실가스이므로 연비 규제의 형태로 따로 관리된다. 유해 배출물의 허용치는 지난 30년 동안 수십 분의 일로 줄었다. 예를 들어 유로 6 승용차 기준은 km당 가솔린 CO 1.0 g, NOx 0.06 g, 디젤 NOx 0.08 g, PM 4.5 mg 수준이다. 엔진 안에서 생기는 양(엔진 출구 배출)만 줄여서는 도달할 수 없는 값이어서, 배기관의 화학 공장이 일의 대부분을 한다.</p>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 760 290" role="img" aria-label="가솔린과 디젤의 배기 후처리 구성">
+        <text x="10" y="24" class="t" style="font-weight:700">가솔린</text>
+        <rect x="10" y="40" width="96" height="60" rx="8" class="f-surface"/><text x="58" y="75" class="t" text-anchor="middle">엔진</text>
+        <rect x="106" y="62" width="60" height="16" class="f-elev"/>
+        <circle cx="136" cy="56" r="7" fill="var(--accent-2)"/><text x="136" y="40" class="t-mono" text-anchor="middle">λ 센서(앞)</text>
+        <rect x="166" y="44" width="150" height="52" rx="22" class="f-acc-soft"/><text x="241" y="66" class="t-acc" text-anchor="middle">삼원 촉매 (TWC)</text><text x="241" y="84" class="t-dim" text-anchor="middle">CO·HC 산화, NOx 환원</text>
+        <rect x="316" y="62" width="60" height="16" class="f-elev"/>
+        <circle cx="346" cy="56" r="7" fill="var(--accent-2)"/><text x="346" y="40" class="t-mono" text-anchor="middle">λ 센서(뒤)</text>
+        <rect x="376" y="44" width="130" height="52" rx="22" class="f-acc2-soft"/><text x="441" y="66" class="t" text-anchor="middle">GPF</text><text x="441" y="84" class="t-dim" text-anchor="middle">입자 포집</text>
+        <rect x="506" y="62" width="70" height="16" class="f-elev"/>
+        <rect x="576" y="46" width="110" height="48" rx="10" class="f-surface"/><text x="631" y="75" class="t" text-anchor="middle">머플러</text>
+        <rect x="686" y="62" width="60" height="16" class="f-elev"/>
+        <path d="M30 100 Q30 122 90 122 L420 122" fill="none" stroke="var(--text-dim)" stroke-width="1.5" stroke-dasharray="5 4" opacity="0"/>
+
+        <text x="10" y="164" class="t" style="font-weight:700">디젤</text>
+        <rect x="10" y="180" width="96" height="60" rx="8" class="f-surface"/><text x="58" y="215" class="t" text-anchor="middle">엔진</text>
+        <path d="M30 180 L30 152 L86 152 L86 180" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 3"/><text x="96" y="156" class="t-dim">EGR: 배기 일부를 흡기로 되돌림</text>
+        <rect x="106" y="202" width="34" height="16" class="f-elev"/>
+        <rect x="140" y="184" width="110" height="52" rx="22" class="f-acc-soft"/><text x="195" y="206" class="t-acc" text-anchor="middle">DOC</text><text x="195" y="224" class="t-dim" text-anchor="middle">CO·HC 산화</text>
+        <rect x="250" y="202" width="24" height="16" class="f-elev"/>
+        <rect x="274" y="184" width="120" height="52" rx="22" class="f-acc2-soft"/><text x="334" y="206" class="t" text-anchor="middle">DPF</text><text x="334" y="224" class="t-dim" text-anchor="middle">그을음 포집·재생</text>
+        <rect x="394" y="202" width="70" height="16" class="f-elev"/>
+        <line x1="430" y1="262" x2="430" y2="220" stroke="var(--accent-2)" stroke-width="2.5"/><path d="M424 226 L430 214 L436 226 Z" fill="var(--accent-2)"/>
+        <text x="430" y="280" class="t" text-anchor="middle" style="fill:var(--accent-2)">요소수 분사</text>
+        <rect x="464" y="184" width="150" height="52" rx="22" class="f-acc-soft"/><text x="539" y="206" class="t-acc" text-anchor="middle">SCR</text><text x="539" y="224" class="t-dim" text-anchor="middle">NH₃로 NOx 환원</text>
+        <rect x="614" y="202" width="132" height="16" class="f-elev"/>
+      </svg>
+      <figcaption><b>그림 4-4.</b> 배기 후처리 구성의 대표적인 예. 가솔린은 λ = 1 운전과 삼원 촉매 하나로 세 성분을 처리하고 직분사 엔진에는 입자 필터(GPF)가 더해진다. 늘 희박하게 타는 디젤은 산화·포집·환원을 각각 다른 장치가 맡는다.</figcaption>
+    </figure>
+
+    <h3>삼원 촉매와 λ 창</h3>
+    <p><span class="term">삼원 촉매</span><span class="en">(Three-Way Catalyst, TWC)</span>는 벌집 모양 세라믹 담체에 백금(Pt)·팔라듐(Pd)·로듐(Rh)을 입힌 것으로, 이름대로 세 가지 반응을 동시에 한다. CO와 HC는 <b>산화</b>시켜 CO₂와 H₂O로, NOx는 <b>환원</b>시켜 N₂로 바꾼다.</p>
+    <div class="formula">$$2\,\mathrm{CO} + \mathrm{O_2} \rightarrow 2\,\mathrm{CO_2},\qquad \mathrm{C_xH_y} + \left(x+\tfrac{y}{4}\right)\mathrm{O_2} \rightarrow x\,\mathrm{CO_2} + \tfrac{y}{2}\,\mathrm{H_2O},\qquad 2\,\mathrm{NO} + 2\,\mathrm{CO} \rightarrow \mathrm{N_2} + 2\,\mathrm{CO_2}$$
+      <div class="where">산화에는 산소가 필요하고, 환원에는 산소를 빼앗아 갈 CO·HC가 필요하다. 산소가 남으면(희박) NOx가 환원되지 않고, 산소가 모자라면(농후) CO·HC가 산화되지 않는다.</div>
+    </div>
+    <p>두 요구가 동시에 만족되는 곳은 산화제와 환원제가 딱 맞게 들어오는 λ = 1 근처, 폭이 약 ±0.5 %인 좁은 창뿐이다. 앞 절의 폐루프 제어가 그토록 λ = 1에 매달리는 이유다. 워시코트에 섞인 세리아(CeO₂)가 산소를 저장·방출하며 순간적인 흔들림을 흡수해 창을 넓혀 준다. ECU는 촉매 앞뒤 λ 센서의 신호를 비교해 이 산소 저장 능력이 남아 있는지, 곧 촉매가 살아 있는지를 진단한다.</p>
+    <p>촉매는 뜨거워야 일한다. 정화율이 50 %에 이르는 온도를 <span class="term">활성화 온도</span><span class="en">(Light-off Temperature)</span>라 하며 대략 250~300 °C다. 냉간 시동 뒤 촉매가 이 온도에 닿기까지 수십 초 동안 나온 배출물이 인증 시험 전체 배출의 대부분을 차지한다. 그래서 촉매를 배기 매니폴드 바로 뒤에 붙이고(근접 장착), 시동 직후에는 일부러 점화를 늦추고 공회전을 높여 뜨거운 배기를 많이 보낸다. 앞의 점화 시뮬레이터에서 본 대로, 늦은 점화는 일이 되지 못한 열을 배기로 보낸다.</p>
+
+    <div class="sim" id="sim-at">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>냉간 시동과 촉매 활성화: 처음 수십 초가 전부다</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-at"></canvas><canvas id="cv-at2"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>시동 후 시간 <output id="at-t-out"></output></span><input type="range" id="at-t" min="0" max="180" value="0" step="0.5"></label>
+          <div class="ctrl"><span>촉매 위치</span><div class="seg" id="at-pos"><button data-value="cc" class="on">근접 장착</button><button data-value="uf">차체 바닥</button></div></div>
+          <label class="check"><input type="checkbox" id="at-heat"> 촉매 가열 전략(점화 지각 + 높은 공회전)</label>
+          <button class="btn primary" id="at-play">냉간 시동</button>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">촉매 온도</span><span class="v" id="o-at-T">—</span></div>
+        <div class="stat"><span class="k">정화율</span><span class="v" id="o-at-eta">—</span></div>
+        <div class="stat"><span class="k">활성화 도달</span><span class="v" id="o-at-lo">—</span></div>
+        <div class="stat"><span class="k">누적 HC (엔진 → 배기구)</span><span class="v" id="o-at-hc">—</span></div>
+        <div class="stat"><span class="k">활성화 전 배출 비중</span><span class="v" id="o-at-share">—</span></div>
+      </div>
+      <div class="sim-note">촉매를 하나의 열용량으로 본 모델이다. 위: 엔진 → 삼원 촉매 → 입자 필터를 지나며 네 성분(CO, HC, NOx, PM)의 막대가 어떻게 줄어드는지. 촉매 색은 온도다. 아래: 촉매 온도·정화율과 누적 HC. 해볼 것: '냉간 시동'을 눌러 180초를 재생하자. 배기구 누적 HC 곡선은 활성화 이후 거의 평평해진다. 촉매를 차체 바닥으로 옮기면 활성화가 얼마나 늦어지고 누적 배출이 몇 배가 되는가? 가열 전략을 켜면?</div>
+    </div>
+
+    <h3>입자 필터, EGR, SCR</h3>
+    <ul>
+      <li><b>입자 필터</b>(가솔린 GPF, 디젤 DPF): 벌집 통로의 입구와 출구를 엇갈려 막아, 배기가 다공성 벽을 통과하며 그을음을 남기게 한다. 쌓인 그을음은 약 600 °C에서 산소와 반응해 타 없어진다(재생). 가솔린은 배기가 뜨거워 연료 차단 구간에서 저절로 재생되지만, 디젤은 배기가 차가워 후분사로 온도를 일부러 올린다. 짧은 시내 주행만 반복하는 디젤차의 DPF가 막히는 이유다.</li>
+      <li><b>EGR</b><span class="en">(Exhaust Gas Recirculation)</span>: 배기가스 일부를 식혀 흡기로 되돌린다. 타지 않는 CO₂와 H₂O가 섞여 열용량이 늘고 산소 농도가 낮아져 화염 온도가 내려가므로 NOx가 크게 준다. 가솔린에서는 같은 토크에 스로틀을 더 열게 되어 펌핑 손실이 줄고 노킹도 억제된다.</li>
+      <li><b>SCR</b><span class="en">(Selective Catalytic Reduction)</span>: 산소가 남아도는 디젤 배기에서는 삼원 촉매로 NOx를 환원할 수 없다. 대신 요소 32.5 % 수용액인 요소수를 배기에 분사한다. 요소가 열분해되어 암모니아가 되고, 촉매 위에서 NOx만 골라 환원한다: \(4\,\mathrm{NO} + 4\,\mathrm{NH_3} + \mathrm{O_2} \rightarrow 4\,\mathrm{N_2} + 6\,\mathrm{H_2O}\). 소모량은 대략 연료의 3~5 %다.</li>
+    </ul>
+  </section>
+
+  <!-- =============================================================== 8 -->
+  <section id="diesel">
+    <h2>디젤 연소: 가솔린과 무엇이 다른가</h2>
+    <p>디젤 엔진에는 점화 플러그도 스로틀도 없다. 공기만 들이마셔 15~18 대 1로 압축하면 온도가 약 550~650 °C까지 오르고, 그 뜨거운 공기 속에 연료를 뿌리면 연료가 스스로 불붙는다. 이것이 <span class="term">압축 착화</span><span class="en">(Compression Ignition)</span>다. 가솔린 엔진에서는 재앙이던 자발화가 디젤에서는 점화 수단이다. 그래서 가솔린은 자발화에 버티는 옥탄가가, 경유는 반대로 잘 발화하는 정도인 세탄가가 품질 지표다.</p>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 760 270" role="img" aria-label="가솔린의 화염 전파와 디젤의 분무 연소 비교">
+        <g transform="translate(60,24)">
+          <text x="140" y="0" class="t" text-anchor="middle" style="font-weight:700">가솔린: 예혼합 화염 전파</text>
+          <path d="M20 40 L20 190 L260 190 L260 40 Z" class="f-acc2-soft"/>
+          <rect x="24" y="150" width="232" height="36" rx="4" class="f-elev"/>
+          <rect x="133" y="22" width="14" height="24" rx="3" fill="var(--text-dim)"/>
+          <path d="M70 44 A70 70 0 0 0 210 44 Z" fill="#ff8a3d" opacity="0.75"/>
+          <path d="M40 44 A100 100 0 0 0 240 44" fill="none" stroke="#ff8a3d" stroke-width="2" stroke-dasharray="5 4"/>
+          <line x1="140" y1="74" x2="140" y2="128" stroke="var(--text)" stroke-width="1.5"/><path d="M135 122 L140 134 L145 122 Z" fill="var(--text)"/>
+          <text x="140" y="92" class="t" text-anchor="middle" dx="46">화염면</text>
+          <text x="52" y="136" class="t-dim" text-anchor="middle">말단 가스</text><text x="228" y="136" class="t-dim" text-anchor="middle">(노킹)</text>
+          <text x="140" y="214" class="t-dim" text-anchor="middle">균질 혼합기 λ = 1, 불꽃 점화</text>
+          <text x="140" y="234" class="t-dim" text-anchor="middle">부하 조절: 스로틀로 공기량</text>
+        </g>
+        <g transform="translate(420,24)">
+          <text x="140" y="0" class="t" text-anchor="middle" style="font-weight:700">디젤: 분무 확산 연소</text>
+          <path d="M20 40 L20 190 L260 190 L260 40 Z" class="f-surface"/>
+          <path d="M24 186 L24 150 L80 150 Q90 176 140 150 Q190 176 200 150 L256 150 L256 186 Z" class="f-elev"/>
+          <rect x="133" y="18" width="14" height="30" rx="3" fill="var(--accent)"/>
+          <path d="M140 48 L60 112 L84 128 Z" fill="var(--accent)" opacity="0.4"/>
+          <path d="M140 48 L220 112 L196 128 Z" fill="var(--accent)" opacity="0.4"/>
+          <path d="M58 108 q-14 14 4 26 q22 6 26 -8" fill="#ff8a3d" opacity="0.8"/>
+          <path d="M222 108 q14 14 -4 26 q-22 6 -26 -8" fill="#ff8a3d" opacity="0.8"/>
+          <text x="140" y="96" class="t-dim" text-anchor="middle">분무</text>
+          <text x="140" y="214" class="t-dim" text-anchor="middle">공기만 압축, 분사와 동시에 연소</text>
+          <text x="140" y="234" class="t-dim" text-anchor="middle">부하 조절: 연료량 (λ ≈ 1.2~6)</text>
+        </g>
+      </svg>
+      <figcaption><b>그림 4-5.</b> 가솔린은 미리 섞인 혼합기 속을 화염면이 번져 간다. 디젤은 분무 가장자리에서 연료와 공기가 섞이는 대로 탄다. 분무 중심은 연료가 과해 그을음이, 바깥의 뜨겁고 산소 많은 곳에서는 NOx가 생긴다.</figcaption>
+    </figure>
+
+    <p>디젤의 부하 조절은 공기가 아니라 <b>연료량</b>으로 한다. 공기는 늘 가득 들이마시고 연료를 적게 뿌리면 약한 폭발, 많이 뿌리면 강한 폭발이다. 스로틀이 없으니 펌핑 손실이 거의 없고, 압축비가 높고, 늘 희박하게 타므로 열효율이 가솔린보다 높다. 대신 연료가 공기와 섞일 시간이 없어 λ가 약 1.2~1.3 아래로 내려가면 그을음(스모크)이 쏟아진다. 공기를 다 쓰지 못하므로 같은 배기량에서 토크가 작고, 그래서 디젤은 사실상 모두 터보를 단다.</p>
+    <p>현대 디젤의 연료 계통은 <span class="term">커먼레일</span><span class="en">(Common Rail)</span>이다. 고압 펌프가 공통 레일에 1,600~2,500 bar의 연료를 쌓아 두고, 솔레노이드나 압전 소자로 여는 인젝터가 한 사이클에 여러 번 나눠 쏜다. 주 분사 직전의 소량 파일럿 분사는 연소를 부드럽게 시작시켜 디젤 특유의 소음을 줄이고, 주 분사 뒤의 후분사는 DPF 재생을 위한 열을 만든다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>항목</th><th>가솔린(불꽃 점화)</th><th>디젤(압축 착화)</th></tr></thead>
+      <tbody>
+        <tr><td>혼합기</td><td>미리 섞은 균질 혼합기, λ ≈ 1</td><td>실린더 안 분무, 전체로는 λ ≈ 1.2~6</td></tr>
+        <tr><td>점화</td><td>점화 플러그의 불꽃</td><td>압축열에 의한 자발화</td></tr>
+        <tr><td>부하 조절</td><td>스로틀로 공기량(양 조절)</td><td>분사량(질 조절), 스로틀 없음</td></tr>
+        <tr><td>압축비</td><td>약 9~13 (노킹이 한계)</td><td>약 15~18</td></tr>
+        <tr><td>분사 압력</td><td>3~5 bar(포트), 200~350 bar(직분사)</td><td>1,600~2,500 bar</td></tr>
+        <tr><td>연료 요구 특성</td><td>옥탄가(자발화 억제)</td><td>세탄가(자발화 촉진)</td></tr>
+        <tr><td>최고 열효율</td><td>약 35~41 %</td><td>약 40~45 %</td></tr>
+        <tr><td>주된 배출 문제</td><td>CO·HC·NOx → 삼원 촉매로 해결</td><td>NOx와 PM의 상충 → EGR, DPF, SCR</td></tr>
+        <tr><td>최고 회전수</td><td>약 6,000~7,000 rpm</td><td>약 4,500~5,000 rpm (연소 시간이 한계)</td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout deep">
+      <strong>NOx–PM 상충</strong>
+      <p>디젤에서 연소 온도를 낮추면(EGR 증가, 분사 지각) NOx는 줄지만 그을음이 덜 산화되어 PM이 늘고, 온도를 올리면 그 반대다. 엔진 안에서는 둘을 동시에 줄일 수 없어, 한쪽은 엔진 설정으로 누르고 다른 쪽은 후처리(DPF 또는 SCR)에 맡긴다. 가솔린이 삼원 촉매 하나로 끝나는 데 비해 디젤 후처리가 크고 비싼 이유다.</p>
+    </div>
+    <p>엔진이 만든 토크는 이제 플라이휠을 지나 변속기로 간다. 엔진이 효율 좋은 좁은 영역에서 일하도록 회전수와 토크를 바꿔 주는 장치가 <a href="transmission.html">5장</a>의 주제다.</p>
+  </section>
+
+  <!-- =============================================================== summary -->
+  <section class="keypoints" id="summary">
+    <h2>핵심 정리</h2>
+    <ol>
+      <li>엔진 출력은 흡입 공기 질량으로 정해진다. \(\dot m_a = \eta_v \rho_i V_d N/2\). 가솔린 엔진은 스로틀로 매니폴드 밀도를 낮춰 출력을 줄이고, 그 대가로 펌핑 손실을 치른다.</li>
+      <li>가솔린의 이론 공연비는 14.7:1(λ = 1)이다. 출력은 λ ≈ 0.9, 연비는 λ ≈ 1.1 부근이 최선이지만, 삼원 촉매 때문에 λ = 1로 운전한다.</li>
+      <li>연료량은 인젝터 펄스폭으로 정한다. 포트 분사는 3~5 bar로 밸브 앞에, 직분사는 200~350 bar로 실린더 안에 뿌리며 냉각 효과로 노킹에 강하다.</li>
+      <li>산소 센서 피드백(폐루프)이 연료 보정을 움직여 λ를 1 주변에서 진동시킨다. 장기 보정값은 공기 누설·연료 계통 이상의 단서다.</li>
+      <li>점화는 상사점 전에 한다. 토크가 최대인 진각이 MBT이며, 이때 최고 압력은 상사점 후 약 14° 부근이다. 말단 가스의 자발화인 노킹이 MBT보다 먼저 오면 점화를 늦춰야 하고, 옥탄가가 높으면 그 한계가 물러난다.</li>
+      <li>터보차저는 배기 에너지로 흡기 밀도를 올린다. 웨이스트게이트가 과급압을 제한하고 인터쿨러가 공기를 식힌다. 회전체 관성 때문에 터보 랙이 생긴다.</li>
+      <li>BSFC 맵에서 효율은 저부하일수록 나쁘다. 같은 출력이면 낮은 회전수·높은 부하가 유리하고, 이것이 다운사이징과 높은 단 기어의 근거다.</li>
+      <li>삼원 촉매는 λ = 1의 좁은 창과 250~300 °C 이상의 온도에서만 CO·HC·NOx를 함께 정화한다. 디젤은 압축 착화·희박 연소로 효율이 높지만 NOx와 PM을 위해 EGR, DPF, SCR이 필요하다.</li>
+    </ol>
+  </section>
+
+  <!-- =============================================================== quiz -->
+  <section class="quiz-sec" id="quiz">
+    <h2>확인 퀴즈</h2>
+    <div class="quiz">
+      <div class="quiz-q"><p>Q1. 가솔린 엔진에서 가속 페달을 반만 밟았을 때 토크가 줄어드는 직접적인 이유는?</p><div class="opts">
+        <button class="opt">인젝터가 연료를 덜 뿌리도록 페달이 직접 조절해서</button>
+        <button class="opt" data-correct>스로틀이 매니폴드 압력을 낮춰 실린더에 들어가는 공기 질량이 줄어서</button>
+        <button class="opt">점화 시기가 늦어져서</button>
+        <button class="opt">압축비가 낮아져서</button>
+      </div><div class="quiz-exp">스로틀이 통로를 좁히면 매니폴드 공기의 밀도가 떨어지고, 같은 부피를 빨아들여도 질량이 줄어든다. ECU는 그 공기량에 맞춰 연료를 줄일 뿐이다.</div></div>
+
+      <div class="quiz-q"><p>Q2. 한 실린더가 한 사이클에 공기 400 mg을 들이마셨다. λ = 1이 되려면 가솔린을 얼마나 분사해야 하고, 유량 3 g/s인 인젝터의 유효 개방 시간은?</p><div class="opts">
+        <button class="opt">약 14.7 mg, 약 4.9 ms</button>
+        <button class="opt" data-correct>약 27 mg, 약 9 ms</button>
+        <button class="opt">약 40 mg, 약 13 ms</button>
+        <button class="opt">약 27 mg, 약 0.9 ms</button>
+      </div><div class="quiz-exp">400 / 14.7 ≈ 27.2 mg. 27.2 mg ÷ 3 g/s ≈ 9.1 ms(여기에 무효 시간이 더해진다). 6,000 rpm에서 한 사이클이 20 ms이므로 듀티는 약 45 %다.</div></div>
+
+      <div class="quiz-q"><p>Q3. 삼원 촉매를 쓰는 엔진이 연비가 가장 좋은 λ ≈ 1.1이 아니라 λ = 1로 운전하는 이유는?</p><div class="opts">
+        <button class="opt">λ = 1에서 출력이 가장 커서</button>
+        <button class="opt">희박하면 CO가 급증해서</button>
+        <button class="opt" data-correct>희박하면 배기에 산소가 남아 촉매가 NOx를 환원하지 못해서</button>
+        <button class="opt">희박하면 산소 센서가 고장 나서</button>
+      </div><div class="quiz-exp">NOx 환원에는 산소를 빼앗아 갈 CO·HC가 필요한데, 산소가 남으면 이들이 산소와 먼저 반응해 버린다. 게다가 엔진 출구 NOx 자체도 λ ≈ 1.05~1.1에서 최대다.</div></div>
+
+      <div class="quiz-q"><p>Q4. 점화 진각을 MBT보다 10° 늦췄다. 일어나는 일로 옳은 것은?</p><div class="opts">
+        <button class="opt">최고 압력이 높아지고 노킹이 심해진다</button>
+        <button class="opt" data-correct>최고 압력이 낮아지고 늦게 나타나며, 토크는 줄고 배기 온도는 오른다</button>
+        <button class="opt">토크와 배기 온도가 모두 내려간다</button>
+        <button class="opt">연소가 빨라져 효율이 오른다</button>
+      </div><div class="quiz-exp">늦게 탄 가스는 팽창에 덜 참여하므로 일이 줄고, 쓰이지 못한 열이 배기로 나간다. 노킹은 오히려 줄어든다. 냉간 시동 때 촉매를 빨리 데우려고 일부러 이렇게 한다.</div></div>
+
+      <div class="quiz-q"><p>Q5. 저회전에서 가속 페달을 끝까지 밟았을 때 터보 엔진의 토크가 바로 나오지 않는 주된 이유는?</p><div class="opts">
+        <button class="opt">웨이스트게이트가 열려 있어서</button>
+        <button class="opt">인터쿨러가 공기를 너무 식혀서</button>
+        <button class="opt" data-correct>배기 에너지가 늘어 터보 축이 가속되기까지 관성 때문에 시간이 걸려서</button>
+        <button class="opt">연료 분사량이 부족해서</button>
+      </div><div class="quiz-exp">터빈 동력과 컴프레서 동력의 차이가 축을 가속시킨다. 축이 수만 rpm에서 십수만 rpm까지 올라가야 과급압이 차므로 1초 안팎의 지연(터보 랙)이 생긴다.</div></div>
+
+      <div class="quiz-q"><p>Q6. 같은 20 kW를 내는 두 운전점 A(4,000 rpm, 48 N·m)와 B(1,600 rpm, 119 N·m) 가운데 연료를 덜 쓰는 쪽과 그 이유는?</p><div class="opts">
+        <button class="opt">A. 회전수가 높아 연소 효율이 좋다</button>
+        <button class="opt">같다. 출력이 같으면 연료도 같다</button>
+        <button class="opt" data-correct>B. 스로틀이 더 열려 펌핑 손실이 줄고, 회전수가 낮아 마찰 손실도 준다</button>
+        <button class="opt">B. 낮은 회전수에서는 λ가 희박해진다</button>
+      </div><div class="quiz-exp">마찰과 펌핑으로 잃는 일은 출력과 무관하게 나가는 고정비에 가깝다. 낮은 회전수·높은 부하는 이 고정비를 줄여 BSFC가 낮다. 변속기가 가능한 높은 단을 고르는 이유다.</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const cssv = (n) => getComputedStyle(document.body).getPropertyValue(n);
+  const font = (sz, mono, w) => (w ? w + " " : "") + sz + "px " + (mono ? cssv("--mono") : cssv("--font"));
+  const sig = (x) => 1 / (1 + Math.exp(-x));
+  const text = (ctx, s, x, y, color, align, base, f) => { ctx.fillStyle = color; ctx.font = f || font(11); ctx.textAlign = align || "left"; ctx.textBaseline = base || "middle"; ctx.fillText(s, x, y); };
+  const VD = 2e-3;                                               // 배기량 m³
+  const etaV = (N) => 0.9 * (1 - Math.pow((N - 4200) / 6500, 2)); // 체적 효율
+
+  /* =================================================== Sim 1: λ dial */
+  (function () {
+    const g = (l) => (l < 1 ? 1 - 0.3 * (1 - l) - 3 * (1 - l) * (1 - l) : 1 + 0.3 * (l - 1) - 1.1 * (l - 1) * (l - 1)); // 상대 열효율
+    const tq = (l) => g(l) / l;
+    const co = (l) => 0.15 + (34 * Math.log(1 + Math.exp(40 * (1 - l)))) / 40;                                     // vol %
+    const hc = (l) => 350 + (l < 1.12 ? 9000 * (1.12 - l) * (1.12 - l) : 0) + 250 * Math.exp((l - 1.28) * 16);       // ppm
+    const nox = (l) => 3000 * Math.exp(-Math.pow((l - 1.07) / 0.13, 2));                                           // ppm
+    const eCO = (l) => 0.25 + 0.73 * sig((l - 0.99) / 0.004);
+    const eHC = (l) => 0.3 + 0.67 * sig((l - 0.988) / 0.005);
+    const eNOx = (l) => 0.05 + 0.93 * sig((1.006 - l) / 0.004);
+    const COM = co(0.7), HCM = 2500, NOM = 3000;
+    let lPow = 0.7, lEco = 1;
+    for (let l = 0.7; l <= 1.4; l += 0.002) { if (tq(l) > tq(lPow)) lPow = l; if (g(l) > g(lEco)) lEco = l; }
+    const D = { tq: [], bs: [], co: [], hc: [], nox: [], cot: [], hct: [], noxt: [], eco: [], ehc: [], enox: [] };
+    for (let i = 0; i <= 350; i++) {
+      const l = 0.7 + i * 0.002;
+      D.tq.push([l, tq(l) * 100]); D.bs.push([l, 100 / g(l)]);
+      D.co.push([l, co(l) / COM]); D.hc.push([l, hc(l) / HCM]); D.nox.push([l, nox(l) / NOM]);
+      D.cot.push([l, (co(l) * (1 - eCO(l))) / COM]); D.hct.push([l, (hc(l) * (1 - eHC(l))) / HCM]); D.noxt.push([l, (nox(l) * (1 - eNOx(l))) / NOM]);
+    }
+    let w0 = null, w1 = null;
+    for (let i = 0; i <= 400; i++) {
+      const l = 0.95 + i * 0.00025;
+      D.eco.push([l, eCO(l) * 100]); D.ehc.push([l, eHC(l) * 100]); D.enox.push([l, eNOx(l) * 100]);
+      if (Math.min(eCO(l), eHC(l), eNOx(l)) >= 0.8) { if (w0 === null) w0 = l; w1 = l; }
+    }
+    const gL = CB.range("af-lam", (v) => v.toFixed(3), () => redraw());
+    const cat = () => $("af-cat").checked;
+    function draw1(ctx) {
+      const P = CB.palette(), l = gL();
+      const ch = CB.chart(ctx, null, { x: [0.7, 1.4], y: [60, 160], xLabel: "공기 과잉률 λ", yLabel: "λ=1 대비 (%)",
+        bands: [{ x0: 0.7, x1: 1, color: P.accent + "14" }],
+        series: [{ data: D.tq, color: P.accent, width: 2.4 }, { data: D.bs, color: P.accent2, width: 2.4 }],
+        vlines: [{ x: lPow, color: P.accent, label: "최대 출력" }, { x: lEco, color: P.accent2, label: "최고 연비" }, { x: l, color: P.text, dash: [], width: 1.5 }],
+        points: [{ x: l, y: tq(l) * 100, color: P.accent }, { x: l, y: 100 / g(l), color: P.accent2 }] });
+      text(ctx, "농후", ch.box.x + 6, ch.box.y + ch.box.h - 10, P.dim);
+      text(ctx, "희박", ch.box.x + ch.box.w - 6, ch.box.y + ch.box.h - 10, P.dim, "right");
+    }
+    function draw2(ctx) {
+      const P = CB.palette(), l = gL(), c = cat();
+      const dash = [5, 4];
+      const series = [{ data: D.co, color: P.warn, width: c ? 1.4 : 2.4, dash: c ? dash : null }, { data: D.hc, color: P.ok, width: c ? 1.4 : 2.4, dash: c ? dash : null }, { data: D.nox, color: P.bad, width: c ? 1.4 : 2.4, dash: c ? dash : null }];
+      const points = [];
+      if (c) {
+        series.push({ data: D.cot, color: P.warn, width: 2.4 }, { data: D.hct, color: P.ok, width: 2.4 }, { data: D.noxt, color: P.bad, width: 2.4 });
+        points.push({ x: l, y: (co(l) * (1 - eCO(l))) / COM, color: P.warn }, { x: l, y: (hc(l) * (1 - eHC(l))) / HCM, color: P.ok }, { x: l, y: (nox(l) * (1 - eNOx(l))) / NOM, color: P.bad });
+      } else points.push({ x: l, y: co(l) / COM, color: P.warn }, { x: l, y: hc(l) / HCM, color: P.ok }, { x: l, y: nox(l) / NOM, color: P.bad });
+      CB.chart(ctx, null, { x: [0.7, 1.4], y: [0, 1.05], xLabel: "공기 과잉률 λ", yLabel: "배출 농도 (상대)", series, points,
+        vlines: [{ x: 1, color: P.faint }, { x: l, color: P.text, dash: [], width: 1.5 }] });
+    }
+    function draw3(ctx) {
+      const P = CB.palette(), l = gL();
+      const vl = [];
+      if (l >= 0.95 && l <= 1.05) vl.push({ x: l, color: P.text, dash: [], width: 1.5 });
+      const ch = CB.chart(ctx, null, { x: [0.95, 1.05], y: [0, 105], xLabel: "공기 과잉률 λ (확대)", yLabel: "촉매 정화율 (%)",
+        bands: [{ x0: w0, x1: w1, color: P.ok + "30" }],
+        series: [{ data: D.eco, color: P.warn, width: 2.2 }, { data: D.ehc, color: P.ok, width: 2.2 }, { data: D.enox, color: P.bad, width: 2.2 }],
+        hlines: [{ y: 80, color: P.faint }], vlines: vl });
+      text(ctx, "λ 창", ch.X((w0 + w1) / 2), ch.box.y + 10, P.ok, "center", "middle", font(11, false, 700));
+      if (!vl.length) text(ctx, l < 0.95 ? "◀ 현재 λ는 창 밖(농후)" : "현재 λ는 창 밖(희박) ▶", l < 0.95 ? ch.box.x + 8 : ch.box.x + ch.box.w - 8, ch.box.y + ch.box.h - 12, P.dim, l < 0.95 ? "left" : "right");
+    }
+    const o = { aspect: 0.42, minHeight: 190, maxHeight: 250 };
+    const c1 = CB.canvas($("cv-af1"), draw1, o), c2 = CB.canvas($("cv-af2"), draw2, o), c3 = CB.canvas($("cv-af3"), draw3, o);
+    function redraw() {
+      const l = gL(), c = cat();
+      c1.redraw(); c2.redraw(); c3.redraw();
+      CB.stat("o-af-afr", (14.7 * l).toFixed(1) + "<small>: 1</small>");
+      CB.stat("o-af-tq", (tq(l) * 100).toFixed(1) + "<small>%</small>");
+      CB.stat("o-af-bsfc", (100 / g(l)).toFixed(1) + "<small>%</small>");
+      CB.stat("o-af-co", (co(l) * (c ? 1 - eCO(l) : 1)).toFixed(2) + "<small>%</small>");
+      CB.stat("o-af-hc", (hc(l) * (c ? 1 - eHC(l) : 1)).toFixed(0) + "<small>ppm</small>");
+      CB.stat("o-af-nox", (nox(l) * (c ? 1 - eNOx(l) : 1)).toFixed(0) + "<small>ppm</small>");
+      CB.stat("o-af-win", (Math.min(eCO(l), eHC(l), eNOx(l)) * 100).toFixed(0) + "<small>%</small>");
+    }
+    $("af-b1").addEventListener("click", () => gL.set(lPow.toFixed(3)));
+    $("af-b2").addEventListener("click", () => gL.set(0.998));
+    $("af-b3").addEventListener("click", () => gL.set(lEco.toFixed(3)));
+    $("af-cat").addEventListener("change", redraw);
+    redraw();
+  })();
+
+  /* =================================================== Sim 5: injector pulse width */
+  (function () {
+    const fmtRail = (v) => (gType && gType() === "gdi" ? v.toFixed(0) + " bar" : "포트 분사: 3.5 bar 고정");
+    let gType = null;
+    const gN = CB.range("inj-rpm", (v) => v.toFixed(0) + " rpm", () => redraw());
+    const gP = CB.range("inj-map", (v) => v.toFixed(0) + " kPa", () => redraw());
+    const gR = CB.range("inj-rail", fmtRail, () => redraw());
+    gType = CB.seg("inj-type", () => { gR.set(gR()); });
+    const IVO = 710, IVC = 220, EVO = 500, EVC = 730, SPARK = 340;
+    function calc() {
+      const N = gN(), p = gP(), gdi = gType() === "gdi";
+      const ma = etaV(N) * ((p * 1e3) / (287 * 310)) * (VD / 4);          // kg / cyl / cycle
+      const mf = ma / 14.7;
+      const q = gdi ? 12e-3 * Math.sqrt(gR() / 200) : 3e-3;              // kg/s
+      const dead = gdi ? 0.3 : 0.6;
+      const pw = (mf / q) * 1e3 + dead;                                   // ms
+      const span = pw * 6 * N / 1000;                                     // °CA
+      const duty = pw / (120000 / N);
+      let s0, warn = "";
+      if (gdi) { s0 = 40; if (s0 + span > 260) warn = "분사가 압축 행정 깊이 이어진다: 혼합 시간 부족"; }
+      else { s0 = 690 - span; if (duty > 0.85) warn = duty >= 1 ? "한 사이클 안에 다 뿌릴 수 없다: 인젝터 용량 부족" : "듀티 85 % 초과: 인젝터 한계에 가깝다"; }
+      return { N, p, gdi, ma, mf, pw, span, duty, s0, warn };
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), r = calc();
+      const x0 = 46, W = w - x0 - 12, X = (ca) => x0 + (ca / 720) * W;
+      const rowH = (h - 58) / 4, yS = 8, yV = yS + rowH, yI = yV + rowH, yK = yI + rowH, yAx = yK + rowH;
+      const strokes = [["흡기", P.accent2], ["압축", P.dim], ["폭발", P.accent], ["배기", P.dim]];
+      strokes.forEach(([name, col], k) => {
+        ctx.fillStyle = col + "30"; ctx.fillRect(X(k * 180) + 1, yS + 3, W / 4 - 2, rowH - 8);
+        text(ctx, name, X(k * 180 + 90), yS + rowH / 2 - 1, P.text, "center", "middle", font(12, false, 600));
+      });
+      // valve lift
+      const lift = (ca, o, c) => { let a = ca; if (a < o - 360) a += 720; if (a > o + 360) a -= 720; return a > o && a < c ? Math.sin((Math.PI * (a - o)) / (c - o)) : 0; };
+      const curve = (o, c, col) => {
+        ctx.beginPath();
+        for (let ca = 0; ca <= 720; ca += 4) { const y = yV + rowH - 5 - lift(ca, o, c) * (rowH - 12); ca ? ctx.lineTo(X(ca), y) : ctx.moveTo(X(ca), y); }
+        ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke();
+      };
+      curve(IVO - 720, IVC, P.accent2); curve(EVO, EVC, P.bad);
+      text(ctx, "흡기 밸브", X(110), yV + 8, P.accent2, "center", "middle", font(10.5));
+      text(ctx, "배기 밸브", X(615), yV + 8, P.bad, "center", "middle", font(10.5));
+      // injection bar (wraps around the cycle)
+      const span = Math.min(r.span, 720), bh = Math.max(12, rowH - 14), by = yI + (rowH - bh) / 2;
+      let a = ((r.s0 % 720) + 720) % 720, left = span;
+      ctx.fillStyle = r.warn ? P.bad : P.accent;
+      while (left > 0.01) { const seg = Math.min(left, 720 - a); ctx.fillRect(X(a), by, Math.max(2, X(a + seg) - X(a)), bh); left -= seg; a = 0; }
+      const mid = (((r.s0 + span / 2) % 720) + 720) % 720;
+      text(ctx, r.pw.toFixed(2) + " ms = " + r.span.toFixed(0) + "°", CB.clamp(X(mid), x0 + 50, x0 + W - 50), by - 7 < yI + 4 ? by + bh / 2 : by - 7, by - 7 < yI + 4 ? "#fff" : P.text, "center", "middle", font(11, true, 600));
+      // spark
+      ctx.strokeStyle = P.warn; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(X(SPARK), yK + 4); ctx.lineTo(X(SPARK), yK + rowH - 6); ctx.stroke();
+      text(ctx, "불꽃", X(SPARK) - 6, yK + rowH / 2, P.warn, "right", "middle", font(11, false, 600));
+      if (r.warn) text(ctx, r.warn, x0 + W, yK + rowH / 2, P.bad, "right", "middle", font(w < 420 ? 10 : 11.5, false, 600));
+      // axis
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x0, yAx); ctx.lineTo(x0 + W, yAx); ctx.stroke();
+      [[0, "TDC"], [180, "BDC"], [360, "TDC"], [540, "BDC"], [720, "TDC"]].forEach(([ca, n]) => {
+        ctx.strokeStyle = P.grid; ctx.beginPath(); ctx.moveTo(X(ca), yS); ctx.lineTo(X(ca), yAx + 4); ctx.stroke();
+        text(ctx, n, X(ca), yAx + 14, P.dim, ca === 0 ? "left" : ca === 720 ? "right" : "center", "middle", font(10.5, true));
+        text(ctx, ca + "°", X(ca), yAx + 28, P.faint, ca === 0 ? "left" : ca === 720 ? "right" : "center", "middle", font(10, true));
+      });
+      text(ctx, "크랭크각", x0 + W / 2 + 46, yAx + 40, P.dim, "center", "middle", font(11));
+      [["행정", yS], ["밸브", yV], ["분사", yI], ["점화", yK]].forEach(([n, y]) => text(ctx, n, 6, y + rowH / 2, P.dim, "left", "middle", font(11.5)));
+    }
+    const cv = CB.canvas($("cv-inj"), draw, { aspect: 0.46, minHeight: 230, maxHeight: 320 });
+    function redraw() {
+      const r = calc();
+      cv.redraw();
+      CB.stat("o-inj-air", (r.ma * 1e6).toFixed(0) + "<small>mg</small>");
+      CB.stat("o-inj-fuel", (r.mf * 1e6).toFixed(1) + "<small>mg</small>");
+      CB.stat("o-inj-pw", r.pw.toFixed(2) + "<small>ms</small>");
+      CB.stat("o-inj-ca", r.span.toFixed(0) + "<small>°CA</small>");
+      CB.stat("o-inj-duty", (r.duty * 100).toFixed(1) + "<small>%</small>");
+      CB.stat("o-inj-flow", (((r.mf * 4 * r.N) / 120) * 3600 / 0.745).toFixed(1) + "<small>L/h</small>");
+    }
+    gR.set(gR());
+  })();
+
+  /* =================================================== Sim 2: closed-loop fuel control */
+  (function () {
+    const gK = CB.range("cl-gain", (v) => v.toFixed(1) + " %/s");
+    const gD = CB.range("cl-delay", (v) => v.toFixed(0) + " ms");
+    const WIN = 10;
+    let t = 0, leak = 0, stft = 0, ltft = 0, lamS = 1, rich = false, lastSw = 0, period = 0, tSample = 0;
+    const buf = [[0, 1]], H = [];
+    function step(dt) {
+      t += dt;
+      const lam = (1 + leak) / ((1 + stft) * (1 + ltft));
+      buf.push([t, lam]);
+      const td = gD() / 1000;
+      while (buf.length > 2 && buf[1][0] <= t - td) buf.shift();
+      lamS += (buf[0][1] - lamS) * Math.min(1, dt / 0.03);
+      const v = 0.45 + 0.42 * Math.tanh((1 - lamS) / 0.006);
+      const r = v > 0.45;
+      if (r !== rich) { if (r) { period = t - lastSw; lastSw = t; } rich = r; }
+      if ($("cl-loop").checked) {
+        stft = CB.clamp(stft + ((r ? -1 : 1) * gK() * dt) / 100, -0.25, 0.25);
+        if ($("cl-ltft").checked) { const d = (stft * dt) / 4; ltft += d; stft -= d; }
+      } else stft = 0;
+      if (t - tSample >= 0.02) { tSample = t; H.push([t, lam, v, stft * 100, ltft * 100]); while (H.length && H[0][0] < t - WIN) H.shift(); }
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette();
+      const x = 50, bw = w - x - 14, gap = 20, bh = (h - 8 - 42 - 2 * gap) / 3;
+      const ser = (k) => H.map((s) => [s[0] - t, s[k]]);
+      const none = () => "";
+      CB.chart(ctx, { x, y: 8, w: bw, h: bh }, { x: [-WIN, 0], y: [0.9, 1.1], yLabel: "λ", xFmt: none, yTicks: [0.9, 0.95, 1, 1.05, 1.1],
+        hlines: [{ y: 1, color: P.faint }], series: [{ data: ser(1), color: P.accent, width: 2 }] });
+      CB.chart(ctx, { x, y: 8 + bh + gap, w: bw, h: bh }, { x: [-WIN, 0], y: [0, 1], yLabel: "센서 (V)", xFmt: none, yTicks: [0, 0.45, 0.9],
+        hlines: [{ y: 0.45, color: P.faint }], series: [{ data: ser(2), color: P.accent2, width: 2 }] });
+      const mx = Math.max(12, ...H.map((s) => Math.abs(s[3]) + 2), ...H.map((s) => Math.abs(s[4]) + 2));
+      const c3 = CB.chart(ctx, { x, y: 8 + 2 * (bh + gap), w: bw, h: bh }, { x: [-WIN, 0], y: [-mx, mx], yLabel: "보정 (%)", xLabel: "시간 (s, 0 = 지금)",
+        hlines: [{ y: 0, color: P.faint }], series: [{ data: ser(3), color: P.warn, width: 2 }, { data: ser(4), color: P.ok, width: 2 }] });
+      text(ctx, "STFT", c3.box.x + 6, c3.box.y + 9, P.warn, "left", "middle", font(11, true, 600));
+      text(ctx, "LTFT", c3.box.x + 46, c3.box.y + 9, P.ok, "left", "middle", font(11, true, 600));
+      text(ctx, "농후 ↑", x + 6, 8 + bh + gap + 9, P.dim, "left", "middle", font(10.5));
+      if (leak) text(ctx, "공기 누설 중 (+8 %)", x + bw - 6, 17, P.bad, "right", "middle", font(11, false, 700));
+    }
+    const el = $("cv-cl");
+    const cv = CB.canvas(el, draw, { aspect: 0.74, minHeight: 330, maxHeight: 440 });
+    $("cl-leak").addEventListener("click", (e) => { leak = leak ? 0 : 0.08; e.target.textContent = leak ? "누설 막기" : "외란: 공기 누설 +8 %"; });
+    let acc = 0;
+    CB.loop(el, (dt) => {
+      let rem = dt;
+      while (rem > 1e-6) { const s = Math.min(0.002, rem); step(s); rem -= s; }
+      cv.redraw();
+      acc += dt; if (acc < 0.2) return; acc = 0;
+      const rec = H.filter((s) => s[0] > t - 3);
+      if (!rec.length) return;
+      let sum = 0, mn = 9, mx = 0; rec.forEach((s) => { sum += s[1]; mn = Math.min(mn, s[1]); mx = Math.max(mx, s[1]); });
+      const loop = $("cl-loop").checked;
+      CB.stat("o-cl-lam", (sum / rec.length).toFixed(3));
+      CB.stat("o-cl-amp", "±" + (((mx - mn) / 2) * 100).toFixed(2) + "<small>%</small>");
+      CB.stat("o-cl-freq", loop && period > 0 && t - lastSw < 3 ? (1 / period).toFixed(2) + "<small>Hz</small>" : "—");
+      CB.stat("o-cl-stft", (stft >= 0 ? "+" : "") + (stft * 100).toFixed(1) + "<small>%</small>");
+      CB.stat("o-cl-ltft", (ltft >= 0 ? "+" : "") + (ltft * 100).toFixed(1) + "<small>%</small>");
+    });
+  })();
+
+  /* =================================================== Sim 3: ignition timing, MBT, knock */
+  (function () {
+    const CR = 10.5, RL = 3.5, B = 0.086, S = 0.086, Vc = 5e-4, GAM = 1.3, RPM = 2000, T0 = 330, DTH = 55, D = 0.5;
+    const Vrel = (th) => { const a = (th * Math.PI) / 180; return 1 / (CR - 1) + 0.5 * (RL + 1 - Math.cos(a) - Math.sqrt(RL * RL - Math.sin(a) * Math.sin(a))); };
+    // 단일 영역 모델: dp = [-γ p dV + (γ-1)(dQ_연소 - dQ_벽)] / V
+    function run(adv, map, ron, fired, trace) {
+      const p0 = map * 1e3, m = (p0 * Vrel(-180) * Vc) / (287 * T0);
+      const Q = fired ? (m / 15.7) * 44e6 * 0.95 : 0, dt = D / (6 * RPM), Sp = (2 * S * RPM) / 60;
+      let p = p0, W = 0, pmax = 0, thmax = 0, ca50 = null, I = 0, knock = null, xbP = 0;
+      for (let th = -180; th < 180; th += D) {
+        const V1 = Vrel(th) * Vc, V2 = Vrel(th + D) * Vc, V = (V1 + V2) / 2;
+        const u = (th + D + adv) / DTH, xb = !fired || u <= 0 ? 0 : 1 - Math.exp(-5 * Math.pow(Math.min(u, 1.6), 3));
+        const T = (p * V) / (m * 287), A = (Math.PI * B * B) / 2 + (4 * V) / B;
+        const hc = 3.26 * Math.pow(B, -0.2) * Math.pow(p / 1e3, 0.8) * Math.pow(T, -0.55) * Math.pow(6 * Sp, 0.8);
+        const dp = (-GAM * p * (V2 - V1) + (GAM - 1) * (Q * (xb - xbP) - hc * A * (T - 420) * dt)) / V;
+        W += (p + dp / 2) * (V2 - V1); p += dp;
+        if (p > pmax) { pmax = p; thmax = th + D; }
+        if (ca50 === null && xb >= 0.5) ca50 = th + D;
+        if (fired && xb < 0.93 && knock === null) {   // 말단 가스 자발화 지연 적분 (Douaud–Eyzat 형태)
+          const Tu = T0 * Math.pow(p / p0, 0.248);
+          I += (dt * 1e3) / (2.5 * 17.68 * Math.pow(ron / 100, 3.402) * Math.pow(p / 101325, -1.7) * Math.exp(3800 / Tu));
+          if (I >= 1 && xb > 0.02) knock = th + D;
+        }
+        xbP = xb;
+        if (trace) trace.push([th + D, p / 1e5]);
+      }
+      return { imep: W / Vc / 1e5, pmax: pmax / 1e5, thmax, ca50, knock };
+    }
+    const gA = CB.range("ig-adv", (v) => (v >= 0 ? v + "° BTDC" : -v + "° ATDC"), () => redraw());
+    const gO = CB.seg("ig-oct", () => redraw());
+    const gM = CB.range("ig-map", (v) => v.toFixed(0) + " kPa", () => redraw());
+    let key = "", sw = null;
+    function sweep() {
+      const k = gM() + "|" + gO();
+      if (k === key) return sw;
+      key = k;
+      const map = gM(), ron = Number(gO()), pts = [];
+      let mbt = -10, best = 0, klim = null;
+      for (let a = -10; a <= 50; a++) {
+        const r = run(a, map, ron, true);
+        pts.push([a, r.imep]);
+        if (r.imep > best) { best = r.imep; mbt = a; }
+        if (klim === null && r.knock !== null) klim = a;
+      }
+      const mot = []; run(0, map, ron, false, mot);
+      sw = { pts: pts.map(([a, v]) => [a, (v / best) * 100]), mbt, best, klim, mot };
+      return sw;
+    }
+    let cur = null, tr = [];
+    function draw(ctx) {
+      if (!cur) return;
+      const P = CB.palette(), s = sweep(), adv = gA();
+      const ymax = Math.max(40, Math.ceil((cur.pmax * 1.15) / 20) * 20);
+      const shown = tr.map(([th, p]) => (cur.knock !== null && th > cur.knock ? [th, p + 0.07 * cur.pmax * Math.exp(-(th - cur.knock) / 14) * Math.sin((th - cur.knock) * 2.1)] : [th, p]));
+      const pts = [{ x: cur.thmax, y: cur.pmax, color: P.accent, label: "최고 압력" }];
+      if (cur.knock !== null) pts.push({ x: cur.knock, y: tr[Math.round((cur.knock + 180) / D) - 1][1], color: P.bad, r: 5, label: "자발화" });
+      const ch = CB.chart(ctx, null, { x: [-90, 120], y: [0, ymax], xLabel: "크랭크각 (° , 0 = 압축 상사점)", yLabel: "실린더 압력 (bar)",
+        bands: cur.ca50 !== null ? [{ x0: -adv, x1: Math.min(120, -adv + DTH), color: P.warn + "1c" }] : [],
+        series: [{ data: s.mot, color: P.dim, width: 1.5, dash: [5, 4] }, { data: shown, color: cur.knock !== null ? P.bad : P.accent, width: 2.4 }],
+        vlines: [{ x: 0, color: P.faint, label: "TDC" }, { x: -adv, color: P.warn, label: "점화", dash: [] }], points: pts });
+      text(ctx, "연소 구간", ch.X(-adv + DTH / 2), ch.box.y + ch.box.h - 10, P.warn, "center", "middle", font(10.5));
+    }
+    function draw2(ctx) {
+      const P = CB.palette(), s = sweep(), adv = gA();
+      const vl = [{ x: s.mbt, color: P.ok, label: "MBT " + s.mbt + "°" }];
+      CB.chart(ctx, null, { x: [-10, 50], y: [70, 102], xLabel: "점화 진각 (° BTDC)", yLabel: "토크 (MBT 대비 %)",
+        bands: s.klim !== null ? [{ x0: s.klim, x1: 50, color: P.bad + "26" }] : [],
+        series: [{ data: s.pts, color: P.accent, width: 2.4 }], vlines: vl,
+        points: [{ x: adv, y: (cur.imep / s.best) * 100, color: cur.knock !== null ? P.bad : P.accent, r: 5 }] });
+      if (s.klim !== null) text(ctx, "노킹 영역 (RON " + gO() + ")", ctx.canvas.width / ((ctx.getTransform && ctx.getTransform().a) || 1) - 24, 30, P.bad, "right", "middle", font(11, false, 700));
+    }
+    const cvA = CB.canvas($("cv-ig"), draw, { aspect: 0.5, minHeight: 220, maxHeight: 320 });
+    const cvB = CB.canvas($("cv-ig2"), draw2, { aspect: 0.36, minHeight: 180, maxHeight: 230 });
+    function redraw() {
+      const s = sweep();
+      tr = []; cur = run(gA(), gM(), Number(gO()), true, tr);
+      cvA.redraw(); cvB.redraw();
+      CB.stat("o-ig-pmax", cur.pmax.toFixed(1) + "<small>bar</small>");
+      CB.stat("o-ig-th", cur.thmax.toFixed(1) + "<small>° ATDC</small>");
+      CB.stat("o-ig-ca50", cur.ca50 === null ? "—" : cur.ca50.toFixed(1) + "<small>° ATDC</small>");
+      CB.stat("o-ig-imep", cur.imep.toFixed(2) + "<small>bar</small>");
+      CB.stat("o-ig-rel", ((cur.imep / s.best) * 100).toFixed(1) + "<small>%</small>");
+      CB.stat("o-ig-knock", cur.knock === null ? '<span style="color:var(--ok)">없음</span>' : '<span style="color:var(--bad)">발생</span><small>' + cur.knock.toFixed(0) + "° ATDC</small>");
+    }
+    $("ig-mbt").addEventListener("click", () => gA.set(sweep().mbt));
+    $("ig-ecu").addEventListener("click", () => { const s = sweep(); gA.set(s.klim === null ? s.mbt : Math.min(s.mbt, s.klim - 1)); });
+    cur = run(gA(), gM(), Number(gO()), true, tr);
+    redraw();
+  })();
+
+  /* =================================================== Sim 4: turbocharger dynamics */
+  (function () {
+    const TB = { small: { K: 2.4, I: 2.2e-5, Nref: 190e3 }, large: { K: 3.6, I: 5e-5, Nref: 150e3 } };
+    const gN = CB.range("tb-rpm", (v) => v.toFixed(0) + " rpm");
+    const gT = CB.range("tb-thr", (v) => v.toFixed(0) + " %");
+    const gS = CB.seg("tb-size", () => { curves = null; });
+    const gB = CB.range("tb-target", (v) => "+" + v.toFixed(1) + " bar", () => { curves = null; });
+    const thrF = (a) => 0.22 + 0.78 * Math.pow(a, 0.8);
+    // 토크: BMEP = k·p_man·η_v − 마찰 − 펌핑(배압 − 흡기압). 과급 시 노킹 지각에 따른 효율 감소 포함
+    const torque = (N, pman, pexh) => {
+      const bmep = 13.6 * pman * (etaV(N) / 0.9) * (1 - (0.12 * Math.max(0, pman - 100)) / 100) - (80 + 0.02 * N) - Math.max(0, pexh - pman);
+      return (bmep * 1e3 * VD) / (4 * Math.PI);
+    };
+    function step(st, N, thr, tb, dt, target) {
+      const Nt = (st.w * 30) / Math.PI;
+      const PRc = 1 + 1.5 * Math.pow(Nt / tb.Nref, 2), pc = 100 * PRc, pman = pc * thrF(thr);
+      const mdot = etaV(N) * ((pman * 1e3) / (287 * 320)) * VD * (N / 120);
+      const T3 = 780 + 330 * Math.min(1, pman / 150);
+      st.wg += (CB.clamp(0.06 * (pc - (target - 4)), 0, 0.85) - st.wg) * Math.min(1, dt / 0.08);
+      const mt = mdot * 1.07 * (1 - st.wg);
+      const PRt = 1 + Math.pow((mt * Math.sqrt(T3)) / tb.K, 2);
+      const Pt = 0.65 * mt * 1150 * T3 * (1 - Math.pow(PRt, -0.248));
+      const Pc = (mdot * 1005 * 298 * (Math.pow(PRc, 0.286) - 1)) / 0.7;
+      st.w = Math.max(1500, st.w + (dt * (Pt - Pc - 1e-6 * st.w * st.w)) / (tb.I * Math.max(st.w, 1500)));
+      return { Nt, pc, pman, mdot, PRt, Pt, Pc, tq: torque(N, pman, 100 * PRt) };
+    }
+    const st = { w: 3000, wg: 0 };
+    let cur = step(st, 2500, 0.15, TB.small, 0.001, 200), curves = null, phase = 0, ang = 0, tt = 0, tS = 0;
+    const H = [];
+    function getCurves() {
+      if (curves) return curves;
+      const tb = TB[gS()], target = 100 + 100 * gB(), na = [], tu = [];
+      for (let N = 1000; N <= 6500; N += 250) {
+        const s = { w: 3000, wg: 0 }; let r;
+        for (let i = 0; i < 2400; i++) r = step(s, N, 1, tb, 0.005, target);
+        na.push([N, torque(N, 100, 105)]); tu.push([N, r.tq]);
+      }
+      curves = { na, tu };
+      return curves;
+    }
+    function wheel(ctx, x, y, R, a, col, P) {
+      ctx.save(); ctx.translate(x, y);
+      ctx.fillStyle = P.surface; ctx.strokeStyle = P.axis; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(0, 0, R * 1.2, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+      ctx.rotate(a); ctx.strokeStyle = col; ctx.lineWidth = Math.max(2, R * 0.12); ctx.lineCap = "round";
+      for (let k = 0; k < 9; k++) { ctx.rotate((2 * Math.PI) / 9); ctx.beginPath(); ctx.moveTo(R * 0.22, 0); ctx.quadraticCurveTo(R * 0.6, R * 0.1, R * 0.95, R * 0.5); ctx.stroke(); }
+      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(0, 0, R * 0.24, 0, 2 * Math.PI); ctx.fill();
+      ctx.restore();
+    }
+    function pipe(ctx, pts, col, speed) {
+      ctx.save(); ctx.lineJoin = "round";
+      ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      ctx.strokeStyle = col; ctx.globalAlpha = 0.25; ctx.lineWidth = 10; ctx.stroke();
+      ctx.globalAlpha = speed > 0.01 ? 1 : 0.3; ctx.lineWidth = 3; ctx.setLineDash([7, 9]); ctx.lineDashOffset = -phase * speed; ctx.stroke();
+      ctx.restore();
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), r = cur, thr = gT() / 100;
+      const COOL = "#3d8bfd", WARM = "#e8962e", HOT = "#e0443e";
+      const R = Math.min(w * 0.075, h * 0.12);
+      const xc = w * 0.13, xt = w * 0.57, yw = h * 0.74, ye = h * 0.2, ex0 = w * 0.26, ex1 = w * 0.48, xg = w * 0.69;
+      const f = CB.clamp(r.mdot / 0.12, 0.05, 1.6);
+      // pipes
+      pipe(ctx, [[4, yw], [xc - R, yw]], COOL, f);
+      pipe(ctx, [[xc, yw - R], [xc, h * 0.52]], WARM, f);
+      pipe(ctx, [[xc, h * 0.38], [xc, ye], [ex0, ye]], COOL, f);
+      pipe(ctx, [[ex1, ye], [xt, ye], [xt, yw - R]], HOT, f * (1 - st.wg));
+      pipe(ctx, [[xt, h * 0.42], [xg, h * 0.42], [xg, yw]], HOT, f * st.wg);
+      pipe(ctx, [[xt + R, yw], [w * 0.8, yw]], HOT, f);
+      // intercooler
+      ctx.fillStyle = P.surface; ctx.strokeStyle = P.axis; ctx.lineWidth = 1.5;
+      const iw = Math.max(34, w * 0.1), ih = h * 0.14;
+      ctx.fillRect(xc - iw / 2, h * 0.38, iw, ih); ctx.strokeRect(xc - iw / 2, h * 0.38, iw, ih);
+      ctx.strokeStyle = COOL; ctx.lineWidth = 1;
+      for (let k = 1; k < 5; k++) { ctx.beginPath(); ctx.moveTo(xc - iw / 2 + (k * iw) / 5, h * 0.38 + 3); ctx.lineTo(xc - iw / 2 + (k * iw) / 5, h * 0.38 + ih - 3); ctx.stroke(); }
+      text(ctx, "인터쿨러", xc + iw / 2 + 5, h * 0.38 + ih / 2, P.dim, "left", "middle", font(10.5));
+      // throttle plate
+      const xth = (xc + ex0) / 2 + 4, ta = (1 - thr) * (Math.PI / 2) * 0.92;
+      ctx.strokeStyle = P.text; ctx.lineWidth = 3; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(xth - 9 * Math.cos(ta), ye - 9 * Math.sin(ta)); ctx.lineTo(xth + 9 * Math.cos(ta), ye + 9 * Math.sin(ta)); ctx.stroke();
+      text(ctx, "스로틀", xth, ye - 16, P.dim, "center", "middle", font(10.5));
+      // engine block
+      ctx.fillStyle = P.surface; ctx.strokeStyle = P.axis; ctx.lineWidth = 1.5;
+      ctx.fillRect(ex0, ye - h * 0.12, ex1 - ex0, h * 0.24); ctx.strokeRect(ex0, ye - h * 0.12, ex1 - ex0, h * 0.24);
+      text(ctx, "엔진 2.0 L", (ex0 + ex1) / 2, ye - 7, P.text, "center", "middle", font(12, false, 700));
+      text(ctx, gN().toFixed(0) + " rpm", (ex0 + ex1) / 2, ye + 10, P.dim, "center", "middle", font(11, true));
+      // wastegate valve
+      const wa = (1 - st.wg / 0.85) * (Math.PI / 2) * 0.95, ywg = h * 0.56;
+      ctx.strokeStyle = P.text; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(xg - 9 * Math.sin(wa), ywg - 9 * Math.cos(wa)); ctx.lineTo(xg + 9 * Math.sin(wa), ywg + 9 * Math.cos(wa)); ctx.stroke();
+      text(ctx, "웨이스트", xg + 12, ywg - 7, P.dim, "left", "middle", font(10.5));
+      text(ctx, "게이트", xg + 12, ywg + 7, P.dim, "left", "middle", font(10.5));
+      // shaft + wheels
+      ctx.strokeStyle = P.dim; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(xc + R, yw); ctx.lineTo(xt - R, yw); ctx.stroke();
+      wheel(ctx, xc, yw, R, ang, COOL, P); wheel(ctx, xt, yw, R, ang, HOT, P);
+      text(ctx, "컴프레서", xc, yw + R * 1.2 + 10, P.dim, "center", "middle", font(10.5));
+      text(ctx, "터빈", xt, yw + R * 1.2 + 10, P.dim, "center", "middle", font(10.5));
+      text(ctx, (r.Nt / 1000).toFixed(0) + " krpm", (xc + xt) / 2, yw - 11, P.text, "center", "middle", font(11.5, true, 600));
+      // boost gauge (-1 .. +1.5 bar)
+      const gx = w * 0.875, gy = h * 0.36, gr = Math.min(w * 0.105, h * 0.24);
+      const A0 = Math.PI * 0.75, A1 = Math.PI * 2.25, aOf = (b) => A0 + ((CB.clamp(b, -1, 1.5) + 1) / 2.5) * (A1 - A0);
+      ctx.lineWidth = 5; ctx.lineCap = "butt";
+      ctx.strokeStyle = COOL; ctx.beginPath(); ctx.arc(gx, gy, gr, A0, aOf(0)); ctx.stroke();
+      ctx.strokeStyle = HOT; ctx.beginPath(); ctx.arc(gx, gy, gr, aOf(0), A1); ctx.stroke();
+      [-1, -0.5, 0, 0.5, 1, 1.5].forEach((b) => {
+        const a = aOf(b);
+        ctx.strokeStyle = P.text; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(gx + Math.cos(a) * (gr - 7), gy + Math.sin(a) * (gr - 7)); ctx.lineTo(gx + Math.cos(a) * (gr + 3), gy + Math.sin(a) * (gr + 3)); ctx.stroke();
+        if (gr > 30 || b === 0 || b === 1) text(ctx, String(b), gx + Math.cos(a) * (gr - 16), gy + Math.sin(a) * (gr - 16), P.dim, "center", "middle", font(9.5, true));
+      });
+      const bt = (100 + 100 * gB() - 100) / 100, at = aOf(bt);
+      ctx.strokeStyle = P.ok; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(gx + Math.cos(at) * (gr + 4), gy + Math.sin(at) * (gr + 4)); ctx.lineTo(gx + Math.cos(at) * (gr + 10), gy + Math.sin(at) * (gr + 10)); ctx.stroke();
+      const an = aOf((r.pman - 100) / 100);
+      CB.arrow(ctx, gx, gy, gx + Math.cos(an) * (gr - 6), gy + Math.sin(an) * (gr - 6), P.accent, 2.5);
+      ctx.fillStyle = P.text; ctx.beginPath(); ctx.arc(gx, gy, 3.5, 0, 2 * Math.PI); ctx.fill();
+      text(ctx, ((r.pman - 100) / 100 >= 0 ? "+" : "") + ((r.pman - 100) / 100).toFixed(2) + " bar", gx, gy + gr + 16, P.text, "center", "middle", font(12, true, 600));
+      text(ctx, "매니폴드 압력", gx, gy + gr + 32, P.dim, "center", "middle", font(10.5));
+      text(ctx, "배기 →", w * 0.8 + 4, yw, P.dim, "left", "middle", font(10.5));
+    }
+    function draw2(ctx, w, h) {
+      const P = CB.palette(), c = getCurves(), N = gN();
+      const stack = w < 520;
+      const b1 = stack ? { x: 50, y: 10, w: w - 64, h: h / 2 - 54 } : { x: 50, y: 10, w: w * 0.5 - 62, h: h - 54 };
+      const b2 = stack ? { x: 50, y: h / 2 + 10, w: w - 64, h: h / 2 - 54 } : { x: w * 0.5 + 46, y: 10, w: w * 0.5 - 60, h: h - 54 };
+      const tmax = Math.ceil(Math.max(...c.tu.map((d) => d[1])) / 100 + 0.3) * 100;
+      CB.chart(ctx, b1, { x: [1000, 6500], y: [0, tmax], xLabel: "엔진 회전수 (rpm)", yLabel: "토크 (N·m)", xTicks: [1000, 2000, 3000, 4000, 5000, 6000],
+        series: [{ data: c.na, color: P.dim, width: 2, dash: [5, 4] }, { data: c.tu, color: P.accent, width: 2.4 }],
+        vlines: [{ x: N, color: P.faint }], points: [{ x: N, y: Math.max(0, cur.tq), color: P.accent2, r: 5 }] });
+      text(ctx, "터보", b1.x + 8, b1.y + 9, P.accent, "left", "middle", font(11, false, 700));
+      text(ctx, "자연흡기", b1.x + 40, b1.y + 9, P.dim, "left", "middle", font(11));
+      const target = 100 + 100 * gB();
+      CB.chart(ctx, b2, { x: [-8, 0], y: [0, 260], xLabel: "시간 (s)", yLabel: stack ? "압력 (kPa)" : "", yTicks: [0, 100, 200],
+        hlines: [{ y: target, color: P.ok, label: "목표" }, { y: 100, color: P.faint }],
+        series: [{ data: H.map((s) => [s[0] - tt, s[2]]), color: P.dim, width: 1.5, dash: [4, 3] }, { data: H.map((s) => [s[0] - tt, s[1]]), color: P.accent, width: 2.4 }] });
+      text(ctx, "매니폴드", b2.x + 8, b2.y + 9, P.accent, "left", "middle", font(11, false, 700));
+      text(ctx, "컴프레서 출구", b2.x + 62, b2.y + 9, P.dim, "left", "middle", font(11));
+    }
+    const el = $("cv-tb");
+    const cvA = CB.canvas(el, draw, { aspect: 0.56, minHeight: 230, maxHeight: 360 });
+    const cvB = CB.canvas($("cv-tb2"), draw2, { aspect: 0.44, minHeight: 210, maxHeight: 280 });
+    $("tb-kick").addEventListener("click", () => gT.set(100));
+    $("tb-lift").addEventListener("click", () => gT.set(15));
+    let acc = 0;
+    CB.loop(el, (dt) => {
+      const N = gN(), thr = gT() / 100, tb = TB[gS()], target = 100 + 100 * gB();
+      let rem = dt;
+      while (rem > 1e-6) { const s = Math.min(0.004, rem); cur = step(st, N, thr, tb, s, target); rem -= s; }
+      tt += dt; phase += dt * 60; ang += dt * (4 + (cur.Nt / 200e3) * 40);
+      if (tt - tS >= 0.04) { tS = tt; H.push([tt, cur.pman, cur.pc]); while (H.length && H[0][0] < tt - 8) H.shift(); }
+      cvA.redraw(); cvB.redraw();
+      acc += dt; if (acc < 0.12) return; acc = 0;
+      const b = (cur.pman - 100) / 100;
+      CB.stat("o-tb-boost", (b >= 0 ? "+" : "") + b.toFixed(2) + "<small>bar</small>");
+      CB.stat("o-tb-nt", (cur.Nt / 1000).toFixed(0) + "<small>천 rpm</small>");
+      CB.stat("o-tb-air", (cur.mdot * 1000).toFixed(0) + "<small>g/s</small>");
+      CB.stat("o-tb-wg", ((st.wg / 0.85) * 100).toFixed(0) + "<small>%</small>");
+      CB.stat("o-tb-tq", cur.tq.toFixed(0) + "<small>N·m</small>");
+      CB.stat("o-tb-na", torque(N, 100 * thrF(thr), 105).toFixed(0) + "<small>N·m</small>");
+    });
+  })();
+
+  /* =================================================== Sim 6: BSFC map */
+  (function () {
+    const N0 = 1000, N1 = 6000, TMAX = 220, LHV = 43;
+    const tmax = (N) => 200 * (1 - Math.pow((N - 4200) / 5200, 2));
+    // 제동 효율 = 도시 효율 × BMEP / (BMEP + 마찰 + 펌핑)
+    function eff(N, T) {
+      const load = T / tmax(N), bmep = T * 6.283;
+      const fmep = 55 + 0.012 * N + 3.5e-6 * N * N, pmep = 70 * Math.pow(Math.max(0, 1 - load), 1.3);
+      let ei = 0.385 * (1 - 0.13 * Math.exp(-N / 1100)) * (1 - 0.035 * Math.pow((N - 2800) / 3200, 2));
+      if (load > 0.9) ei *= 1 - 1.2 * (load - 0.9);
+      return (ei * bmep) / (bmep + fmep + pmep);
+    }
+    const bsfc = (N, T) => 3600 / (eff(N, T) * LHV);
+    const LV = [240, 250, 260, 280, 310, 350, 420, 550];
+    const COL = [[26, 152, 80], [102, 189, 99], [166, 217, 106], [217, 239, 139], [254, 224, 139], [253, 174, 97], [244, 109, 67], [215, 48, 39], [165, 0, 38]];
+    const GW = 240, GH = 150, off = document.createElement("canvas");
+    off.width = GW; off.height = GH;
+    (function build() {
+      const o = off.getContext("2d"), im = o.createImageData(GW, GH);
+      for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) {
+        const N = N0 + ((i + 0.5) / GW) * (N1 - N0), T = TMAX * (1 - (j + 0.5) / GH), p = (j * GW + i) * 4;
+        if (T > tmax(N)) { im.data[p + 3] = 0; continue; }
+        const b = bsfc(N, Math.max(T, 1));
+        let k = 0; while (k < LV.length && b >= LV[k]) k++;
+        im.data[p] = COL[k][0]; im.data[p + 1] = COL[k][1]; im.data[p + 2] = COL[k][2]; im.data[p + 3] = 255;
+      }
+      o.putImageData(im, 0, 0);
+    })();
+    let op = { N: 3000, T: 57.3 };
+    const boxOf = (w, h) => ({ x: 52, y: 12, w: w - 52 - 14, h: h - 12 - 46 });
+    function best(Pw) {
+      let b = null;
+      for (let N = N0; N <= N1; N += 20) { const T = Pw / ((N * Math.PI) / 30); if (T > tmax(N) || T > TMAX) continue; const v = bsfc(N, T); if (!b || v < b.v) b = { N, T, v }; }
+      return b;
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), bx = boxOf(w, h);
+      ctx.imageSmoothingEnabled = true;
+      ctx.globalAlpha = CB.isDark() ? 0.85 : 0.9; ctx.drawImage(off, bx.x, bx.y, bx.w, bx.h); ctx.globalAlpha = 1;
+      const full = []; for (let N = N0; N <= N1; N += 50) full.push([N, tmax(N)]);
+      const Pw = (op.T * op.N * Math.PI) / 30, series = [];
+      if ($("bs-iso").checked) {
+        [20e3, 40e3, 60e3, 80e3, 100e3].forEach((pp) => { const d = []; for (let N = N0; N <= N1; N += 50) { const T = pp / ((N * Math.PI) / 30); if (T <= tmax(N)) d.push([N, T]); } series.push({ data: d, color: "rgba(20,26,38,0.45)", width: 1, dash: [3, 4] }); });
+        const d = []; for (let N = N0; N <= N1; N += 25) { const T = Pw / ((N * Math.PI) / 30); if (T <= tmax(N)) d.push([N, T]); }
+        series.push({ data: d, color: "#141a26", width: 2.4, dash: [7, 5] });
+      }
+      series.push({ data: full, color: P.text, width: 2.6 });
+      const ch = CB.chart(ctx, bx, { x: [N0, N1], y: [0, TMAX], xLabel: "엔진 회전수 (rpm)", yLabel: "토크 (N·m)", series });
+      const b = best(Pw);
+      if (b && $("bs-iso").checked) { ctx.strokeStyle = "#fff"; ctx.fillStyle = "#141a26"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(ch.X(b.N), ch.Y(b.T), 6, 0, 2 * Math.PI); ctx.fill(); ctx.stroke(); }
+      const px = ch.X(op.N), py = ch.Y(op.T);
+      ctx.fillStyle = "#fff"; ctx.strokeStyle = "#141a26"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(px, py, 8, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(px, py, 4, 0, 2 * Math.PI); ctx.fill();
+      text(ctx, "전부하 토크", ch.X(4300), ch.Y(tmax(4300)) - 10, P.text, "center", "middle", font(11, false, 700));
+      if ($("bs-iso").checked && w > 420) [20, 40, 60, 80, 100].forEach((k) => { const N = 5750, T = (k * 1e3) / ((N * Math.PI) / 30); if (T < tmax(N)) text(ctx, k + " kW", ch.X(N), ch.Y(T) - 7, "#141a26", "center", "middle", font(10, true, 600)); });
+    }
+    const el = $("cv-bs");
+    const cv = CB.canvas(el, draw, { aspect: 0.56, minHeight: 280, maxHeight: 460 });
+    function setOp(N, T) {
+      N = CB.clamp(N, N0, N1); T = CB.clamp(T, 5, Math.min(TMAX, tmax(N)));
+      op = { N, T };
+      const Pw = (T * N * Math.PI) / 30, bs = bsfc(N, T), b = best(Pw);
+      cv.redraw();
+      CB.stat("o-bs-op", N.toFixed(0) + "<small>rpm</small> " + T.toFixed(0) + "<small>N·m</small>");
+      CB.stat("o-bs-p", (Pw / 1e3).toFixed(1) + "<small>kW</small>");
+      CB.stat("o-bs-bsfc", bs.toFixed(0) + "<small>g/kWh</small>");
+      CB.stat("o-bs-eff", (eff(N, T) * 100).toFixed(1) + "<small>%</small>");
+      CB.stat("o-bs-fuel", (((Pw / 1e3) * bs) / 745).toFixed(2) + "<small>L/h</small>");
+      CB.stat("o-bs-best", b ? b.N.toFixed(0) + "<small>rpm</small> " + b.T.toFixed(0) + "<small>N·m</small>" : "—");
+      CB.stat("o-bs-save", b ? "−" + Math.max(0, (1 - b.v / bs) * 100).toFixed(1) + "<small>% 연료</small>" : "—");
+    }
+    const fromP = (p) => { const bx = boxOf(cv.w, cv.h); setOp(N0 + ((p.x - bx.x) / bx.w) * (N1 - N0), TMAX * (1 - (p.y - bx.y) / bx.h)); };
+    CB.drag(el, { down: fromP, move: fromP });
+    $("bs-iso").addEventListener("change", () => cv.redraw());
+    $("bs-cruise").addEventListener("click", () => setOp(3000, 18e3 / ((3000 * Math.PI) / 30)));
+    $("bs-best").addEventListener("click", () => { const b = best((op.T * op.N * Math.PI) / 30); if (b) setOp(b.N, b.T); });
+    setOp(op.N, op.T);
+  })();
+
+  /* =================================================== Sim 7: cold start & catalyst light-off */
+  (function () {
+    const TEND = 180, DT = 0.25, T50 = 270;
+    const etaOf = (T) => 0.98 / (1 + Math.exp(-(T - T50) / 18));
+    const gT = CB.range("at-t", (v) => v.toFixed(1) + " s", () => redraw());
+    const gPos = CB.seg("at-pos", () => { build(); redraw(); });
+    let tr = null;
+    // 촉매 = 열용량 하나: C dT/dt = ṁ c_p ε (T_in − T) + 반응열 − 방열
+    function build() {
+      const heat = $("at-heat").checked, cc = gPos() === "cc";
+      const Tgas = (heat ? 680 : 480) - (cc ? 0 : 130), tauP = cc ? 4 : 25, flow = heat ? 14 : 9, C = 380;
+      let T = 20, eo = 0, tp = 0, lo = null;
+      tr = { T: [], eta: [], eo: [], tp: [], lo: null, tpAtLo: 0 };
+      for (let t = 0; t <= TEND + 1e-9; t += DT) {
+        const eta = etaOf(T), rate = (12 + 60 * Math.exp(-t / 15)) * (heat ? 1.15 : 1);   // HC mg/s
+        tr.T.push([t, T]); tr.eta.push([t, eta * 100]); tr.eo.push([t, eo]); tr.tp.push([t, tp]);
+        if (lo === null && eta >= 0.5) { lo = t; tr.lo = t; tr.tpAtLo = tp; }
+        eo += rate * DT; tp += rate * (1 - eta) * DT;
+        const Tin = 20 + (Tgas - 20) * (1 - Math.exp(-t / tauP));
+        T += DT * ((flow * 1.1 * 0.85 * (Tin - T)) / C + eta * 3 - 0.004 * (T - 20));
+      }
+    }
+    const at = (arr, t) => arr[Math.min(arr.length - 1, Math.round(t / DT))][1];
+    const lerpC = (a, b, u) => "rgb(" + a.map((v, k) => Math.round(v + (b[k] - v) * u)).join(",") + ")";
+    function draw(ctx, w, h) {
+      const P = CB.palette(), t = gT(), T = at(tr.T, t), eta = at(tr.eta, t) / 100;
+      const yb = h * 0.1, bh = h * 0.3, ym = yb + bh / 2;
+      const blk = [[0.03, 0.19, "엔진"], [0.33, 0.52, "삼원 촉매"], [0.63, 0.79, "GPF"]];
+      ctx.strokeStyle = P.dim; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(w * 0.19, ym); ctx.lineTo(w * 0.97, ym); ctx.stroke();
+      blk.forEach(([a, b, name], k) => {
+        ctx.fillStyle = k === 1 ? lerpC([70, 120, 230], [255, 96, 40], CB.clamp((T - 20) / 480, 0, 1)) : P.surface;
+        ctx.strokeStyle = P.axis; ctx.lineWidth = 1.5;
+        ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(w * a, yb, w * (b - a), bh, k ? bh * 0.4 : 8); else ctx.rect(w * a, yb, w * (b - a), bh);
+        ctx.fill(); ctx.stroke();
+        text(ctx, name, w * (a + b) / 2, k === 1 ? ym - 8 : ym, k === 1 ? "#fff" : P.text, "center", "middle", font(w < 420 ? 11 : 12.5, false, 700));
+        if (k === 1) text(ctx, T.toFixed(0) + " °C", w * (a + b) / 2, ym + 9, "#fff", "center", "middle", font(11, true, 600));
+      });
+      CB.arrow(ctx, w * 0.9, ym - bh * 0.42, w * 0.985, ym - bh * 0.42, P.dim, 2);
+      // pollutant bars at three stations
+      const e0 = [0.35 + 0.65 * Math.exp(-t / 20), 0.2 + 0.8 * Math.exp(-t / 15), 0.4 + 0.6 * (1 - Math.exp(-t / 30)), 0.25 + 0.75 * Math.exp(-t / 25)];
+      const s1 = [e0[0] * (1 - eta), e0[1] * (1 - eta), e0[2] * (1 - eta), e0[3]], s2 = [s1[0], s1[1], s1[2], s1[3] * 0.15];
+      const cols = [P.warn, P.ok, P.bad, P.dim], names = ["CO", "HC", "NOx", "PM"];
+      const y0 = h * 0.88, H = h * 0.36, bw = Math.min(22, w * 0.042);
+      [[0.26, e0, "엔진 출구"], [0.575, s1, "촉매 뒤"], [0.88, s2, "배기구"]].forEach(([xc, vals, name]) => {
+        const xs = w * xc - bw * 2.3;
+        vals.forEach((v, k) => {
+          const x = xs + k * bw * 1.2;
+          ctx.fillStyle = P.grid; ctx.fillRect(x, y0 - H, bw, H);
+          ctx.fillStyle = cols[k]; ctx.fillRect(x, y0 - H * v, bw, H * v);
+          text(ctx, names[k], x + bw / 2, y0 + 9, P.dim, "center", "middle", font(w < 420 ? 8.5 : 10, true));
+        });
+        text(ctx, name, w * xc, y0 - H - 10, P.text, "center", "middle", font(11.5, false, 600));
+      });
+    }
+    function draw2(ctx, w, h) {
+      const P = CB.palette(), t = gT();
+      const bh = (h - 10 - 44 - 22) / 2, x = 52, bw = w - x - 14;
+      const vl = [{ x: t, color: P.text, dash: [], width: 1.5 }];
+      if (tr.lo !== null) vl.push({ x: tr.lo, color: P.ok, label: "활성화" });
+      const sc = 6;   // 정화율 100 % ↔ 600 °C 눈금
+      const c1 = CB.chart(ctx, { x, y: 10, w: bw, h: bh }, { x: [0, TEND], y: [0, 600], yLabel: "온도 (°C)", xFmt: () => "",
+        hlines: [{ y: T50, color: P.faint, label: "T50 = 270 °C" }], vlines: vl,
+        series: [{ data: tr.eta.map(([a, b]) => [a, b * sc]), color: P.ok, width: 2 }, { data: tr.T, color: P.accent, width: 2.4 }] });
+      text(ctx, "촉매 온도", c1.box.x + 8, c1.box.y + 9, P.accent, "left", "middle", font(11, false, 700));
+      text(ctx, "정화율 (위 끝 = 100 %)", c1.box.x + 66, c1.box.y + 9, P.ok, "left", "middle", font(11));
+      const emax = tr.eo[tr.eo.length - 1][1];
+      const c2 = CB.chart(ctx, { x, y: 10 + bh + 22, w: bw, h: bh }, { x: [0, TEND], y: [0, Math.ceil(emax / 1000) * 1000], yLabel: "누적 HC (mg)", xLabel: "시동 후 시간 (s)",
+        vlines: [{ x: t, color: P.text, dash: [], width: 1.5 }],
+        series: [{ data: tr.eo, color: P.dim, width: 1.8, dash: [5, 4] }, { data: tr.tp, color: P.bad, width: 2.4, fill: P.bad + "22" }] });
+      text(ctx, "엔진 출구", c2.box.x + 8, c2.box.y + 9, P.dim, "left", "middle", font(11));
+      text(ctx, "배기구", c2.box.x + 66, c2.box.y + 9, P.bad, "left", "middle", font(11, false, 700));
+    }
+    build();
+    const el = $("cv-at");
+    const cvA = CB.canvas(el, draw, { aspect: 0.46, minHeight: 220, maxHeight: 300 });
+    const cvB = CB.canvas($("cv-at2"), draw2, { aspect: 0.6, minHeight: 300, maxHeight: 380 });
+    function redraw() {
+      const t = gT();
+      cvA.redraw(); cvB.redraw();
+      CB.stat("o-at-T", at(tr.T, t).toFixed(0) + "<small>°C</small>");
+      CB.stat("o-at-eta", at(tr.eta, t).toFixed(0) + "<small>%</small>");
+      CB.stat("o-at-lo", tr.lo === null ? "180 s 안에 못 미침" : tr.lo.toFixed(1) + "<small>s</small>");
+      CB.stat("o-at-hc", at(tr.eo, t).toFixed(0) + " → " + at(tr.tp, t).toFixed(0) + "<small>mg</small>");
+      CB.stat("o-at-share", tr.lo === null ? "—" : ((tr.tpAtLo / tr.tp[tr.tp.length - 1][1]) * 100).toFixed(0) + "<small>% (180 s 중)</small>");
+    }
+    let playing = false;
+    const btn = $("at-play");
+    const setPlay = (p) => { playing = p; btn.textContent = p ? "일시정지" : "냉간 시동"; };
+    btn.addEventListener("click", () => { if (!playing && gT() >= TEND - 0.5) gT.set(0); if (!playing && gT() > 0 && gT() < TEND - 0.5) { setPlay(true); return; } if (!playing) gT.set(0); setPlay(!playing); });
+    $("at-heat").addEventListener("change", () => { build(); redraw(); });
+    CB.loop(el, (dt) => {
+      if (!playing) return;
+      const t = Math.min(TEND, gT() + dt * 10);
+      gT.set(t);
+      if (t >= TEND) setPlay(false);
+    });
+    redraw();
+  })();
+})();
+</script>
+</body>
+</html>

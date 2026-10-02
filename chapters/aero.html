@@ -1,0 +1,1307 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>공기역학 · CarBook</title>
+<meta name="description" content="동압과 베르누이, 압력 항력과 박리·후류, 항력 계수 Cd와 CdA, 다운포스와 디퓨저, 공력 균형, 옆바람, 냉각과 풍절음, 전기차 공력, 슬립스트림을 유동 시뮬레이터로 배운다.">
+<link rel="canonical" href="https://carbook.euiyun.com/chapters/aero.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="CarBook">
+<meta property="og:title" content="공기역학 · CarBook">
+<meta property="og:description" content="동압과 베르누이, 압력 항력과 박리·후류, 항력 계수 Cd와 CdA, 다운포스와 디퓨저, 공력 균형, 옆바람, 냉각과 풍절음, 전기차 공력, 슬립스트림을 유동 시뮬레이터로 배운다.">
+<meta property="og:url" content="https://carbook.euiyun.com/chapters/aero.html">
+<meta property="og:image" content="https://carbook.euiyun.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TechArticle","headline":"공기역학","name":"공기역학 · CarBook","url":"https://carbook.euiyun.com/chapters/aero.html","mainEntityOfPage":"https://carbook.euiyun.com/chapters/aero.html","inLanguage":"ko","isAccessibleForFree":true,"learningResourceType":"interactive textbook chapter","position":12,"image":"https://carbook.euiyun.com/og.png","dateModified":"2026-10-02","isPartOf":{"@type":"Book","@id":"https://carbook.euiyun.com/#book","name":"CarBook — 인터랙티브 자동차 교과서","url":"https://carbook.euiyun.com/"},"publisher":{"@type":"Organization","name":"CarBook","url":"https://carbook.euiyun.com/"},"description":"동압과 베르누이, 압력 항력과 박리·후류, 항력 계수 Cd와 CdA, 다운포스와 디퓨저, 공력 균형, 옆바람, 냉각과 풍절음, 전기차 공력, 슬립스트림을 유동 시뮬레이터로 배운다."},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"CarBook","item":"https://carbook.euiyun.com/"},{"@type":"ListItem","position":2,"name":"12 공기역학","item":"https://carbook.euiyun.com/chapters/aero.html"}]}]}</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="../css/style.css">
+<script src="../js/common.js"></script>
+<style>
+  .sim-view canvas + canvas { border-top: 1px solid var(--border); }
+  #cv-fl { touch-action: none; cursor: crosshair; }
+  svg .flow { stroke: var(--accent-2); fill: none; stroke-width: 1.6; }
+  svg .wake { fill: var(--accent-soft); stroke: var(--accent); stroke-dasharray: 4 3; }
+  svg .body { fill: var(--surface-2); stroke: var(--text-dim); stroke-width: 1.5; }
+</style>
+</head>
+<body data-chapter="aero">
+<main class="chapter">
+  <header class="chapter-hero">
+    <div class="eyebrow">Chapter 12</div>
+    <h1>공기역학</h1>
+    <p class="lead">시속 100 km로 달리는 차는 매초 약 60 m³, 무게로 70 kg이 넘는 공기를 밀어내며 나아간다. 이 공기가 차체를 어떻게 돌아 나가느냐가 고속 연비와 전기차 주행 거리, 최고 속도, 고속 안정성, 실내 소음까지 결정한다. 이 장에서는 공기가 차를 뒤로 당기는 힘(항력)과 위아래로 미는 힘(양력·다운포스)이 어디서 생기는지 살피고, 직접 흐름을 만들어 보며 확인한다.</p>
+    <ul class="objectives">
+      <li>동압과 베르누이 식으로 차체 표면의 압력 분포를 설명한다.</li>
+      <li>압력 항력과 마찰 항력을 구분하고, 박리와 후류가 자동차 항력을 지배하는 이유를 이해한다.</li>
+      <li>Cd와 CdA로 항력·필요 출력·전기차 주행 거리를 계산한다.</li>
+      <li>스포일러, 윙, 디퓨저가 다운포스를 만드는 원리와 그 대가(항력)를 안다.</li>
+      <li>다운포스가 코너링 한계를 높이는 식을 세우고, 공력 균형과 옆바람 안정성을 설명한다.</li>
+      <li>냉각 공기, 풍절음, 전기차 공력 설계, 풍동·CFD, 슬립스트림의 핵심을 이해한다.</li>
+    </ul>
+  </header>
+
+  <!-- =============================================================== 1 -->
+  <section id="intro">
+    <h2>공기 저항은 왜 고속에서 지배적인가</h2>
+    <p><a href="dynamics.html">2장</a>에서 주행 저항을 구름 저항, 공기 저항, 등판 저항으로 나누었다. 그중 공기 저항, 곧 <span class="term">항력</span><span class="en">(Drag)</span>은 다음 식으로 쓴다.</p>
+    <div class="formula">$$F_D = \tfrac12\,\rho\,v^2\,C_d\,A,\qquad P_D = F_D\,v = \tfrac12\,\rho\,C_d A\,v^3$$
+      <div class="where">\(\rho\): 공기 밀도(15 °C 해수면에서 1.225 kg/m³), \(v\): 공기에 대한 차의 속도, \(C_d\): 항력 계수, \(A\): 전면 투영 면적.</div>
+    </div>
+    <p>구름 저항은 속도와 거의 무관하게 일정한데, 항력은 속도의 제곱으로, 항력을 이기는 데 드는 출력은 속도의 <b>세제곱</b>으로 커진다. 속도를 두 배로 올리면 공기를 이기는 출력은 여덟 배가 필요하다. 그래서 시내에서는 무게(구름 저항·가속 저항)가, 고속도로에서는 공기가 에너지 소비를 좌우한다.</p>
+    <div class="callout tip">
+      <strong>계산 예: 두 저항이 같아지는 속도</strong>
+      <p>질량 1,500 kg, 구름 저항 계수 0.010, \(C_d\) = 0.28, \(A\) = 2.2 m²인 세단. 구름 저항은 \(0.010 \times 1500 \times 9.81 = 147\) N으로 일정하다. 항력이 이와 같아지는 속도는 \(v = \sqrt{2 \times 147 / (1.225 \times 0.28 \times 2.2)} = 19.7\) m/s, 곧 <b>약 71 km/h</b>다. 이 속도를 넘으면 공기가 가장 큰 저항이 되고, 140 km/h에서는 항력이 구름 저항의 네 배 가까이 된다.</p>
+    </div>
+
+    <div class="sim" id="sim-dp">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>항력과 필요 출력: 속도의 세제곱</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-dp"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>차종 프리셋</span><div class="seg" id="dp-preset"><button data-value="sedan" class="on">세단</button><button data-value="suv">SUV</button><button data-value="ev">공력형 EV</button><button data-value="truck">대형 트럭</button></div></div>
+          <label class="ctrl"><span>항력 계수 Cd <output id="dp-cd-out"></output></span><input type="range" id="dp-cd" min="0.15" max="1" step="0.01" value="0.28"></label>
+          <label class="ctrl"><span>전면 면적 A <output id="dp-a-out"></output></span><input type="range" id="dp-a" min="1.6" max="10" step="0.1" value="2.2"></label>
+          <label class="ctrl"><span>속도 <output id="dp-v-out"></output></span><input type="range" id="dp-v" min="10" max="250" step="1" value="110"></label>
+          <label class="ctrl"><span>배터리 용량 <output id="dp-batt-out"></output></span><input type="range" id="dp-batt" min="40" max="120" step="1" value="77"></label>
+        </div>
+      </div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>공기 저항 출력</span><span><i style="background:var(--accent-2)"></i>구름 저항 출력</span><span><i style="background:var(--text-dim)"></i>합계</span></div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">항력</span><span class="v" id="o-dp-f">—</span></div>
+        <div class="stat"><span class="k">공기 저항 출력</span><span class="v" id="o-dp-p">—</span></div>
+        <div class="stat"><span class="k">공기 저항 비중</span><span class="v" id="o-dp-share">—</span></div>
+        <div class="stat"><span class="k">정속 전비</span><span class="v" id="o-dp-wh">—</span></div>
+        <div class="stat"><span class="k">정속 주행 거리</span><span class="v" id="o-dp-range">—</span></div>
+        <div class="stat"><span class="k">Cd를 0.01 줄이면</span><span class="v" id="o-dp-gain">—</span></div>
+      </div>
+      <div class="sim-note">평지 정속 주행 모델. 질량과 구름 저항 계수는 프리셋이 정한다(세단 1,500 kg·0.010, SUV 1,900 kg·0.011, EV 1,900 kg·0.009, 트럭 25 t·0.006). 전비와 주행 거리는 구동 효율 88 %, 보조 전력 0.7 kW를 가정한 전기차 기준이다. 해볼 것: 속도를 80에서 160 km/h로 두 배 올리면 공기 저항 출력이 몇 배가 되는지 보자. 세단과 SUV는 Cd 차이보다 CdA 차이가 더 크다.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 2 -->
+  <section id="pressure">
+    <h2>동압, 베르누이, 그리고 박리</h2>
+    <p>항력 식의 앞부분 \(\tfrac12\rho v^2\)을 <span class="term">동압</span><span class="en">(Dynamic Pressure)</span> \(q\)라 한다. 움직이는 공기가 멈출 때 압력으로 바뀌는 운동 에너지 밀도다. 100 km/h(27.8 m/s)에서 \(q = 0.5 \times 1.225 \times 27.8^2 \approx 473\) Pa, 200 km/h에서는 그 네 배인 약 1,890 Pa다. 대기압(약 101,000 Pa)에 비하면 작지만 수 m² 면적에 걸리면 수백~수천 N의 힘이 된다.</p>
+    <p>점성을 무시할 수 있는 영역에서는 한 유선을 따라 <span class="term">베르누이 식</span>이 성립한다. 공기가 빨라지는 곳에서는 압력이 내려가고, 느려지는 곳에서는 올라간다.</p>
+    <div class="formula">$$p + \tfrac12\rho v^2 = p_\infty + \tfrac12\rho v_\infty^2,\qquad C_p \equiv \frac{p - p_\infty}{\tfrac12\rho v_\infty^2} = 1 - \left(\frac{v}{v_\infty}\right)^2$$
+      <div class="where">\(C_p\): 압력 계수. 공기가 완전히 멈추는 정체점(범퍼 중앙)에서 \(C_p = 1\), 흐름이 자유류보다 빠른 곳(보닛 앞 모서리, 루프)에서 \(C_p &lt; 0\).</div>
+    </div>
+    <p>표면이 받는 공기력은 두 가지다. 표면에 수직으로 누르는 압력을 차 전체에 대해 더한 <span class="term">압력 항력</span><span class="en">(Pressure/Form Drag)</span>과, 표면을 따라 끄는 점성 전단 응력을 더한 <span class="term">마찰 항력</span><span class="en">(Skin Friction Drag)</span>이다. 비행기 날개처럼 가늘고 긴 유선형 물체는 마찰 항력이 대부분이지만, 자동차는 길이에 비해 높이가 큰 <b>뭉툭한 물체</b><span class="en">(Bluff Body)</span>라 항력의 대부분(대략 80~90 %)이 압력 항력이다. 차 앞쪽은 고압, 뒤쪽은 저압이 되어 그 차이가 차를 뒤로 민다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 250" role="img" aria-label="뭉툭한 물체와 유선형 물체의 후류 비교">
+        <g>
+          <text x="190" y="22" class="t" text-anchor="middle">뭉툭한 물체 (평판)</text>
+          <path class="flow" d="M20 60 C120 60 150 40 190 38 C240 36 290 50 370 56"/>
+          <path class="flow" d="M20 95 C110 95 150 62 186 58 C230 56 290 80 370 86"/>
+          <path class="flow" d="M20 155 C110 155 150 188 186 192 C230 194 290 170 370 164"/>
+          <path class="flow" d="M20 190 C120 190 150 210 190 212 C240 214 290 200 370 194"/>
+          <path class="wake" d="M190 66 C250 62 320 96 366 125 C320 154 250 188 190 184 Z"/>
+          <rect x="182" y="66" width="10" height="118" class="body"/>
+          <path d="M240 108 a16 12 0 1 1 -1 0" fill="none" stroke="var(--accent)" stroke-width="1.5"/>
+          <path d="M240 142 a16 12 0 1 0 -1 0" fill="none" stroke="var(--accent)" stroke-width="1.5"/>
+          <text x="168" y="130" class="t-mono" text-anchor="end">고압 +</text>
+          <text x="300" y="130" class="t-mono" text-anchor="middle">저압 −</text>
+          <text x="190" y="240" class="t-acc" text-anchor="middle">Cd ≈ 1.1~1.2 · 큰 후류</text>
+        </g>
+        <g transform="translate(390,0)">
+          <text x="190" y="22" class="t" text-anchor="middle">유선형 물체 (물방울)</text>
+          <path class="flow" d="M10 60 C80 60 110 44 150 42 C220 42 300 58 360 62"/>
+          <path class="flow" d="M10 100 C60 100 80 62 130 60 C200 60 290 100 360 112"/>
+          <path class="flow" d="M10 150 C60 150 80 188 130 190 C200 190 290 150 360 138"/>
+          <path class="flow" d="M10 190 C80 190 110 206 150 208 C220 208 300 192 360 188"/>
+          <path class="body" d="M76 125 C76 85 120 66 150 66 C210 66 280 110 338 125 C280 140 210 184 150 184 C120 184 76 165 76 125 Z"/>
+          <path class="wake" d="M338 120 L366 118 L366 132 L338 130 Z"/>
+          <text x="190" y="240" class="t-acc" text-anchor="middle">Cd ≈ 0.04~0.05 · 가는 후류</text>
+        </g>
+      </svg>
+      <figcaption><b>그림 12-1.</b> 앞에서 본 넓이가 같아도 뒤쪽을 서서히 좁혀 주면 흐름이 표면에 붙은 채 뒤에서 다시 만난다. 평판은 가장자리에서 흐름이 떨어져 나가 큰 저압 후류가 생기고, 항력은 스무 배 이상 차이 난다.</figcaption>
+    </figure>
+
+    <h3>경계층과 박리</h3>
+    <p>공기는 차체 표면에 달라붙는다(점착 조건). 표면에서 속도 0, 조금 떨어진 곳에서 자유류 속도가 되는 얇은 층을 <span class="term">경계층</span><span class="en">(Boundary Layer)</span>이라 한다. 차 앞쪽에서 수 mm, 뒤쪽 루프 끝에서는 수 cm 두께다. 길이 4.5 m 차가 100 km/h로 달릴 때 레이놀즈 수는 \(Re = vL/\nu \approx 27.8 \times 4.5 / 1.5\times10^{-5} \approx 8\times10^6\)로, 앞 범퍼에서 수십 cm 안에 층류가 난류로 바뀐다. 차체 표면 대부분은 난류 경계층이다.</p>
+    <p>차 뒤쪽에서 단면이 줄어들면 흐름은 느려지고 압력이 회복되어야 한다. 이때 경계층 안의 느린 공기는 높아지는 압력(역압력 구배)을 거슬러 올라갈 운동량이 모자란다. 벽 근처 흐름이 멈추고 거꾸로 흐르기 시작하면 주류가 표면에서 떨어져 나가는데, 이것이 <span class="term">박리</span><span class="en">(Flow Separation)</span>다. 박리된 뒤에는 느리게 소용돌이치는 <span class="term">후류</span><span class="en">(Wake)</span>가 남고, 그 안의 압력은 회복되지 못한 채 낮게 유지된다. 차 뒷면에 걸리는 이 낮은 압력(기저 압력)이 압력 항력의 핵심이다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 260" role="img" aria-label="경계층 속도 분포와 박리">
+        <path d="M30 200 C180 200 260 150 380 150 C500 150 580 200 730 215 L730 240 L30 240 Z" class="body"/>
+        <path d="M30 186 C180 186 260 132 380 128 C480 126 560 150 730 120" fill="none" stroke="var(--text-faint)" stroke-dasharray="5 4"/>
+        <text x="724" y="112" class="t-dim" text-anchor="end">경계층 가장자리</text>
+        <g stroke="var(--accent-2)" stroke-width="1.6" fill="none">
+          <line x1="150" y1="196" x2="150" y2="150"/><path d="M150 196 C182 190 196 170 198 150"/>
+          <line x1="150" y1="186" x2="186" y2="186"/><line x1="150" y1="174" x2="194" y2="174"/><line x1="150" y1="162" x2="197" y2="162"/>
+          <line x1="380" y1="150" x2="380" y2="104"/><path d="M380 150 C410 146 432 128 436 104"/>
+          <line x1="380" y1="140" x2="414" y2="140"/><line x1="380" y1="128" x2="430" y2="128"/><line x1="380" y1="116" x2="434" y2="116"/>
+          <line x1="520" y1="170" x2="520" y2="112"/><path d="M520 170 C522 150 540 132 566 112"/>
+          <line x1="520" y1="150" x2="528" y2="150"/><line x1="520" y1="136" x2="544" y2="136"/><line x1="520" y1="122" x2="556" y2="122"/>
+        </g>
+        <g stroke="var(--accent)" stroke-width="1.6" fill="none">
+          <line x1="640" y1="204" x2="640" y2="112"/><path d="M640 204 C622 190 620 170 640 158 C660 146 676 130 684 112"/>
+          <line x1="640" y1="190" x2="628" y2="190"/><line x1="640" y1="176" x2="626" y2="176"/><line x1="640" y1="140" x2="664" y2="140"/><line x1="640" y1="124" x2="678" y2="124"/>
+        </g>
+        <circle cx="556" cy="183" r="5" class="f-acc"/>
+        <text x="556" y="212" class="t-acc" text-anchor="middle">박리점</text>
+        <path d="M562 180 C620 150 680 160 730 150 L730 215 C660 208 610 196 562 184 Z" class="wake"/>
+        <text x="690" y="190" class="t-dim" text-anchor="middle">역류</text>
+        <text x="200" y="40" class="t" text-anchor="middle">가속 구간: 압력이 내려감</text>
+        <text x="200" y="60" class="t-dim" text-anchor="middle">(순압력 구배, 경계층 안정)</text>
+        <text x="560" y="40" class="t" text-anchor="middle">감속 구간: 압력이 올라감</text>
+        <text x="560" y="60" class="t-dim" text-anchor="middle">(역압력 구배, 벽 근처가 먼저 멈춤)</text>
+        <line x1="380" y1="24" x2="380" y2="96" class="s-axis" stroke-dasharray="3 4"/>
+      </svg>
+      <figcaption><b>그림 12-2.</b> 표면을 따라가는 경계층의 속도 분포. 꼭대기를 지난 뒤 압력이 다시 올라가는 구간에서 벽 근처 속도가 0이 되는 곳이 박리점이고, 그 뒤로는 역류가 생긴다. 난류 경계층은 바깥의 빠른 공기를 섞어 넣기 때문에 층류보다 박리가 늦다.</figcaption>
+    </figure>
+
+    <p>아래 유동 놀이터는 격자 볼츠만 방법<span class="en">(Lattice Boltzmann, D2Q9)</span>으로 2차원 비압축성 유동을 실제로 계산한다. 차 옆모습을 바꿔 가며 후류의 크기와 항력이 어떻게 달라지는지 보자. 캔버스를 끌어 장애물을 직접 그릴 수도 있다.</p>
+
+    <div class="sim" id="sim-fl">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>2D 유동 놀이터: 차 옆모습 주위의 흐름</h3></div>
+      <div class="sim-body">
+        <div class="sim-view"><canvas id="cv-fl"></canvas><span class="hint">끌어서 장애물 그리기</span></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>형상</span><div class="seg" id="fl-shape"><button data-value="sedan" class="on">세단</button><button data-value="hatch">해치백</button><button data-value="suv">SUV</button><button data-value="truck">박스 트럭</button><button data-value="drop">물방울</button><button data-value="none">빈 풍동</button></div></div>
+          <label class="ctrl"><span>풍속 (격자 단위) <output id="fl-u-out"></output></span><input type="range" id="fl-u" min="0.04" max="0.12" step="0.005" value="0.09"></label>
+          <div class="ctrl"><span>색</span><div class="seg" id="fl-view"><button data-value="speed" class="on">속도</button><button data-value="press">압력</button><button data-value="vort">소용돌이도</button></div></div>
+          <div class="ctrl"><span>마우스 도구</span><div class="seg" id="fl-tool"><button data-value="draw" class="on">그리기</button><button data-value="erase">지우기</button></div></div>
+          <label class="check"><input type="checkbox" id="fl-smoke" checked> 연기선 표시</label>
+          <div class="ctrl-row"><button class="btn primary" id="fl-play">일시정지</button><button class="btn" id="fl-reset">바람 다시 불기</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">레이놀즈 수 (높이 기준)</span><span class="v" id="o-fl-re">—</span></div>
+        <div class="stat"><span class="k">항력 계수 (2D)</span><span class="v" id="o-fl-cd">—</span></div>
+        <div class="stat"><span class="k">양력 계수 (2D, 위 +)</span><span class="v" id="o-fl-cl">—</span></div>
+        <div class="stat"><span class="k">저속 영역 / 차체 단면</span><span class="v" id="o-fl-wake">—</span></div>
+      </div>
+      <div class="sim-note">바람은 왼쪽에서 불고 바닥은 바람과 같은 속도로 움직인다(차 기준 좌표). 속도 색: 주황은 자유류보다 느린 곳(정체점·후류), 파랑은 빠른 곳. 압력 색: 빨강은 고압, 파랑은 저압. 항력은 표면에서 튕겨 나오는 입자의 운동량 변화를 더해 구한다. 이 계산은 2차원이고 레이놀즈 수가 수백에 불과해(실차는 약 10⁷) 수치 자체는 실제 차의 Cd와 다르다. 2D에서는 바퀴가 바닥 틈을 막는 벽이 되므로 바퀴를 생략했다. 형상 사이의 <b>순위와 후류 모양</b>을 비교하는 용도로 쓰자. 해볼 것: 박스 트럭과 물방울의 저속 영역을 비교하고, 트럭 뒤에 꼬리 모양을 그려 넣어 항력이 줄어드는지 확인하자.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 3 -->
+  <section id="cd">
+    <h2>항력 계수 Cd와 CdA, 차체 부위별 기여</h2>
+    <p><span class="term">항력 계수</span> \(C_d\)는 항력을 동압과 전면 면적으로 나눈 무차원 수다. 크기와 속도를 빼고 <b>형상이 얼마나 매끄럽게 공기를 가르는지</b>만 남긴 값이다. 하지만 실제로 차가 받는 힘은 \(C_d\)가 아니라 \(C_d A\)(<span class="term">항력 면적</span>)에 비례한다. 형상이 좋아도 덩치가 크면 항력은 크다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>차종</th><th class="num">Cd (대표 범위)</th><th class="num">A (m²)</th><th class="num">CdA (m²)</th></tr></thead>
+      <tbody>
+        <tr><td>공력 특화 전기 세단</td><td class="num">0.20~0.23</td><td class="num">2.2~2.4</td><td class="num">0.45~0.55</td></tr>
+        <tr><td>세단</td><td class="num">0.25~0.30</td><td class="num">2.1~2.3</td><td class="num">0.55~0.70</td></tr>
+        <tr><td>해치백</td><td class="num">0.28~0.33</td><td class="num">2.0~2.2</td><td class="num">0.58~0.72</td></tr>
+        <tr><td>SUV</td><td class="num">0.30~0.40</td><td class="num">2.5~2.9</td><td class="num">0.75~1.1</td></tr>
+        <tr><td>픽업·박스형 밴</td><td class="num">0.38~0.50</td><td class="num">2.8~4.0</td><td class="num">1.1~2.0</td></tr>
+        <tr><td>버스·대형 트럭</td><td class="num">0.6~0.8</td><td class="num">7~10</td><td class="num">4.5~8</td></tr>
+        <tr><td>포뮬러 레이스카</td><td class="num">0.7~1.0</td><td class="num">약 1.5</td><td class="num">1.1~1.5</td></tr>
+      </tbody>
+    </table></div>
+    <p>포뮬러 카의 Cd가 트럭만큼 큰 것은 다운포스를 만드는 날개와 노출된 바퀴 때문이다. 항력을 줄이는 것만이 공력 설계의 목표는 아니다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 320" role="img" aria-label="차체 부위별 압력과 항력 기여">
+        <line x1="40" y1="246" x2="720" y2="246" class="s-axis"/>
+        <path class="flow" d="M30 120 C90 120 110 110 150 96 C230 70 300 52 352 46 C420 40 470 44 540 80 C600 104 660 112 730 116"/>
+        <path class="flow" d="M30 180 C80 180 100 176 118 168"/>
+        <path class="flow" d="M30 236 C200 240 520 240 640 232 C680 228 710 222 730 216"/>
+        <path class="wake" d="M628 150 C660 150 700 168 728 184 C700 196 660 208 622 206 Z"/>
+        <path class="body" d="M135.8 204 L132.500 169 L165.5 141.5 L275.5 125 L352.5 75.5 L473.5 78.800 L539.5 119.5 L605.5 130.5 L627.5 152.5 L622 204 Z"/>
+        <path d="M283 126 L353 80 L470 83 L527 120 Z" fill="var(--accent-2-soft)" stroke="var(--accent-2)"/>
+        <circle cx="231.500" cy="210" r="36" fill="var(--text)" opacity="0.8"/><circle cx="528.5" cy="210" r="36" fill="var(--text)" opacity="0.8"/>
+        <circle cx="231.500" cy="210" r="20" class="f-surface"/><circle cx="528.5" cy="210" r="20" class="f-surface"/>
+        <rect x="292" y="112" width="20" height="12" rx="4" class="f-acc"/>
+        <g class="t-mono">
+          <text x="112" y="196" text-anchor="end">Cp ≈ +1</text>
+          <text x="410" y="34" text-anchor="middle">Cp &lt; 0 (가속)</text>
+          <text x="690" y="170" text-anchor="middle">Cp &lt; 0</text>
+        </g>
+        <g class="t">
+          <text x="60" y="150" text-anchor="middle">① 전면</text>
+          <text x="410" y="64" text-anchor="middle">② 루프 라인</text>
+          <text x="690" y="140" text-anchor="middle">③ 리어 엔드</text>
+          <text x="380" y="266" text-anchor="middle">④ 언더보디</text>
+          <text x="231" y="290" text-anchor="middle">⑤ 휠·휠 하우스</text>
+          <text x="302" y="104" text-anchor="middle">⑥ 미러</text>
+          <text x="150" y="232" text-anchor="middle" class="t-dim">⑦ 냉각 공기</text>
+        </g>
+        <path d="M118 176 L160 176 L176 190" class="s-acc" stroke-dasharray="3 3"/>
+      </svg>
+      <figcaption><b>그림 12-3.</b> 승용차 주위의 흐름과 항력이 생기는 곳. 정체점이 있는 전면은 고압, 흐름이 빨라지는 루프는 저압, 박리된 리어 엔드 뒤는 압력이 회복되지 못한 저압 후류다.</figcaption>
+    </figure>
+
+    <ul>
+      <li><b>① 전면</b>: 범퍼 중앙이 정체점이다. 모서리를 둥글게(반경 수 cm 이상) 하면 흐름이 떨어지지 않고 보닛과 옆면으로 돌아 나간다. 정체 압력은 피할 수 없지만 그 주변 가속 구간의 저압이 앞으로 당기는 힘을 만들어 상당 부분 상쇄한다.</li>
+      <li><b>② 루프 라인</b>: 앞유리 경사가 완만할수록, 루프가 뒤로 갈수록 서서히 낮아질수록 리어에서 박리가 늦어진다. 대신 뒷좌석 머리 공간과 맞바꾼다.</li>
+      <li><b>③ 리어 엔드</b>: 후류의 크기와 기저 압력을 정한다. 승용차 항력에서 가장 큰 몫이다. 바로 아래에서 자세히 본다.</li>
+      <li><b>④ 언더보디</b>: 배기관, 서스펜션 암, 연료 탱크가 드러난 바닥은 거친 표면이다. 평평한 커버를 씌우면 항력과 양력이 함께 줄어든다.</li>
+      <li><b>⑤ 휠과 휠 하우스</b>: 회전하는 바퀴와 그 주변 공간은 전체 항력의 대략 25~30 %를 차지한다고 알려져 있다. 범퍼 옆에서 공기를 끌어와 바퀴 바깥면에 얇은 막처럼 흘리는 에어 커튼, 평평한 휠 커버가 대책이다.</li>
+      <li><b>⑥ 미러와 돌출부</b>: 사이드 미러 한 쌍이 Cd의 대략 2~5 %. 카메라 방식 미러, 매립형 도어 손잡이가 이 부분을 줄인다.</li>
+      <li><b>⑦ 냉각 공기</b>: 그릴로 들어온 공기는 라디에이터를 지나며 운동량을 잃고 엔진룸에서 휠 하우스·바닥으로 빠져나가 흐름을 흩뜨린다. Cd의 대략 5~10 %.</li>
+    </ul>
+
+    <h3>리어 엔드: 패스트백, 노치백, 캄 테일</h3>
+    <figure class="diagram">
+      <svg viewBox="0 0 760 230" role="img" aria-label="리어 엔드 형상: 노치백, 패스트백, 스퀘어백, 캄 테일">
+        <g>
+          <path class="body" d="M10 160 L10 90 L70 90 L120 126 L170 128 L176 160 Z"/>
+          <path class="flow" d="M10 78 L72 78 C100 86 118 112 150 116 C170 118 185 118 190 120"/>
+          <path class="wake" d="M74 92 C96 98 108 112 118 124 L100 112 Z"/>
+          <path class="wake" d="M172 130 C184 134 190 144 188 152 L176 158 Z"/>
+          <text x="95" y="190" class="t" text-anchor="middle">노치백</text>
+          <text x="95" y="210" class="t-dim" text-anchor="middle">박리 후 트렁크에 재부착</text>
+        </g>
+        <g transform="translate(192,0)">
+          <path class="body" d="M10 160 L10 90 L60 90 L172 138 L176 160 Z"/>
+          <path class="flow" d="M10 78 L62 78 C110 96 150 116 188 130"/>
+          <path class="wake" d="M174 140 C184 144 190 150 188 156 L176 158 Z"/>
+          <text x="95" y="190" class="t" text-anchor="middle">패스트백</text>
+          <text x="95" y="210" class="t-dim" text-anchor="middle">완만한 경사, 부착 유지</text>
+        </g>
+        <g transform="translate(384,0)">
+          <path class="body" d="M10 160 L10 90 L150 90 L156 160 Z"/>
+          <path class="flow" d="M10 78 L150 78 C168 80 180 86 190 92"/>
+          <path class="wake" d="M152 92 C172 100 186 116 190 128 C184 142 172 154 158 158 Z"/>
+          <text x="95" y="190" class="t" text-anchor="middle">스퀘어백</text>
+          <text x="95" y="210" class="t-dim" text-anchor="middle">뒷면 전체가 후류</text>
+        </g>
+        <g transform="translate(576,0)">
+          <path class="body" d="M0 160 L0 90 L50 90 L120 114 L124 160 Z"/>
+          <path d="M120 114 L176 136 L124 150" fill="none" stroke="var(--text-faint)" stroke-dasharray="4 3"/>
+          <path class="flow" d="M0 78 L52 78 C90 90 130 106 180 124"/>
+          <path class="wake" d="M122 116 C140 122 154 130 160 136 C150 146 138 154 126 158 Z"/>
+          <text x="90" y="190" class="t" text-anchor="middle">캄 테일</text>
+          <text x="90" y="210" class="t-dim" text-anchor="middle">가늘어지다가 수직 절단</text>
+        </g>
+      </svg>
+      <figcaption><b>그림 12-4.</b> 리어 엔드 형상과 후류. 캄 테일은 물방울 꼬리(점선)를 도중에 잘라 낸 모양으로, 흐름은 없는 꼬리가 있는 것처럼 계속 좁아진다.</figcaption>
+    </figure>
+    <p>이상적인 물방울 꼬리는 너무 길어 차에 붙일 수 없다. 1930년대에 캄<span class="en">(Wunibald Kamm)</span>은 꼬리를 완만하게 좁히다가 단면이 충분히 작아진 곳에서 <b>수직으로 잘라도</b> 항력이 거의 늘지 않음을 보였다. 잘린 면의 후류는 작고, 그 앞까지는 흐름이 붙어 압력을 회복하기 때문이다. 오늘날 하이브리드·전기차의 높게 끝나는 트렁크 모서리와 날카로운 뒷모서리가 이 <span class="term">캄 테일</span><span class="en">(Kammback)</span>이다. 모서리를 날카롭게 하는 것은 박리 위치를 한곳에 고정해 후류가 흔들리지 않게 하려는 것이다.</p>
+    <p>뒷유리 경사각의 효과는 단순하지 않다. 단순화한 차 모형인 <span class="term">아메드 보디</span><span class="en">(Ahmed Body)</span> 실험이 유명하다. 경사각을 0°(스퀘어백)에서 키우면 처음에는 후류가 작아져 항력이 줄지만, 약 12°를 넘으면 경사면 양옆 모서리(C필러)에서 강한 세로 와류가 말려 올라가 경사면에 저압을 만든다. 이 와류가 흐름을 경사면에 붙잡아 두는 동안 항력은 계속 늘다가, <b>약 30°</b>에서 흐름이 견디지 못하고 루프 끝에서 통째로 박리한다. 그 순간 와류가 무너지고 항력은 스퀘어백 수준으로 뚝 떨어진다.</p>
+
+    <div class="sim" id="sim-re">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>리어 윈도 경사각과 항력: 아메드 보디의 임계각</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-re"></canvas><canvas id="cv-rec"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>경사각 φ <output id="re-ang-out"></output></span><input type="range" id="re-ang" min="0" max="60" step="0.5" value="25"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">Cd</span><span class="v" id="o-re-cd">—</span></div>
+        <div class="stat"><span class="k">스퀘어백(0°) 대비</span><span class="v" id="o-re-d">—</span></div>
+        <div class="stat"><span class="k">C필러 와류 세기</span><span class="v" id="o-re-vx">—</span></div>
+        <div class="stat"><span class="k">120 km/h · 2.2 m² 항력</span><span class="v" id="o-re-f">—</span></div>
+        <div class="stat"><span class="k">유동 상태</span><span class="v" id="o-re-st" style="font-size:14px">—</span></div>
+      </div>
+      <div class="sim-note">위: 옆에서 본 유동 개략도(주황 영역이 박리·후류, 파란 나선이 C필러 세로 와류). 아래: 경사각에 따른 Cd. 곡선은 아메드 보디 실험의 대표값을 이은 근사다. 해볼 것: 12° 부근의 최소점과 30° 직전의 최대점을 찾고, 30°를 넘는 순간 유동 그림이 어떻게 바뀌는지 보자. 뒷유리가 25~30°로 누운 차에 작은 스포일러를 달아 일부러 박리시키면 항력이 줄어드는 이유가 여기 있다.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 4 -->
+  <section id="lift">
+    <h2>양력과 다운포스</h2>
+    <p>차 위쪽 공기는 볼록한 루프를 넘느라 빨라지고(저압), 바닥과 도로 사이의 공기는 상대적으로 느리다. 승용차를 옆에서 보면 위가 볼록한 날개 단면과 닮았으므로, 가만히 두면 차는 <span class="term">양력</span><span class="en">(Lift)</span>을 받는다. 일반 승용차의 양력 계수 \(C_L\)은 대략 0.1~0.3이다.</p>
+    <div class="formula">$$F_L = \tfrac12\,\rho\,v^2\,C_L\,A$$
+      <div class="where">\(C_L &gt; 0\)이면 위로 뜨는 힘, \(C_L &lt; 0\)이면 누르는 힘(<b>다운포스</b>). 예: \(C_L\) = 0.25, \(A\) = 2.2 m², 200 km/h → \(0.5 \times 1.225 \times 55.6^2 \times 0.25 \times 2.2 \approx 1040\) N. 1,500 kg 차 무게의 약 7 %가 가벼워진다.</div>
+    </div>
+    <p>양력은 타이어 수직 하중을 줄여 접지력을 깎는다. 특히 뒤축이 뜨면 고속에서 뒤가 불안해진다. 그래서 고성능 차는 양력을 0 근처로, 레이스카는 큰 음수로 만든다. 방법은 세 가지다.</p>
+    <ul>
+      <li><b>스포일러</b><span class="en">(Spoiler)</span>: 트렁크 끝에 세운 턱이다. 이름 그대로 흐름을 '망쳐서' 턱 앞쪽에 공기를 고이게 해 트렁크 윗면 압력을 높인다. 양력을 줄이는 장치이며, 박리 위치를 고정해 항력까지 줄이는 경우도 있다. 프런트 범퍼 아래의 에어 댐도 같은 계열로, 바닥으로 들어가는 공기를 줄인다.</li>
+      <li><b>윙</b><span class="en">(Wing)</span>: 차체에서 띄워 깨끗한 흐름 속에 놓은 뒤집힌 날개다. 볼록한 면이 아래를 향하므로 아랫면 흐름이 빨라져 저압이 되고 날개가 아래로 당겨진다.</li>
+      <li><b>디퓨저와 언더보디</b>: 차 바닥 자체를 날개로 쓴다. 아래에서 본다.</li>
+    </ul>
+
+    <h3>날개의 받음각과 실속</h3>
+    <p>날개가 흐름과 이루는 각을 <span class="term">받음각</span><span class="en">(Angle of Attack)</span> \(\alpha\)라 한다. 얇은 날개 이론에서 양력 계수는 \(C_L \approx 2\pi(\alpha - \alpha_0)\)로 받음각에 비례한다(\(\alpha_0\)는 캠버가 만드는 영양력각). 받음각을 키우면 다운포스가 늘지만, 흡입면(뒤집힌 날개에서는 아랫면)의 앞전 바로 뒤에 생기는 강한 저압 뒤로 급한 압력 회복이 필요해진다. 어느 각도를 넘으면 경계층이 견디지 못하고 박리한다. 이것이 <span class="term">실속</span><span class="en">(Stall)</span>이다. 다운포스는 줄고 항력만 급증한다.</p>
+
+    <div class="sim" id="sim-wg">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>뒤집힌 날개 단면: 받음각, 압력 분포, 실속</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-wg"></canvas><canvas id="cv-wgcp"></canvas><canvas id="cv-wgpol"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>받음각 α <output id="wg-aoa-out"></output></span><input type="range" id="wg-aoa" min="-4" max="24" step="0.5" value="6"></label>
+          <label class="ctrl"><span>캠버 <output id="wg-camber-out"></output></span><input type="range" id="wg-camber" min="0" max="8" step="1" value="4"></label>
+          <label class="check"><input type="checkbox" id="wg-arrows" checked> 표면 압력 화살표</label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">다운포스 계수</span><span class="v" id="o-wg-cl">—</span></div>
+        <div class="stat"><span class="k">항력 계수</span><span class="v" id="o-wg-cd">—</span></div>
+        <div class="stat"><span class="k">L/D</span><span class="v" id="o-wg-ld">—</span></div>
+        <div class="stat"><span class="k">200 km/h · 0.5 m² 다운포스</span><span class="v" id="o-wg-df">—</span></div>
+        <div class="stat"><span class="k">상태</span><span class="v" id="o-wg-st" style="font-size:14px">—</span></div>
+      </div>
+      <div class="sim-note">위: 주콥스키 변환으로 구한 퍼텐셜 유동의 유선(쿠타 조건 적용). 파란 화살표는 표면을 바깥으로 당기는 흡입, 주황 화살표는 누르는 압력이다. 가운데: 시위 방향 압력 계수 분포. 흡입면이 날개 아랫면이므로 그래프에서도 아래로 내려간다. 아래: 받음각에 따른 계수 곡선. 퍼텐셜 유동에는 박리가 없으므로 실속은 경험적 모델(약 12° 부근에서 순환 감소와 박리 영역 표시)로 넣었다. 수치는 2차원 단면 값이며 폭이 유한한 실제 날개는 이보다 작다. 해볼 것: 받음각을 0에서 12°까지 올리며 앞전 흡입 피크가 날카로워지는 것을 보고, 14° 이상에서 다운포스와 L/D가 어떻게 되는지 확인하자.</div>
+    </div>
+
+    <h3>디퓨저와 그라운드 이펙트</h3>
+    <p>차 바닥과 도로 사이는 위아래가 막힌 통로다. 통로가 좁아지면 연속 방정식 \(A_1 v_1 = A_2 v_2\)에 따라 흐름이 빨라지고 베르누이 식에 따라 압력이 내려간다. 차 바닥 뒤쪽을 위로 비스듬히 올린 <span class="term">디퓨저</span><span class="en">(Diffuser)</span>는 좁은 곳에서 빨라진 흐름을 박리 없이 서서히 넓혀 차 뒤의 압력까지 되돌리는 통로다. 출구 압력은 후류의 압력으로 정해져 있으므로, 디퓨저가 압력을 많이 회복할수록 그 앞 목 부분의 압력은 더 낮아진다. 넓은 바닥 면적 전체에 저압이 걸리므로 다운포스가 크고, 날개와 달리 항력 증가가 작다. 이것이 <span class="term">그라운드 이펙트</span><span class="en">(Ground Effect)</span>다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 290" role="img" aria-label="언더보디와 디퓨저의 압력 분포">
+        <line x1="30" y1="150" x2="730" y2="150" class="s-axis"/>
+        <path class="body" d="M110 60 L110 118 C130 128 150 132 180 132 L500 132 L650 96 L650 60 Z"/>
+        <text x="380" y="92" class="t" text-anchor="middle">차 바닥</text>
+        <text x="575" y="88" class="t-acc" text-anchor="middle">디퓨저</text>
+        <g stroke="var(--accent-2)" stroke-width="1.8" fill="var(--accent-2)">
+          <line x1="40" y1="140" x2="84" y2="140"/><path d="M84 136 l10 4 l-10 4 z"/>
+          <line x1="230" y1="141" x2="320" y2="141"/><path d="M320 137 l10 4 l-10 4 z"/>
+          <line x1="370" y1="141" x2="460" y2="141"/><path d="M460 137 l10 4 l-10 4 z"/>
+          <line x1="560" y1="134" x2="604" y2="126"/><path d="M603 122 l11 2 l-9 6 z"/>
+          <line x1="670" y1="130" x2="706" y2="128"/><path d="M706 124 l10 4 l-10 4 z"/>
+        </g>
+        <text x="62" y="130" class="t-mono" text-anchor="middle">v₁</text>
+        <text x="340" y="170" class="t-mono" text-anchor="middle">목: 빠름, 저압</text>
+        <text x="690" y="118" class="t-mono" text-anchor="middle">느림</text>
+        <g stroke="var(--accent)" stroke-width="1.6" fill="var(--accent)">
+          <line x1="250" y1="120" x2="250" y2="136"/><path d="M246 128 l4 10 l4 -10 z"/>
+          <line x1="350" y1="116" x2="350" y2="136"/><path d="M346 128 l4 10 l4 -10 z"/>
+          <line x1="450" y1="114" x2="450" y2="136"/><path d="M446 128 l4 10 l4 -10 z"/>
+        </g>
+        <line x1="60" y1="210" x2="730" y2="210" class="s-axis" stroke-dasharray="4 4"/>
+        <text x="56" y="214" class="t-mono" text-anchor="end">p∞</text>
+        <path d="M60 210 C100 204 110 196 130 214 C160 250 200 262 300 264 C400 266 470 270 500 272 C560 262 620 232 650 220 C690 214 710 212 730 210" fill="none" stroke="var(--accent)" stroke-width="2.4"/>
+        <text x="380" y="252" class="t-acc" text-anchor="middle">바닥면 압력 (아래로 갈수록 저압)</text>
+        <text x="610" y="262" class="t-dim" text-anchor="middle">압력 회복</text>
+      </svg>
+      <figcaption><b>그림 12-5.</b> 언더보디는 벤투리관이다. 디퓨저가 출구에서 압력을 대기압 근처로 되돌릴수록 목 부분의 압력은 더 낮아지고, 주황 화살표처럼 차체를 아래로 당긴다. 디퓨저 각도가 너무 크면(대략 10~15° 이상) 흐름이 박리해 효과가 사라진다.</figcaption>
+    </figure>
+    <p>그라운드 이펙트는 지상고에 매우 민감하다. 바닥이 낮을수록 다운포스가 커지지만, 너무 낮아지면 바닥의 경계층이 통로를 막아 흐름이 끊기고 다운포스가 갑자기 사라진다. 차가 다시 떠오르면 흐름이 살아나 또 눌린다. 이 과정이 반복되는 상하 진동이 <b>포퍼싱</b><span class="en">(Porpoising)</span>이다. 양산차에서는 평평한 언더커버와 작은 디퓨저만으로도 뒤축 양력을 눈에 띄게 줄일 수 있다.</p>
+  </section>
+
+  <!-- =============================================================== 5 -->
+  <section id="corner">
+    <h2>다운포스, 코너링, 공력 균형</h2>
+    <p><a href="tire.html">7장</a>에서 타이어가 낼 수 있는 최대 횡력은 수직 하중에 비례한다고 했다(\(F_{y,\max} \approx \mu F_z\)). 차를 무겁게 하면 하중은 늘지만 원심력도 똑같이 늘어 이득이 없다. 다운포스는 <b>질량을 늘리지 않고 하중만 늘린다</b>. 반경 \(R\)인 코너에서 한계 속도는 다음 조건으로 정해진다.</p>
+    <div class="formula">$$\frac{m v^2}{R} = \mu\left(mg + \tfrac12\rho v^2 C_L A\right)\quad\Rightarrow\quad v_{\max} = \sqrt{\frac{\mu\,m g}{\dfrac{m}{R} - \tfrac12\,\mu\,\rho\,C_L A}}$$
+      <div class="where">여기서 \(C_L A\)는 다운포스 계수와 면적의 곱(다운포스 방향을 양으로 둠). 다운포스가 없으면 \(v_{\max} = \sqrt{\mu g R}\).</div>
+    </div>
+    <p>다운포스는 속도의 제곱으로 커지므로 느린 헤어핀에서는 거의 쓸모가 없고 고속 코너에서 위력을 낸다. 분모가 0이 되는 반경 \(R^{*} = 2m/(\mu\rho C_L A)\)보다 큰 코너에서는 속도를 올릴수록 접지력이 원심력보다 빨리 늘어, 타이어가 아니라 엔진 출력이 한계가 된다. 포뮬러 카가 고속 코너를 전개로 통과하는 이유다. 다만 타이어 마찰 계수는 하중이 커질수록 조금씩 낮아지므로(하중 민감도) 실제 이득은 이 식보다 다소 작다.</p>
+    <p>대가는 항력이다. 날개가 만드는 다운포스와 그 때문에 늘어난 항력의 비를 <span class="term">공력 효율</span> \(L/D\)라 한다. 레이스카 전체로 보면 대략 3~5 수준이다. 직선이 긴 서킷에서는 날개를 눕혀 최고 속도를 얻고, 코너가 많은 서킷에서는 세워 코너 속도를 얻는다. 직선에서 날개 일부를 열어 항력을 줄이는 가변 장치는 이 타협을 구간별로 푸는 방법이다.</p>
+
+    <div class="sim" id="sim-cn">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>다운포스와 코너링 한계</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-cn"></canvas><canvas id="cv-cnc"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>프리셋</span><div class="seg" id="cn-preset"><button data-value="road" class="on">양산 세단</button><button data-value="sport">스포츠카</button><button data-value="gt">GT 레이스카</button><button data-value="f">포뮬러</button></div></div>
+          <label class="ctrl"><span>코너 반경 R <output id="cn-r-out"></output></span><input type="range" id="cn-r" min="20" max="400" step="5" value="120"></label>
+          <label class="ctrl"><span>다운포스 계수 × 면적 <output id="cn-cla-out"></output></span><input type="range" id="cn-cla" min="-0.4" max="6" step="0.05" value="-0.1"></label>
+          <label class="ctrl"><span>타이어 μ <output id="cn-mu-out"></output></span><input type="range" id="cn-mu" min="0.7" max="1.9" step="0.01" value="1"></label>
+          <label class="ctrl"><span>공력 효율 L/D <output id="cn-ld-out"></output></span><input type="range" id="cn-ld" min="1" max="5" step="0.1" value="3"></label>
+        </div>
+      </div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>다운포스 포함</span><span><i style="background:var(--text-dim)"></i>다운포스 없음</span></div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">최대 코너 속도</span><span class="v" id="o-cn-v">—</span></div>
+        <div class="stat"><span class="k">다운포스 없을 때</span><span class="v" id="o-cn-v0">—</span></div>
+        <div class="stat"><span class="k">횡가속도</span><span class="v" id="o-cn-g">—</span></div>
+        <div class="stat"><span class="k">그 속도의 다운포스</span><span class="v" id="o-cn-df">—</span></div>
+        <div class="stat"><span class="k">직선 최고 속도</span><span class="v" id="o-cn-top">—</span></div>
+        <div class="stat"><span class="k">날개로 인한 손해</span><span class="v" id="o-cn-loss">—</span></div>
+      </div>
+      <div class="sim-note">위: 뒤에서 본 차와 힘(차 무게를 기준으로 길이를 맞춘 화살표). 아래: 코너 반경에 따른 한계 속도. 점선은 엔진 출력으로 정해지는 직선 최고 속도다. 프리셋의 질량·출력: 세단 1,500 kg·150 kW, 스포츠카 1,500 kg·350 kW, GT 1,300 kg·400 kW, 포뮬러 800 kg·700 kW. 다운포스 계수가 음수면 양력이다. 해볼 것: 포뮬러 프리셋에서 반경을 30 m와 300 m로 바꿔 다운포스의 이득을 비교하자. L/D를 낮추면 같은 다운포스를 얻는 데 최고 속도를 얼마나 잃는지도 보자.</div>
+    </div>
+
+    <h3>공력 균형</h3>
+    <p>다운포스의 총량만큼 중요한 것이 앞뒤 배분이다. 공기력의 합력이 작용하는 점을 <span class="term">압력 중심</span><span class="en">(Center of Pressure)</span>이라 하고, 앞축이 받는 다운포스의 비율을 공력 균형이라 한다. 이 비율이 차의 무게 배분과 비슷해야 저속과 고속에서 조향 특성이 같게 유지된다.</p>
+    <ul>
+      <li>앞쪽 다운포스가 과하면 고속에서 앞 그립만 늘어 <b>오버스티어</b>가 된다. 속도가 높을수록 뒤가 먼저 미끄러지는 위험한 성격이다.</li>
+      <li>뒤쪽이 과하면 고속 <b>언더스티어</b>다. 안정적이지만 고속 코너에서 앞이 밀려 느리다. 양산차는 대체로 이쪽으로 약간 치우치게 맞춘다(<a href="steering.html">10장</a>).</li>
+      <li>제동 시 앞이 숙여지면 프런트 스플리터가 지면에 가까워져 앞 다운포스가 늘고 디퓨저는 들려 뒤 다운포스가 준다. 자세 변화에 따라 균형이 얼마나 움직이는지(피치 민감도)가 레이스카 서스펜션을 단단하게 만드는 큰 이유다(<a href="suspension.html">9장</a>).</li>
+    </ul>
+  </section>
+
+  <!-- =============================================================== 6 -->
+  <section id="crosswind">
+    <h2>옆바람과 요 모멘트</h2>
+    <p>차가 속도 \(V\)로 달리는데 옆에서 속도 \(W\)의 바람이 불면, 차가 느끼는 상대풍은 정면이 아니라 비스듬히 온다. 차 축과 상대풍이 이루는 각을 <span class="term">공력 요각</span> \(\beta\)라 한다.</p>
+    <div class="formula">$$\beta = \arctan\frac{W}{V},\qquad V_{rel} = \sqrt{V^2 + W^2},\qquad F_Y = \tfrac12\rho V_{rel}^2\,A\,C_Y(\beta),\qquad N = F_Y\,x_{cp}$$
+      <div class="where">\(C_Y\): 횡력 계수(작은 각에서 \(\beta\)에 거의 비례, 승용차는 대략 1°당 0.03~0.04), \(x_{cp}\): 무게중심에서 압력 중심까지의 앞쪽 거리, \(N\): 요 모멘트.</div>
+    </div>
+    <p>비스듬한 흐름을 받는 차체는 눕혀 놓은 날개처럼 작동한다. 바람을 맞는 쪽 앞 모서리에서 흐름이 급히 돌며 강한 저압이 생기므로, 횡력의 압력 중심은 보통 <b>무게중심보다 앞</b>에 있다. 그래서 옆바람은 차를 옆으로 미는 동시에 앞머리를 바람 반대쪽으로 돌린다. 머리가 돌아가면 타이어가 그 방향으로 차를 끌고 가므로 차로 이탈이 더 커진다.</p>
+    <p>압력 중심이 뒤로 갈수록 유리하다. 횡력이 <span class="term">중립 조향점</span><span class="en">(Neutral Steer Point)</span>에 걸리면 차는 방향을 바꾸지 않고 옆으로만 조금 밀리고, 그보다 뒤에 걸리면 화살의 깃처럼 머리가 바람 쪽으로 돌아 밀림을 스스로 상쇄한다. 뒤가 길고 옆면이 넓은 왜건·밴이 세단보다 옆바람에 덜 예민하고, 레이스카가 뒤에 수직 핀을 다는 이유다. 반대로 뒤가 짧고 매끈한 유선형 차는 압력 중심이 앞으로 가기 쉽다.</p>
+
+    <div class="sim" id="sim-cw">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>옆바람: 상대풍, 횡력, 요 모멘트</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-cw"></canvas><canvas id="cv-cwp"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>차속 V <output id="cw-v-out"></output></span><input type="range" id="cw-v" min="30" max="200" step="5" value="110"></label>
+          <label class="ctrl"><span>옆바람 W <output id="cw-w-out"></output></span><input type="range" id="cw-w" min="0" max="30" step="0.5" value="12"></label>
+          <label class="ctrl"><span>압력 중심 위치 <output id="cw-cp-out"></output></span><input type="range" id="cw-cp" min="-1" max="1.2" step="0.05" value="0.5"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">공력 요각 β</span><span class="v" id="o-cw-beta">—</span></div>
+        <div class="stat"><span class="k">횡력</span><span class="v" id="o-cw-fy">—</span></div>
+        <div class="stat"><span class="k">요 모멘트</span><span class="v" id="o-cw-n">—</span></div>
+        <div class="stat"><span class="k">1.5초 뒤 횡 이동</span><span class="v" id="o-cw-y">—</span></div>
+        <div class="stat"><span class="k">1.5초 뒤 차체 방향</span><span class="v" id="o-cw-psi">—</span></div>
+        <div class="stat"><span class="k">거동</span><span class="v" id="o-cw-st" style="font-size:14px">—</span></div>
+      </div>
+      <div class="sim-note">위: 위에서 본 차. 오른쪽 위의 삼각형은 주행풍(−V)과 옆바람(W)을 더한 상대풍이다. 주황 화살표는 압력 중심(CP)에 걸리는 횡력, 원호는 요 모멘트 방향, 십자 원은 무게중심(CG)이다. 아래: 바람이 갑자기 불기 시작한 뒤 운전자가 핸들을 고정하고 있는 1.5초 동안의 횡 이동을 <a href="steering.html">자전거 모델</a>(1,500 kg, 축거 2.7 m)로 적분한 결과. 해볼 것: 압력 중심을 +0.5 m에서 뒤로 옮기며 횡 이동이 줄어드는 것을 보고, 차 머리가 돌지 않는 위치(중립 조향점, 이 차에서는 무게중심 뒤 약 0.23 m)를 찾아보자.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 7 -->
+  <section id="noise-cooling">
+    <h2>풍절음, 냉각, 전기차의 공력</h2>
+    <h3>풍절음</h3>
+    <p>공기 흐름이 만드는 소음을 <span class="term">풍절음</span><span class="en">(Wind Noise)</span>이라 한다. 표면에서 요동치는 압력이 음원이 되는 이 소음의 세기는 대략 속도의 <b>여섯제곱</b>에 비례한다. 속도가 두 배가 되면 음압 레벨이 약 \(60\log_{10}2 \approx 18\) dB 오른다. 타이어 소음보다 훨씬 가파르므로 대략 100 km/h를 넘으면 풍절음이 실내 소음을 지배한다. 엔진 소리가 없는 전기차에서는 더 낮은 속도에서부터 귀에 들린다.</p>
+    <ul>
+      <li><b>A필러와 사이드 미러</b>: 앞유리에서 옆유리로 넘어가는 모서리에서 원뿔 모양 와류가 생겨 운전자 귀 바로 옆 유리를 두드린다. A필러 단차, 미러 형상과 위치를 다듬는 것이 풍절음 개발의 중심이다.</li>
+      <li><b>틈새 누설</b>: 고속에서는 차 밖 옆유리 부근 압력이 실내보다 낮아 도어가 바깥으로 빨려 나간다. 실링이 조금만 들떠도 공기가 새며 높은 음의 소음이 난다. 이중·삼중 실링과 프레임 강성으로 막는다.</li>
+      <li><b>공동 공명</b>: 선루프나 창문 하나만 열었을 때 귀가 먹먹한 저주파 울림(버페팅)은 실내가 병 입구에 바람을 불 때와 같은 헬름홀츠 공명기가 되기 때문이다. 주파수는 대략 15~20 Hz다. 선루프 앞에 올라오는 디플렉터가 와류를 흩어 이를 줄인다.</li>
+    </ul>
+    <h3>냉각 공기</h3>
+    <p>엔진 열효율이 40 %라면 연료 에너지의 나머지는 배기와 냉각수로 간다(<a href="engine.html">3장</a>). 냉각수의 열은 라디에이터를 지나는 공기가 가져가야 한다. 문제는 라디에이터 코어가 촘촘한 저항체라는 점이다. 그릴로 들어온 공기는 운동량을 잃고, 엔진룸을 빠져나가며 휠 하우스와 바닥의 흐름을 흩뜨린다. 이 <b>냉각 항력</b>은 Cd로 대략 0.01~0.03에 해당한다.</p>
+    <p>최대 냉각은 여름철 오르막 견인 같은 드문 조건에서만 필요하다. 그래서 <span class="term">액티브 그릴 셔터</span><span class="en">(Active Grille Shutter)</span>는 냉각수 온도가 낮을 때 그릴 뒤의 날개를 닫아 공기를 차체 밖으로 돌려보낸다. 닫았을 때 Cd가 대략 0.01~0.02 줄고, 겨울철 워밍업도 빨라진다. 라디에이터 앞뒤를 덕트로 감싸 들어온 공기가 새지 않게 하고, 데워진 공기를 보닛 위나 휠 하우스 뒤의 저압부로 뽑아내는 설계도 같은 목적이다.</p>
+    <h3>전기차의 공력 설계</h3>
+    <p>전기차는 구동계 효율이 높아 배터리에서 나온 에너지의 대부분이 주행 저항을 이기는 데 쓰인다. 고속 정속 주행에서는 그 절반 이상이 공기 저항이다. 내연기관차에서는 엔진 손실에 가려 있던 공력이 주행 거리를 직접 좌우하게 된 것이다. 앞의 항력 시뮬레이터에서 보았듯이 110 km/h 정속에서 Cd를 0.01 줄이면 주행 거리가 대략 2~3 % 늘어난다. 같은 거리를 배터리 증설로 얻으려면 무게와 비용이 든다.</p>
+    <ul>
+      <li><b>매끈한 언더보디</b>: 배터리 팩이 바닥 전체를 평평하게 덮고, 배기관과 프로펠러 샤프트 터널이 없다. 내연기관차보다 유리한 출발점이다.</li>
+      <li><b>작은 냉각 개구부</b>: 모터와 인버터의 손실 열은 엔진보다 훨씬 적다. 그릴을 막고 범퍼 아래의 작은 흡입구와 셔터만 둔다. 급속 충전이나 고부하 때만 연다(<a href="battery.html">16장</a>).</li>
+      <li><b>에어로 휠</b>: 스포크 사이를 메운 평평한 휠은 휠 안팎으로 드나드는 흐름을 줄인다. Cd로 대략 0.005~0.01 수준의 이득이다. 브레이크 냉각이 줄지만 회생 제동 덕분에 마찰 브레이크 부담이 작다(<a href="brake.html">8장</a>).</li>
+      <li><b>돌출부 정리와 차고 조절</b>: 매립형 손잡이, 카메라 미러, 고속에서 차고를 낮추는 에어 서스펜션, 길게 뻗다 날카롭게 끝나는 캄 테일.</li>
+    </ul>
+  </section>
+
+  <!-- =============================================================== 8 -->
+  <section id="tunnel">
+    <h2>풍동, CFD, 그리고 슬립스트림</h2>
+    <p>공력 성능은 <span class="term">풍동</span><span class="en">(Wind Tunnel)</span>에서 잰다. 차를 세워 두고 바람을 불어도 상대 운동은 같기 때문이다. 다만 실제 도로와 맞추려면 몇 가지가 더 필요하다.</p>
+    <ul>
+      <li><b>무빙 벨트와 회전 휠</b>: 실제 도로는 공기와 같은 속도로 차 밑을 지나가므로 지면에 경계층이 없다. 풍동 바닥이 정지해 있으면 바닥 경계층이 언더보디 흐름을 왜곡한다. 그래서 바닥을 벨트로 움직이고 바퀴를 돌리며, 벨트 앞에서 경계층을 흡입해 없앤다.</li>
+      <li><b>폐색 비</b>: 시험부 단면에 비해 차가 너무 크면 벽이 흐름을 가둬 속도가 과대해진다. 폐색 비는 보통 수 % 수준으로 두고 보정한다.</li>
+      <li><b>계측</b>: 차 밑의 6분력 저울로 항력·양력·횡력과 세 축 모멘트를 재고, 차를 돌려 요각 특성을 얻는다. 연기, 표면에 붙인 실(터프트), 압력 탭, 레이저 입자 영상 유속계로 흐름을 본다.</li>
+      <li><b>축소 모형</b>: 레이놀즈 수가 달라지면 박리 위치가 달라질 수 있다. 축소 모형은 풍속을 올려 보상하지만 한계가 있어 최종 확인은 실차 크기로 한다.</li>
+    </ul>
+    <p><span class="term">전산 유체 역학</span><span class="en">(CFD)</span>은 차 주위 공간을 수천만~수억 개의 격자로 나누어 유동 방정식을 푼다. 시간 평균 흐름만 푸는 RANS는 빠르지만 큰 박리와 후류의 예측이 약하고, 큰 소용돌이를 직접 계산하는 DES·LES는 정확하지만 비싸다. 앞의 유동 놀이터에서 쓴 격자 볼츠만 방법도 비정상 후류와 풍절음 계산에 실제로 쓰인다. CFD로 형상을 빠르게 걸러 내고 풍동으로 확인하며, 도로에서는 타행 시험(<a href="dynamics.html">2장</a>)으로 검증한다.</p>
+
+    <h3>슬립스트림</h3>
+    <p>앞차 바로 뒤는 앞차가 끌고 가는 후류 속이다. 그 안의 공기는 앞차와 함께 움직이므로 뒤차가 느끼는 상대 속도가 낮고, 동압이 속도 제곱으로 줄어든다. 이것이 <span class="term">슬립스트림</span><span class="en">(Slipstream)</span>, 곧 드래프팅이다. 흥미롭게도 아주 가까이 붙으면 앞차의 항력도 조금 준다. 뒤차가 후류를 채워 앞차 뒷면의 압력을 높여 주기 때문이다.</p>
+    <p>레이스에서는 뒤차가 남는 출력으로 속도를 붙였다가 옆으로 빠져나와 추월한다. 대신 흐트러진 공기 속에서는 날개가 제 성능을 내지 못해 코너에서 다운포스를 잃고 냉각도 나빠진다. 도로에서는 화물차 여러 대가 통신으로 묶여 짧은 간격으로 달리는 군집 주행(<a href="adas.html">17장</a>)이 같은 원리를 쓴다. 뒤따르는 차의 연료 소비가 대략 수 %에서 10 % 남짓 줄어든다고 보고된다.</p>
+
+    <div class="sim" id="sim-df">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>드래프팅: 차간 거리와 항력 감소</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-df"></canvas><canvas id="cv-dfc"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>차간 거리 <output id="df-gap-out"></output></span><input type="range" id="df-gap" min="2" max="60" step="0.5" value="20"></label>
+          <label class="ctrl"><span>속도 <output id="df-v-out"></output></span><input type="range" id="df-v" min="60" max="200" step="5" value="110"></label>
+        </div>
+      </div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>뒤차 항력 감소</span><span><i style="background:var(--accent-2)"></i>앞차 항력 감소</span></div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">뒤차 항력 감소</span><span class="v" id="o-df-tr">—</span></div>
+        <div class="stat"><span class="k">앞차 항력 감소</span><span class="v" id="o-df-ld">—</span></div>
+        <div class="stat"><span class="k">뒤차 주행 저항 감소</span><span class="v" id="o-df-fuel">—</span></div>
+        <div class="stat"><span class="k">시간 간격</span><span class="v" id="o-df-t">—</span></div>
+        <div class="stat"><span class="k">안전</span><span class="v" id="o-df-safe" style="font-size:14px">—</span></div>
+      </div>
+      <div class="sim-note">감소율 곡선은 풍동·실차 시험에서 보고된 경향(차 길이만큼 떨어지면 뒤차 약 30 %, 차 길이의 서너 배에서 10 % 안팎)을 따르는 근사식이다. 주행 저항 감소는 Cd 0.30, 2.2 m², 1,500 kg 승용차의 정속 주행 기준으로, 정속에서는 연료·전력 소비 감소와 거의 같다. 해볼 것: 눈에 띄는 이득이 나는 거리와 그때의 시간 간격을 보자. 사람의 반응 시간(약 1~1.5초)보다 훨씬 짧다. 일반 도로에서 따라 하면 안 되는 이유다.</div>
+    </div>
+    <div class="callout warn">
+      <strong>도로에서의 드래프팅</strong>
+      <p>110 km/h에서 2초 간격은 약 61 m다. 그 거리에서 항력 이득은 몇 %뿐이고, 의미 있는 이득이 생기는 10 m 안쪽은 시간 간격 0.3초다. 앞차가 급제동하면 브레이크를 밟기도 전에 부딪친다. 군집 주행이 차량 간 통신과 자동 제동을 전제로 하는 까닭이다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== summary -->
+  <section class="keypoints" id="summary">
+    <h2>핵심 정리</h2>
+    <ol>
+      <li>항력 \(F_D = \tfrac12\rho v^2 C_d A\)는 속도의 제곱, 필요한 출력은 세제곱으로 늘어난다. 승용차는 대략 70 km/h 부근에서 공기 저항이 구름 저항을 넘어선다.</li>
+      <li>자동차는 뭉툭한 물체라 항력의 대부분이 압력 항력이다. 역압력 구배에서 경계층이 박리해 생기는 저압 후류가 차를 뒤로 당긴다.</li>
+      <li>실제 힘은 \(C_d A\)에 비례한다. 세단 Cd 0.25~0.30, SUV 0.30~0.40, 대형 트럭 0.6 이상. 리어 엔드, 휠 하우스, 언더보디, 냉각 공기가 주요 기여처다.</li>
+      <li>리어 엔드는 완만히 좁히다 날카롭게 자르는 캄 테일이 실용적 해법이다. 뒷유리 경사 약 30° 직전에는 C필러 와류 때문에 항력이 최대가 되고, 그 이상에서는 통째로 박리해 항력이 떨어진다.</li>
+      <li>승용차는 가만히 두면 양력을 받는다. 스포일러는 양력을 줄이고, 뒤집힌 윙과 디퓨저(그라운드 이펙트)는 다운포스를 만든다. 받음각이 과하면 실속한다.</li>
+      <li>다운포스는 질량을 늘리지 않고 타이어 하중을 늘려 코너 한계를 높인다. 속도 제곱으로 커지므로 고속 코너에서 효과가 크고, 대가는 항력(\(L/D\))이다. 앞뒤 배분이 고속 조향 특성을 정한다.</li>
+      <li>옆바람의 압력 중심은 보통 무게중심보다 앞에 있어 차 머리를 풍하 쪽으로 돌린다. 압력 중심이 뒤에 있을수록 옆바람에 강하다.</li>
+      <li>풍절음은 대략 속도의 여섯제곱으로 커진다. 전기차는 평평한 언더보디, 작은 냉각 개구부와 그릴 셔터, 에어로 휠로 Cd를 낮춰 주행 거리를 번다. 슬립스트림은 뒤차 항력을 크게 줄이지만 그만큼 가까이 붙어야 한다.</li>
+    </ol>
+  </section>
+
+  <!-- =============================================================== quiz -->
+  <section class="quiz-sec" id="quiz">
+    <h2>확인 퀴즈</h2>
+    <div class="quiz">
+      <div class="quiz-q"><p>Q1. 같은 차가 100 km/h에서 공기 저항을 이기는 데 12 kW를 쓴다. 150 km/h에서는 대략 얼마가 필요한가?</p><div class="opts">
+        <button class="opt">18 kW</button><button class="opt">27 kW</button><button class="opt" data-correct>약 40 kW</button><button class="opt">약 61 kW</button>
+      </div><div class="quiz-exp">공기 저항 출력은 속도의 세제곱에 비례한다. \(12 \times 1.5^3 = 12 \times 3.375 = 40.5\) kW. 힘은 2.25배, 출력은 3.375배다.</div></div>
+
+      <div class="quiz-q"><p>Q2. 차 A는 Cd 0.24·전면 면적 2.9 m², 차 B는 Cd 0.30·전면 면적 2.1 m²다. 같은 속도에서 항력이 더 큰 차는?</p><div class="opts">
+        <button class="opt" data-correct>A (CdA 0.70 m²)</button><button class="opt">B (Cd가 더 크므로)</button><button class="opt">같다</button><button class="opt">질량을 알아야 한다</button>
+      </div><div class="quiz-exp">항력은 Cd가 아니라 CdA에 비례한다. A는 \(0.24 \times 2.9 = 0.70\), B는 \(0.30 \times 2.1 = 0.63\) m². 형상이 매끈해도 덩치가 크면 항력이 크다. 항력에는 질량이 들어가지 않는다.</div></div>
+
+      <div class="quiz-q"><p>Q3. 자동차 항력의 대부분을 차지하는 압력 항력이 생기는 직접적인 원인은?</p><div class="opts">
+        <button class="opt">차체 표면과 공기 사이의 마찰</button>
+        <button class="opt" data-correct>뒤쪽에서 흐름이 박리해 압력이 회복되지 못한 저압 후류</button>
+        <button class="opt">공기가 압축되어 밀도가 높아지는 것</button>
+        <button class="opt">타이어와 노면 사이의 변형 손실</button>
+      </div><div class="quiz-exp">앞면은 정체 압력으로 고압, 뒤는 박리 때문에 저압으로 남아 그 차이가 차를 뒤로 민다. 표면 마찰은 마찰 항력이며 승용차에서는 작은 몫이다. 자동차 속도에서 공기는 거의 압축되지 않는다.</div></div>
+
+      <div class="quiz-q"><p>Q4. 아메드 보디에서 뒷유리 경사각이 약 30°를 넘는 순간 항력이 갑자기 줄어드는 이유는?</p><div class="opts">
+        <button class="opt">경사면에 흐름이 더 잘 붙기 때문</button>
+        <button class="opt">전면 면적이 줄어들기 때문</button>
+        <button class="opt" data-correct>흐름이 루프 끝에서 통째로 박리하면서 경사면에 저압을 만들던 C필러 와류가 무너지기 때문</button>
+        <button class="opt">경계층이 층류로 돌아가기 때문</button>
+      </div><div class="quiz-exp">30° 직전까지는 강한 세로 와류가 흐름을 경사면에 붙잡으며 큰 저압(와류 항력)을 만든다. 임계각을 넘으면 완전히 박리해 스퀘어백과 같은 유동이 되고 항력이 떨어진다.</div></div>
+
+      <div class="quiz-q"><p>Q5. μ = 1.0인 타이어로 반경 100 m 코너를 돈다. 다운포스가 없을 때 한계 속도는 약 113 km/h다. 다운포스를 더하면 한계 속도가 오르는 이유로 옳은 것은?</p><div class="opts">
+        <button class="opt">차가 무거워져 원심력이 줄기 때문</button>
+        <button class="opt" data-correct>원심력을 정하는 질량은 그대로인데 타이어 수직 하중만 늘어 최대 횡력이 커지기 때문</button>
+        <button class="opt">공기 저항이 차를 코너 안쪽으로 밀기 때문</button>
+        <button class="opt">타이어 마찰 계수 자체가 커지기 때문</button>
+      </div><div class="quiz-exp">\(v = \sqrt{\mu g R} = \sqrt{9.81 \times 100} = 31.3\) m/s. 필요한 구심력 \(mv^2/R\)은 질량에 비례하지만 다운포스는 질량을 늘리지 않고 \(\mu F_z\)만 키운다. 마찰 계수는 하중이 늘면 오히려 조금 낮아진다.</div></div>
+
+      <div class="quiz-q"><p>Q6. 옆바람을 받을 때 횡력의 압력 중심이 무게중심보다 앞에 있는 차는 어떻게 움직이는가?</p><div class="opts">
+        <button class="opt">방향 변화 없이 옆으로만 밀린다</button>
+        <button class="opt">차 머리가 바람이 불어오는 쪽으로 돌아 밀림을 상쇄한다</button>
+        <button class="opt" data-correct>차 머리가 바람이 불어 가는 쪽(풍하)으로 돌아 차로 이탈이 더 커진다</button>
+        <button class="opt">옆바람의 영향을 받지 않는다</button>
+      </div><div class="quiz-exp">횡력이 무게중심 앞에 걸리면 요 모멘트가 머리를 풍하로 돌린다. 타이어가 그 방향으로 차를 끌고 가므로 횡 이동이 커진다. 압력 중심이 중립 조향점보다 뒤에 있으면 반대로 머리가 바람 쪽으로 돈다.</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const cssv = (n) => getComputedStyle(document.body).getPropertyValue(n);
+  const font = (sz, mono, w) => (w ? w + " " : "") + sz + "px " + (mono ? cssv("--mono") : cssv("--font"));
+  const sm = (s) => "<small>" + s + "</small>";
+  const RHO = CB.RHO, G = CB.G;
+  const hex = (c) => {
+    c = String(c).trim();
+    if (c[0] === "#") {
+      if (c.length === 4) c = "#" + c[1] + c[1] + c[2] + c[2] + c[3] + c[3];
+      const n = parseInt(c.slice(1, 7), 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    }
+    const m = c.match(/[\d.]+/g);
+    return m && m.length >= 3 ? [Number(m[0]), Number(m[1]), Number(m[2])] : [128, 128, 128];
+  };
+  const rgba = (c, a) => { const v = hex(c); return "rgba(" + v[0] + "," + v[1] + "," + v[2] + "," + a + ")"; };
+  const label = (ctx, text, x, y, color, align, size, weight) => {
+    ctx.fillStyle = color; ctx.font = font(size || 12, false, weight); ctx.textAlign = align || "left"; ctx.textBaseline = "middle";
+    ctx.fillText(text, x, y);
+  };
+
+  /* =================================================== Sim: drag and power */
+  (function () {
+    const PRE = {
+      sedan: { cd: 0.28, a: 2.2, m: 1500, crr: 0.010 },
+      suv: { cd: 0.35, a: 2.7, m: 1900, crr: 0.011 },
+      ev: { cd: 0.23, a: 2.3, m: 1900, crr: 0.009 },
+      truck: { cd: 0.60, a: 9.0, m: 25000, crr: 0.006 },
+    };
+    const ETA = 0.88, PAUX = 700;
+    let cur = PRE.sedan;
+    const gCd = CB.range("dp-cd", (v) => v.toFixed(2), () => redraw());
+    const gA = CB.range("dp-a", (v) => v.toFixed(1) + " m²", () => redraw());
+    const gV = CB.range("dp-v", (v) => v.toFixed(0) + " km/h", () => redraw());
+    const gB = CB.range("dp-batt", (v) => v.toFixed(0) + " kWh", () => redraw());
+    CB.seg("dp-preset", (v) => { cur = PRE[v]; gCd.set(cur.cd); gA.set(cur.a); });
+    const fa = (cd, a, v) => 0.5 * RHO * cd * a * v * v;
+    const whkm = (cd, a, kmh) => (fa(cd, a, kmh / 3.6) + cur.crr * cur.m * G) / (3.6 * ETA) + PAUX / kmh;
+    function draw(ctx, w, h) {
+      const P = CB.palette(), cd = gCd(), a = gA(), kmh = gV(), fr = cur.crr * cur.m * G;
+      const dA = [], dR = [], dT = [];
+      for (let k = 0; k <= 250; k += 5) {
+        const v = k / 3.6, pa = fa(cd, a, v) * v / 1000, pr = fr * v / 1000;
+        dA.push([k, pa]); dR.push([k, pr]); dT.push([k, pa + pr]);
+      }
+      const ymax = dT[dT.length - 1][1] * 1.05;
+      const v = kmh / 3.6, pa = fa(cd, a, v) * v / 1000, pr = fr * v / 1000;
+      CB.chart(ctx, null, {
+        x: [0, 250], y: [0, ymax], xLabel: "속도 (km/h)", yLabel: "출력 (kW)",
+        series: [{ data: dA, color: P.accent, width: 2.6, fill: rgba(P.accent, 0.1) }, { data: dR, color: P.accent2, width: 2 }, { data: dT, color: P.dim, width: 1.6, dash: [5, 4] }],
+        vlines: [{ x: kmh, color: P.text }],
+        points: [{ x: kmh, y: pa, color: P.accent, r: 5, label: pa.toFixed(1) + " kW" }, { x: kmh, y: pr, color: P.accent2, r: 4 }],
+      });
+      const F = fa(cd, a, v);
+      CB.stat("o-dp-f", F.toFixed(0) + sm("N"));
+      CB.stat("o-dp-p", pa.toFixed(1) + sm("kW"));
+      CB.stat("o-dp-share", ((F / (F + fr)) * 100).toFixed(0) + sm("%"));
+      const e = whkm(cd, a, kmh), rng = (gB() * 1000) / e, rng2 = (gB() * 1000) / whkm(cd - 0.01, a, kmh);
+      CB.stat("o-dp-wh", e.toFixed(0) + sm("Wh/km"));
+      CB.stat("o-dp-range", rng.toFixed(0) + sm("km"));
+      CB.stat("o-dp-gain", "+" + (rng2 - rng).toFixed(1) + sm("km"));
+    }
+    const cv = CB.canvas($("cv-dp"), draw, { aspect: 0.56, minHeight: 250, maxHeight: 380 });
+    function redraw() { cv.redraw(); }
+  })();
+
+  /* =================================================== Sim: lattice Boltzmann flow playground */
+  (function () {
+    const NX = 200, NY = 80, N = NX * NY, PPM = 11, NU = 0.012, OMEGA = 1 / (3 * NU + 0.5), SUB = 8, MAXP = 6000;
+    const EX = [0, 1, 0, -1, 0, 1, -1, -1, 1], EY = [0, 0, 1, 0, -1, 1, 1, -1, -1], OPP = [0, 3, 4, 1, 2, 7, 8, 5, 6];
+    const WT = [4 / 9, 1 / 9, 1 / 9, 1 / 9, 1 / 9, 1 / 36, 1 / 36, 1 / 36, 1 / 36];
+    let F = [], Gn = [];
+    for (let i = 0; i < 9; i++) { F.push(new Float64Array(N)); Gn.push(new Float64Array(N)); }
+    const solid = new Uint8Array(N), rho = new Float64Array(N).fill(1), ux = new Float64Array(N), uy = new Float64Array(N);
+    const px = new Float32Array(MAXP).fill(-1), py = new Float32Array(MAXP);
+    let pWrite = 0, tick = 0, uIn = 0, cdAvg = 0, clAvg = 0, hBody = 1, nBody = 0, running = true, frames = 0;
+    const eq = new Float64Array(9);
+    function setEq(r, vx, vy) {
+      const u2 = 1 - 1.5 * (vx * vx + vy * vy);
+      for (let i = 0; i < 9; i++) { const eu = 3 * (EX[i] * vx + EY[i] * vy); eq[i] = WT[i] * r * (u2 + eu + 0.5 * eu * eu); }
+    }
+    function restart() {
+      uIn = 0; cdAvg = 0; clAvg = 0; tick = 0; px.fill(-1);
+      setEq(1, 0, 0);
+      for (let i = 0; i < 9; i++) F[i].fill(eq[i]);
+      rho.fill(1); ux.fill(0); uy.fill(0);
+    }
+    const drop = (s) => 5 * (0.2969 * Math.sqrt(s) - 0.126 * s - 0.3516 * s * s + 0.2843 * s * s * s - 0.1036 * s * s * s * s);
+    const SHAPES = {
+      sedan: [[0, 0.25], [0.05, 0.55], [0.5, 0.72], [1.4, 0.85], [2.0, 1.38], [2.25, 1.45], [3.1, 1.42], [3.75, 1.05], [4.5, 0.98], [4.6, 0.8], [4.6, 0.25], [4.45, 0.18], [0.15, 0.18]],
+      hatch: [[0, 0.25], [0.05, 0.55], [0.45, 0.72], [1.2, 0.85], [1.8, 1.42], [2.1, 1.5], [3.5, 1.47], [3.95, 1.05], [4.1, 0.85], [4.1, 0.25], [3.95, 0.18], [0.15, 0.18]],
+      suv: [[0, 0.35], [0.03, 0.8], [0.4, 0.98], [1.25, 1.08], [1.8, 1.68], [2.1, 1.75], [4.2, 1.72], [4.6, 1.25], [4.7, 1.0], [4.7, 0.35], [4.5, 0.25], [0.2, 0.25]],
+      truck: [[0, 0.4], [0, 1.2], [0.3, 1.9], [1.3, 1.95], [1.3, 2.5], [5.6, 2.5], [5.6, 0.4]],
+      drop: (function () { const p = []; for (let k = 0; k <= 25; k++) { const s = k / 25; p.push([s * 5, 0.18 + 2.6 * drop(s)]); } p.push([5, 0.18]); return p; })(),
+      none: [],
+    };
+    function measure() {
+      let y0 = NY, y1 = -1; nBody = 0;
+      for (let c = 0; c < N; c++) if (solid[c]) { const y = (c / NX) | 0; if (y < y0) y0 = y; if (y > y1) y1 = y; nBody++; }
+      hBody = nBody ? y1 - y0 + 1 : 1;
+      cdAvg = 0; clAvg = 0;
+    }
+    function build(name) {
+      solid.fill(0);
+      const poly = SHAPES[name].map(([x, y]) => [45 + x * PPM, NY - 1 - y * PPM]);
+      if (poly.length) for (let y = 1; y < NY - 1; y++) for (let x = 1; x < NX - 1; x++) {
+        const qx = x + 0.5, qy = y + 0.5; let ins = false;
+        for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+          const a = poly[i], b = poly[j];
+          if ((a[1] > qy) !== (b[1] > qy) && qx < ((b[0] - a[0]) * (qy - a[1])) / (b[1] - a[1]) + a[0]) ins = !ins;
+        }
+        if (ins) solid[y * NX + x] = 1;
+      }
+      measure(); restart();
+    }
+    function step(uT) {
+      uIn += (uT - uIn) * 0.004;
+      const f0 = F[0], f1 = F[1], f2 = F[2], f3 = F[3], f4 = F[4], f5 = F[5], f6 = F[6], f7 = F[7], f8 = F[8];
+      const om1 = 1 - OMEGA;
+      for (let c = 0; c < N; c++) {
+        if (solid[c]) { ux[c] = 0; uy[c] = 0; continue; }
+        const a0 = f0[c], a1 = f1[c], a2 = f2[c], a3 = f3[c], a4 = f4[c], a5 = f5[c], a6 = f6[c], a7 = f7[c], a8 = f8[c];
+        const r = a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8;
+        const vx = (a1 + a5 + a8 - a3 - a6 - a7) / r, vy = (a2 + a5 + a6 - a4 - a7 - a8) / r;
+        rho[c] = r; ux[c] = vx; uy[c] = vy;
+        const u2 = 1 - 1.5 * (vx * vx + vy * vy), r9 = (r / 9) * OMEGA, r36 = (r / 36) * OMEGA;
+        const x3 = 3 * vx, y3 = 3 * vy, p = x3 + y3, m = x3 - y3;
+        f0[c] = om1 * a0 + 4 * r9 * u2;
+        f1[c] = om1 * a1 + r9 * (u2 + x3 + 0.5 * x3 * x3);
+        f3[c] = om1 * a3 + r9 * (u2 - x3 + 0.5 * x3 * x3);
+        f2[c] = om1 * a2 + r9 * (u2 + y3 + 0.5 * y3 * y3);
+        f4[c] = om1 * a4 + r9 * (u2 - y3 + 0.5 * y3 * y3);
+        f5[c] = om1 * a5 + r36 * (u2 + p + 0.5 * p * p);
+        f7[c] = om1 * a7 + r36 * (u2 - p + 0.5 * p * p);
+        f8[c] = om1 * a8 + r36 * (u2 + m + 0.5 * m * m);
+        f6[c] = om1 * a6 + r36 * (u2 - m + 0.5 * m * m);
+      }
+      let fx = 0, fy = 0;
+      for (let y = 1; y < NY - 1; y++) for (let x = 1; x < NX - 1; x++) {
+        const c = y * NX + x;
+        if (solid[c]) continue;
+        Gn[0][c] = f0[c];
+        for (let i = 1; i < 9; i++) {
+          const s = c - EX[i] - EY[i] * NX;
+          if (solid[s]) { const v = F[OPP[i]][c]; Gn[i][c] = v; fx -= 2 * v * EX[i]; fy -= 2 * v * EY[i]; }
+          else Gn[i][c] = F[i][s];
+        }
+      }
+      setEq(1, uIn, 0);
+      for (let i = 0; i < 9; i++) {
+        const g = Gn[i], e = eq[i];
+        for (let x = 0; x < NX; x++) { g[x] = e; g[(NY - 1) * NX + x] = e; }
+        for (let y = 1; y < NY - 1; y++) { g[y * NX] = e; g[y * NX + NX - 1] = g[y * NX + NX - 2]; }
+      }
+      const t = F; F = Gn; Gn = t;
+      if (uIn > 0.01) {
+        const q = 0.5 * uT * uT * hBody;
+        cdAvg += (fx / q - cdAvg) * 0.004; clAvg += (-fy / q - clAvg) * 0.004;
+      }
+      // smoke
+      for (let k = 0; k < MAXP; k++) {
+        if (px[k] < 0) continue;
+        const c = (py[k] | 0) * NX + (px[k] | 0);
+        if (solid[c]) { px[k] = -1; continue; }
+        px[k] += ux[c]; py[k] += uy[c];
+        if (px[k] >= NX - 1 || px[k] < 0.5 || py[k] < 1 || py[k] >= NY - 1) px[k] = -1;
+      }
+      tick++;
+      if (tick % Math.max(4, Math.round(1.3 / Math.max(uIn, 0.02))) === 0) {
+        for (let y = 3; y < NY - 1; y += 4) { px[pWrite] = 1.01; py[pWrite] = y + 0.5; pWrite = (pWrite + 1) % MAXP; }
+      }
+    }
+    const gU = CB.range("fl-u", (v) => v.toFixed(3));
+    const gView = CB.seg("fl-view", () => { paint(); cv.redraw(); });
+    const gTool = CB.seg("fl-tool");
+    CB.seg("fl-shape", (v) => build(v));
+    const off = document.createElement("canvas"); off.width = NX; off.height = NY;
+    const octx = off.getContext("2d"), img = octx.createImageData(NX, NY);
+    function paint() {
+      const P = CB.palette(), bg = hex(P.bg), mode = gView(), u0 = Math.max(uIn, 0.02);
+      const neg = hex(mode === "speed" ? P.accent : P.accent2), pos = hex(mode === "speed" ? P.accent2 : mode === "press" ? P.bad : P.accent);
+      const d = img.data;
+      for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) {
+        const c = y * NX + x; let t;
+        if (mode === "speed") t = (Math.hypot(ux[c], uy[c]) - u0) / u0 * 1.2;
+        else if (mode === "press") t = (rho[c] - 1) / (1.5 * u0 * u0);
+        else t = x > 0 && x < NX - 1 && y > 0 && y < NY - 1 ? (uy[c + 1] - uy[c - 1] - ux[c + NX] + ux[c - NX]) / (0.5 * u0) : 0;
+        const col = t < 0 ? neg : pos, k = Math.min(1, Math.abs(t)) * 0.9, o = c * 4;
+        d[o] = bg[0] + (col[0] - bg[0]) * k; d[o + 1] = bg[1] + (col[1] - bg[1]) * k; d[o + 2] = bg[2] + (col[2] - bg[2]) * k; d[o + 3] = 255;
+      }
+      octx.putImageData(img, 0, 0);
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), sx = w / NX, sy = h / NY;
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(off, 0, 0, w, h);
+      if ($("fl-smoke").checked) {
+        ctx.fillStyle = rgba(P.text, 0.6);
+        const r = Math.max(1.2, sx * 0.42);
+        for (let k = 0; k < MAXP; k++) if (px[k] >= 0) ctx.fillRect(px[k] * sx - r / 2, py[k] * sy - r / 2, r, r);
+      }
+      ctx.fillStyle = P.dim;
+      for (let y = 1; y < NY - 1; y++) for (let x = 1; x < NX - 1; x++) if (solid[y * NX + x]) ctx.fillRect(x * sx, y * sy, sx + 0.6, sy + 0.6);
+      ctx.fillStyle = P.axis; ctx.fillRect(0, (NY - 1) * sy, w, sy);
+      CB.arrow(ctx, 8, 14, 8 + Math.max(14, w * 0.06), 14, P.accent2, 2);
+      label(ctx, "바람", 14 + Math.max(14, w * 0.06), 14, P.dim, "left", 11);
+    }
+    const cvEl = $("cv-fl");
+    const cv = CB.canvas(cvEl, draw, { aspect: NY / NX });
+    function stats() {
+      const uT = gU();
+      CB.stat("o-fl-re", nBody ? ((uT * hBody) / NU).toFixed(0) : "—");
+      CB.stat("o-fl-cd", nBody && uIn > 0.9 * uT ? cdAvg.toFixed(2) : "…");
+      CB.stat("o-fl-cl", nBody && uIn > 0.9 * uT ? (clAvg >= 0 ? "+" : "−") + Math.abs(clAvg).toFixed(2) : "…");
+      let wk = 0;
+      if (nBody && uIn > 0.02) for (let y = 2; y < NY - 2; y++) for (let x = 2; x < NX - 2; x++) { const c = y * NX + x; if (!solid[c] && ux[c] < 0.4 * uIn) wk++; }
+      CB.stat("o-fl-wake", nBody ? ((wk / nBody) * 100).toFixed(0) + sm("%") : "—");
+    }
+    function brush(p) {
+      const cx = (p.x / cv.w) * NX, cy = (p.y / cv.h) * NY, erase = gTool() === "erase";
+      setEq(1, 0, 0);
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+        if (dx * dx + dy * dy > 3.3) continue;
+        const x = Math.round(cx + dx - 0.5), y = Math.round(cy + dy - 0.5);
+        if (x < 3 || x > NX - 4 || y < 2 || y > NY - 3) continue;
+        const c = y * NX + x;
+        if (erase) { if (solid[c]) { solid[c] = 0; for (let i = 0; i < 9; i++) F[i][c] = eq[i]; } }
+        else solid[c] = 1;
+      }
+      measure();
+      if (!running) cv.redraw();
+    }
+    CB.drag(cvEl, { down: (p) => brush(p), move: (p) => brush(p) });
+    $("fl-play").addEventListener("click", (e) => { running = !running; e.target.textContent = running ? "일시정지" : "재생"; });
+    $("fl-reset").addEventListener("click", () => restart());
+    $("fl-smoke").addEventListener("change", () => cv.redraw());
+    build("sedan");
+    CB.loop(cvEl, () => {
+      if (!running) return;
+      const uT = gU();
+      for (let k = 0; k < SUB; k++) step(uT);
+      let bad = false;
+      for (let c = NX + 7; c < N; c += 97) if (!(rho[c] > 0.3 && rho[c] < 3)) { bad = true; break; }
+      if (bad) restart();
+      paint(); cv.redraw();
+      if (frames++ % 10 === 0) stats();
+    });
+  })();
+
+  /* =================================================== Sim: rear slant angle (Ahmed body) */
+  (function () {
+    const LO = [[0, 0.25], [5, 0.235], [12.5, 0.23], [20, 0.255], [25, 0.29], [28, 0.34], [30, 0.378]], HI = [[30, 0.26], [40, 0.258], [60, 0.255]];
+    const interp = (T, x) => { for (let i = 1; i < T.length; i++) if (x <= T[i][0]) return CB.map(x, T[i - 1][0], T[i][0], T[i - 1][1], T[i][1]); return T[T.length - 1][1]; };
+    const cdOf = (a) => (a <= 30 ? interp(LO, a) : interp(HI, a));
+    const vortex = (a) => (a <= 30 ? CB.clamp((a - 8) / 22, 0, 1) : 0.12);
+    const gA = CB.range("re-ang", (v) => v.toFixed(1) + "°", () => redraw());
+    function eddy(ctx, x, y, rx, ry, cw, color) {
+      ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0.5, Math.PI * 2 - 0.3, !cw); ctx.stroke();
+      const a = cw ? 0.5 : -0.5, ex = x + rx * Math.cos(a), ey = y + ry * Math.sin(a), d = cw ? -1 : 1;
+      ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex - 5, ey + 6 * d); ctx.moveTo(ex, ey); ctx.lineTo(ex + 5, ey + 6 * d); ctx.stroke();
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), ang = gA(), ph = (ang * Math.PI) / 180, att = ang <= 30;
+      const s = Math.min(w / 2.0, h / 0.66), xN = w / 2 - s * 0.72, gy = h * 0.86;
+      const yB = gy - s * 0.05, yT = yB - s * 0.288, xR = xN + s * 1.044, sl = s * 0.222;
+      const xs = xR - sl * Math.cos(ph), dropPx = sl * Math.sin(ph);
+      const top = att ? [xR, yT + dropPx] : [xs, yT];
+      const Lw = s * (att ? 0.1 + 1.25 * (0.288 - 0.222 * Math.sin(ph)) : 0.46);
+      const xc = xR + Lw, yc = (top[1] + yB) / 2 + s * 0.02;
+      // wake
+      ctx.beginPath(); ctx.moveTo(top[0], top[1]);
+      ctx.quadraticCurveTo((top[0] + xc) / 2 + s * 0.05, top[1] + (att ? 0 : s * 0.02), xc, yc);
+      ctx.quadraticCurveTo((xR + xc) / 2, yB + s * 0.01, xR, yB);
+      if (!att) ctx.lineTo(xR, yT + dropPx);
+      ctx.closePath(); ctx.fillStyle = rgba(P.accent, 0.18); ctx.fill();
+      ctx.strokeStyle = rgba(P.accent, 0.7); ctx.setLineDash([4, 3]); ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);
+      const wx = xR + (xc - xR) * 0.36, wh = yB - top[1];
+      eddy(ctx, wx, top[1] + wh * 0.32, Math.max(6, (xc - xR) * 0.2), Math.max(4, wh * 0.16), true, P.accent);
+      eddy(ctx, wx, top[1] + wh * 0.72, Math.max(6, (xc - xR) * 0.2), Math.max(4, wh * 0.14), false, P.accent);
+      // slant separation bubble
+      if (att && ang > 12.5) {
+        const f = ((ang - 12.5) / 17.5) * 0.85, bx = xs + (xR - xs) * f, by = yT + dropPx * f;
+        ctx.beginPath(); ctx.moveTo(xs, yT); ctx.quadraticCurveTo((xs + bx) / 2 + dropPx * 0.25 * f, (yT + by) / 2 - sl * 0.2 * f, bx, by); ctx.closePath();
+        ctx.fillStyle = rgba(P.warn, 0.45); ctx.fill();
+      }
+      // streamlines over the roof
+      ctx.strokeStyle = P.accent2; ctx.lineWidth = 1.5;
+      [0.03, 0.075, 0.135].forEach((d) => {
+        const o = d * s, k = Math.max(0, 1 - d / 0.2), defl = att ? dropPx * k : dropPx * 0.12 * k;
+        ctx.beginPath(); ctx.moveTo(xN - s * 0.24, yT + s * 0.06 - o * 0.6);
+        ctx.quadraticCurveTo(xN - s * 0.02, yT - o, xN + s * 0.14, yT - o);
+        ctx.lineTo(xs, yT - o);
+        ctx.quadraticCurveTo((xs + xR) / 2 + o * 0.3, yT - o + defl * 0.3, xR + o * 0.2, yT - o + defl);
+        ctx.quadraticCurveTo(xR + Lw * 0.6, yT - o + defl + (yc - top[1]) * 0.55 * k, xc + s * 0.22, yc - o * 1.1);
+        ctx.stroke();
+      });
+      ctx.beginPath(); ctx.moveTo(xN - s * 0.24, gy - s * 0.022); ctx.lineTo(xR, gy - s * 0.022); ctx.quadraticCurveTo(xR + Lw * 0.6, gy - s * 0.022, xc + s * 0.22, yc + s * 0.03); ctx.stroke();
+      CB.arrow(ctx, xN - s * 0.34, yT - s * 0.06, xN - s * 0.2, yT - s * 0.06, P.accent2, 2);
+      // body
+      ctx.beginPath(); ctx.moveTo(xN + s * 0.09, yT); ctx.lineTo(xs, yT); ctx.lineTo(xR, yT + dropPx); ctx.lineTo(xR, yB); ctx.lineTo(xN + s * 0.09, yB);
+      ctx.quadraticCurveTo(xN, yB, xN, yB - s * 0.09); ctx.lineTo(xN, yT + s * 0.09); ctx.quadraticCurveTo(xN, yT, xN + s * 0.09, yT); ctx.closePath();
+      ctx.fillStyle = P.surface; ctx.fill(); ctx.strokeStyle = P.dim; ctx.lineWidth = 1.6; ctx.stroke();
+      ctx.fillStyle = P.dim; [0.2, 0.84].forEach((f) => ctx.fillRect(xN + s * 1.044 * f - 2, yB, 4, gy - yB));
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
+      // C-pillar vortex
+      const vs = vortex(ang);
+      if (vs > 0.05) {
+        const x0 = xs + (xR - xs) * 0.25, y0 = yT + dropPx * 0.25, x1 = xc + s * 0.2, amp = s * 0.045 * vs;
+        ctx.strokeStyle = P.accent2; ctx.lineWidth = 1 + 1.6 * vs; ctx.beginPath();
+        for (let i = 0; i <= 90; i++) {
+          const f = i / 90, x = x0 + (x1 - x0) * f, base = y0 + (dropPx * 0.75 + s * 0.02) * Math.min(1, f * 2.2);
+          const y = base + amp * (0.35 + 0.65 * f) * Math.sin(f * 30);
+          i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        }
+        ctx.stroke();
+        if (vs > 0.3) label(ctx, "C필러 와류", Math.min(x1, w - 4), y0 + dropPx + s * 0.11, P.accent2, "right", 11);
+      }
+      // angle marker
+      if (ang > 2) {
+        ctx.strokeStyle = P.text; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(xs, yT); ctx.lineTo(xR + s * 0.05, yT); ctx.stroke(); ctx.setLineDash([]);
+        ctx.beginPath(); ctx.arc(xs, yT, sl * 0.55, 0, ph); ctx.stroke();
+      }
+      label(ctx, "φ = " + ang.toFixed(1) + "°", xs - 4, yT - 12, P.text, "right", 12, 700);
+      label(ctx, "후류", xR + (xc - xR) * 0.5, gy + 12, P.accent, "center", 11);
+    }
+    function drawC(ctx, w, h) {
+      const P = CB.palette(), ang = gA(), cd = cdOf(ang);
+      const d1 = [], d2 = [];
+      for (let a = 0; a <= 30; a += 0.5) d1.push([a, interp(LO, a)]);
+      for (let a = 30; a <= 60; a += 1) d2.push([a, interp(HI, a)]);
+      CB.chart(ctx, null, {
+        x: [0, 60], y: [0.2, 0.4], xLabel: "경사각 φ (°)", yLabel: "Cd",
+        bands: [{ x0: 12.5, x1: 30, color: rgba(P.accent2, 0.08) }],
+        series: [{ data: d1, color: P.accent, width: 2.6 }, { data: d2, color: P.accent, width: 2.6 }, { data: [[30, 0.378], [30, 0.26]], color: P.accent, width: 1.4, dash: [3, 3] }],
+        vlines: [{ x: 30, color: P.faint, label: "임계각 약 30°" }],
+        points: [{ x: ang, y: cd, color: P.text, r: 5, label: cd.toFixed(3) }],
+      });
+      CB.stat("o-re-cd", cd.toFixed(3));
+      const dd = (cd / 0.25 - 1) * 100;
+      CB.stat("o-re-d", (dd >= 0 ? "+" : "−") + Math.abs(dd).toFixed(0) + sm("%"));
+      CB.stat("o-re-vx", (vortex(ang) * 100).toFixed(0) + sm("%"));
+      CB.stat("o-re-f", (0.5 * RHO * Math.pow(120 / 3.6, 2) * 2.2 * cd).toFixed(0) + sm("N"));
+      CB.stat("o-re-st", ang > 30 ? "루프 끝에서 완전 박리" : ang > 12.5 ? "경사면 부착 + 강한 세로 와류" : ang > 3 ? "경사면 부착, 후류 축소" : "스퀘어백");
+    }
+    const cvA = CB.canvas($("cv-re"), draw, { aspect: 0.42, minHeight: 170, maxHeight: 300 });
+    const cvB = CB.canvas($("cv-rec"), drawC, { aspect: 0.42, minHeight: 210, maxHeight: 280 });
+    function redraw() { cvA.redraw(); cvB.redraw(); }
+  })();
+
+  /* =================================================== Sim: inverted wing section (Joukowski) */
+  (function () {
+    const E = 0.08, M = 180;
+    const gA = CB.range("wg-aoa", (v) => v.toFixed(1) + "°", () => redraw());
+    const gC = CB.range("wg-camber", (v) => v.toFixed(0) + " %", () => redraw());
+    $("wg-arrows").addEventListener("change", () => redraw());
+    function geom() {
+      const my = (2 * gC()) / 100, mx = -E, a = Math.hypot(1 - mx, my);
+      return { mx, my, a, beta: Math.asin(my / a) };
+    }
+    function coef(alDeg, beta) {
+      const al = (alDeg * Math.PI) / 180, lin = 2 * Math.PI * 0.9 * Math.sin(al + beta);
+      const sig = 1 / (1 + Math.exp((alDeg - 14) / 1.2));
+      const cl = sig * lin + (1 - sig) * 1.1 * Math.sin(2 * al);
+      const cd = sig * (0.012 + 0.012 * lin * lin) + (1 - sig) * (0.05 + 1.9 * Math.pow(Math.sin(al), 2));
+      return { cl, cd, sig, k: Math.abs(lin) > 1e-6 ? cl / lin : 1 };
+    }
+    // conjugate velocity dW/dzeta in the circle plane → [u, v]
+    function vel(zx, zy, g, ca, sa, gam) {
+      const x = zx - g.mx, y = zy - g.my, r2 = x * x + y * y, r4 = r2 * r2, a2 = g.a * g.a;
+      const ix = (x * x - y * y) / r4, iy = (-2 * x * y) / r4, k = gam / (2 * Math.PI * r2);
+      return [ca - a2 * (ca * ix - sa * iy) + k * y, sa + a2 * (sa * ix + ca * iy) - k * x];
+    }
+    const zmap = (zx, zy) => { const r2 = zx * zx + zy * zy; return [zx + zx / r2, zy - zy / r2]; };
+    const dz = (zx, zy) => { const r2 = zx * zx + zy * zy, r4 = r2 * r2; return Math.hypot(1 - (zx * zx - zy * zy) / r4, (2 * zx * zy) / r4); };
+    let S = null;
+    function solve() {
+      const g = geom(), alDeg = gA(), al = (alDeg * Math.PI) / 180, ca = Math.cos(al), sa = Math.sin(al);
+      const c = coef(alDeg, g.beta), gamK = 4 * Math.PI * g.a * Math.sin(al + g.beta), sep = 1 - c.sig;
+      const surf = [];
+      let xmin = 1e9, xmax = -1e9, iLE = 0;
+      for (let k = 0; k < M; k++) {
+        const th = -g.beta + (2 * Math.PI * (k + 0.5)) / M, zx = g.mx + g.a * Math.cos(th), zy = g.my + g.a * Math.sin(th);
+        const z = zmap(zx, zy), v = vel(zx, zy, g, ca, sa, gamK), sp = Math.hypot(v[0], v[1]) / Math.max(dz(zx, zy), 1e-4);
+        surf.push({ x: z[0], y: z[1], cp: Math.max(-12, 1 - sp * sp) });
+        if (z[0] < xmin) { xmin = z[0]; iLE = k; } if (z[0] > xmax) xmax = z[0];
+      }
+      surf.forEach((p, k) => { p.xc = (p.x - xmin) / (xmax - xmin); p.suction = k <= iLE; });
+      const xsep = 1 - 0.9 * sep;
+      if (sep > 0.02) {
+        const scale = 1 - 0.45 * sep;
+        let plat = -0.5;
+        for (let k = 0; k <= iLE; k++) if (surf[k].xc >= xsep) plat = CB.clamp(surf[k].cp * scale, -1.2, -0.3);
+        for (let k = 0; k <= iLE; k++) {
+          const p = surf[k], t = CB.clamp((p.xc - (xsep - 0.12)) / 0.12, 0, 1), sc = p.cp < 0 ? p.cp * scale : p.cp;
+          p.cp = sc + (plat - sc) * t * t * (3 - 2 * t);
+        }
+      }
+      S = { g, al, alDeg, ca, sa, c, gam: gamK * c.k, sep, xsep, surf, iLE, xmin, xmax };
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), { g, ca, sa, gam, surf, sep, xsep, iLE, c } = S;
+      const sc = Math.min(w / 9.2, h / 5.2), cx = w * 0.47, cy = h * 0.5;
+      const D = (x, y) => [cx + sc * (x * ca + y * sa), cy + sc * (-x * sa + y * ca)];
+      // streamlines
+      ctx.lineWidth = 1.2; ctx.strokeStyle = rgba(P.accent2, 0.75);
+      for (let j = -13; j <= 13; j++) {
+        const y0 = j * 0.2 + 0.07;
+        let zx = g.mx + (-4.6 * ca - y0 * sa), zy = g.my + (-4.6 * sa + y0 * ca);
+        ctx.beginPath();
+        for (let n = 0; n < 330; n++) {
+          const z = zmap(zx, zy), p = D(z[0], z[1]);
+          n ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]);
+          if (p[0] > w + 10) break;
+          const v1 = vel(zx, zy, g, ca, sa, gam), s1 = Math.hypot(v1[0], v1[1]);
+          if (s1 < 1e-4) break;
+          const hs = 0.03, mxp = zx + (0.5 * hs * v1[0]) / s1, myp = zy + (0.5 * hs * v1[1]) / s1;
+          const v2 = vel(mxp, myp, g, ca, sa, gam), s2 = Math.hypot(v2[0], v2[1]);
+          if (s2 < 1e-4) break;
+          zx += (hs * v2[0]) / s2; zy += (hs * v2[1]) / s2;
+          const r = Math.hypot(zx - g.mx, zy - g.my);
+          if (r < g.a * 1.003) { zx = g.mx + ((zx - g.mx) / r) * g.a * 1.003; zy = g.my + ((zy - g.my) / r) * g.a * 1.003; }
+        }
+        ctx.stroke();
+      }
+      const pts = surf.map((p) => D(p.x, p.y));
+      // separated region
+      if (sep > 0.05) {
+        let kS = 0; for (let k = 0; k <= iLE; k++) if (surf[k].xc >= xsep) kS = k;
+        const p0 = pts[kS], te = pts[0], len = sc * (1.2 + 1.6 * sep), spread = sc * (0.25 + 0.9 * sep);
+        ctx.beginPath(); ctx.moveTo(p0[0], p0[1]);
+        for (let k = kS; k >= 0; k--) ctx.lineTo(pts[k][0], pts[k][1]);
+        ctx.lineTo(te[0] + len, te[1] - sc * 0.1); ctx.lineTo(te[0] + len, Math.max(p0[1], te[1]) + spread);
+        ctx.quadraticCurveTo((p0[0] + te[0]) / 2, p0[1] + spread * 0.9, p0[0], p0[1]); ctx.closePath();
+        ctx.fillStyle = rgba(P.bg, 0.82); ctx.fill(); ctx.fillStyle = rgba(P.warn, 0.28); ctx.fill();
+        ctx.strokeStyle = P.warn; ctx.lineWidth = 1.3;
+        for (let i = 0; i < 5; i++) {
+          const f = (i + 0.5) / 5, ex = p0[0] + (te[0] + len * 0.85 - p0[0]) * f, ey = Math.max(p0[1], te[1] * f + p0[1] * (1 - f)) + spread * (0.3 + 0.25 * ((i * 7) % 3) / 2) * (0.5 + f * 0.5), r = sc * (0.08 + 0.06 * ((i * 5) % 3));
+          ctx.beginPath(); ctx.arc(ex, ey, r, i % 2 ? 0.6 : 3.4, (i % 2 ? 0.6 : 3.4) + 4.6); ctx.stroke();
+        }
+        label(ctx, "박리 영역", te[0] + len * 0.55, Math.max(p0[1], te[1]) + spread + 12, P.warn, "center", 11, 700);
+      }
+      // airfoil
+      ctx.beginPath(); pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.closePath();
+      ctx.fillStyle = P.surface; ctx.fill(); ctx.strokeStyle = P.text; ctx.lineWidth = 1.6; ctx.stroke();
+      // pressure arrows
+      if ($("wg-arrows").checked) {
+        let mx = 0, my = 0; pts.forEach((p) => { mx += p[0]; my += p[1]; }); mx /= M; my /= M;
+        for (let k = 2; k < M; k += 5) {
+          const a = pts[(k + M - 1) % M], b = pts[(k + 1) % M], p = pts[k];
+          let nx = b[1] - a[1], ny = -(b[0] - a[0]); const nl = Math.hypot(nx, ny) || 1; nx /= nl; ny /= nl;
+          if ((p[0] - mx) * nx + (p[1] - my) * ny < 0) { nx = -nx; ny = -ny; }
+          const cp = surf[k].cp, L = Math.min(sc * 1.5, Math.abs(cp) * sc * 0.3);
+          if (L < 3) continue;
+          if (cp < 0) CB.arrow(ctx, p[0], p[1], p[0] + nx * L, p[1] + ny * L, P.accent2, 1.4);
+          else CB.arrow(ctx, p[0] + nx * L, p[1] + ny * L, p[0], p[1], P.accent, 1.4);
+        }
+      }
+      // resultant forces at quarter chord
+      const q = D(S.xmin + 0.25 * (S.xmax - S.xmin), 0.1), fs = sc * 1.1;
+      CB.arrow(ctx, q[0], q[1], q[0], q[1] + c.cl * fs, P.text, 3);
+      CB.arrow(ctx, q[0], q[1], q[0] + Math.min(c.cd * fs * 4, w * 0.3), q[1], P.bad, 3);
+      label(ctx, c.cl >= 0 ? "다운포스" : "양력", q[0] + 6, q[1] + c.cl * fs + (c.cl >= 0 ? 10 : -10), P.text, "left", 11, 700);
+      label(ctx, "항력", q[0] + Math.min(c.cd * fs * 4, w * 0.3) + 5, q[1] - 9, P.bad, "left", 11, 700);
+      CB.arrow(ctx, 10, 16, 10 + Math.max(16, w * 0.06), 16, P.accent2, 2);
+      label(ctx, "바람", 16 + Math.max(16, w * 0.06), 16, P.dim, "left", 11);
+    }
+    function drawCp(ctx, w, h) {
+      const P = CB.palette(), up = [], lo = [];
+      let mn = -1.5;
+      S.surf.forEach((p) => { (p.suction ? up : lo).push([p.xc, p.cp]); if (p.cp < mn) mn = p.cp; });
+      lo.reverse();
+      CB.chart(ctx, null, {
+        x: [0, 1], y: [Math.max(-10, Math.floor(mn - 0.3)), 1.2], xLabel: "시위 위치 x/c (0 = 앞전)", yLabel: "압력 계수 Cp",
+        series: [{ data: up, color: P.accent2, width: 2.4, fill: rgba(P.accent2, 0.1) }, { data: lo, color: P.accent, width: 2.4 }],
+        hlines: [{ y: 0, color: P.faint }],
+        vlines: S.sep > 0.05 ? [{ x: S.xsep, color: P.warn, label: "박리" }] : [],
+      });
+      label(ctx, "— 흡입면(아랫면)", w - 20, 26, P.accent2, "right", 11);
+      label(ctx, "— 압력면(윗면)", w - 20, 42, P.accent, "right", 11);
+    }
+    function drawPol(ctx, w, h) {
+      const P = CB.palette(), beta = S.g.beta, dl = [], dd = [];
+      for (let a = -4; a <= 24; a += 0.5) { const c = coef(a, beta); dl.push([a, c.cl]); dd.push([a, c.cd]); }
+      CB.chart(ctx, null, {
+        x: [-4, 24], y: [-0.4, 2], xLabel: "받음각 α (°)", yLabel: "계수",
+        series: [{ data: dl, color: P.accent, width: 2.6 }, { data: dd, color: P.bad, width: 2.2 }],
+        vlines: [{ x: S.alDeg, color: P.text }], hlines: [{ y: 0, color: P.faint }],
+        points: [{ x: S.alDeg, y: S.c.cl, color: P.accent, r: 5 }, { x: S.alDeg, y: S.c.cd, color: P.bad, r: 4 }],
+      });
+      label(ctx, "— 다운포스 계수", 70, 26, P.accent, "left", 11);
+      label(ctx, "— 항력 계수", 70, 42, P.bad, "left", 11);
+    }
+    solve();
+    const cvA = CB.canvas($("cv-wg"), draw, { aspect: 0.5, minHeight: 200, maxHeight: 380 });
+    const cvB = CB.canvas($("cv-wgcp"), drawCp, { aspect: 0.4, minHeight: 210, maxHeight: 270 });
+    const cvC = CB.canvas($("cv-wgpol"), drawPol, { aspect: 0.4, minHeight: 210, maxHeight: 270 });
+    function stats() {
+      const c = S.c;
+      CB.stat("o-wg-cl", c.cl.toFixed(2));
+      CB.stat("o-wg-cd", c.cd.toFixed(3));
+      CB.stat("o-wg-ld", (c.cl / c.cd).toFixed(1));
+      CB.stat("o-wg-df", (0.5 * RHO * Math.pow(200 / 3.6, 2) * 0.5 * c.cl).toFixed(0) + sm("N"));
+      CB.stat("o-wg-st", S.sep < 0.1 ? "부착 유동" : S.sep < 0.6 ? "실속 시작" : "실속");
+    }
+    function redraw() { solve(); cvA.redraw(); cvB.redraw(); cvC.redraw(); stats(); }
+    stats();
+  })();
+
+  /* =================================================== Sim: downforce and cornering */
+  (function () {
+    const PRE = {
+      road: { m: 1500, mu: 1.0, cla: -0.1, cda0: 0.62, P: 150e3, ld: 3 },
+      sport: { m: 1500, mu: 1.15, cla: 0.6, cda0: 0.65, P: 350e3, ld: 2.5 },
+      gt: { m: 1300, mu: 1.5, cla: 2.5, cda0: 0.75, P: 400e3, ld: 3 },
+      f: { m: 800, mu: 1.8, cla: 5.0, cda0: 0.4, P: 700e3, ld: 4 },
+    };
+    let cur = PRE.road;
+    const gR = CB.range("cn-r", (v) => v.toFixed(0) + " m", () => redraw());
+    const gL = CB.range("cn-cla", (v) => v.toFixed(2) + " m²", () => redraw());
+    const gM = CB.range("cn-mu", (v) => v.toFixed(2), () => redraw());
+    const gD = CB.range("cn-ld", (v) => v.toFixed(1), () => redraw());
+    CB.seg("cn-preset", (v) => { cur = PRE[v]; gL.set(cur.cla); gM.set(cur.mu); gD.set(cur.ld); });
+    function top(cda) {
+      let lo = 1, hi = 160;
+      for (let i = 0; i < 40; i++) { const v = (lo + hi) / 2; ((0.5 * RHO * cda * v * v + 0.012 * cur.m * G) * v < 0.9 * cur.P) ? (lo = v) : (hi = v); }
+      return lo;
+    }
+    function calc(R) {
+      const m = cur.m, mu = gM(), cla = gL(), k = 0.5 * RHO * cla;
+      const vt = top(cur.cda0 + Math.abs(cla) / gD()), vt0 = top(cur.cda0);
+      const den = m / R - mu * k, vg = den > 0 ? Math.sqrt((mu * m * G) / den) : Infinity;
+      const v = Math.min(vg, vt), v0 = Math.min(Math.sqrt(mu * G * R), vt0);
+      return { v, v0, vt, vt0, k, m, mu, limited: vg > vt };
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), c = calc(gR()), cla = gL();
+      const s = Math.min(w / 6.4, h / 3.3), cx = w * 0.5, gy = h * 0.74, mg = c.m * G;
+      const df = c.k * c.v * c.v, lat = (c.m * c.v * c.v) / gR();
+      const unit = Math.min(h * 0.2, (w * 0.4) / Math.max(lat / mg, 0.5), (h * 0.34) / Math.max(Math.abs(df) / mg, 0.3));
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
+      // rear view of the car
+      ctx.fillStyle = "#1c2028";
+      [-0.78, 0.78].forEach((x) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(cx + (x - 0.13) * s, gy - 0.66 * s, 0.26 * s, 0.66 * s, 0.06 * s); else ctx.rect(cx + (x - 0.13) * s, gy - 0.66 * s, 0.26 * s, 0.66 * s); ctx.fill(); });
+      ctx.fillStyle = P.accent;
+      ctx.beginPath(); ctx.moveTo(cx - 0.9 * s, gy - 0.2 * s); ctx.lineTo(cx - 0.9 * s, gy - 0.8 * s); ctx.lineTo(cx - 0.62 * s, gy - 1.3 * s); ctx.lineTo(cx + 0.62 * s, gy - 1.3 * s); ctx.lineTo(cx + 0.9 * s, gy - 0.8 * s); ctx.lineTo(cx + 0.9 * s, gy - 0.2 * s); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "rgba(15,22,36,0.55)";
+      ctx.beginPath(); ctx.moveTo(cx - 0.72 * s, gy - 0.86 * s); ctx.lineTo(cx - 0.54 * s, gy - 1.22 * s); ctx.lineTo(cx + 0.54 * s, gy - 1.22 * s); ctx.lineTo(cx + 0.72 * s, gy - 0.86 * s); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#ff3b30"; ctx.fillRect(cx - 0.84 * s, gy - 0.7 * s, 0.3 * s, 0.09 * s); ctx.fillRect(cx + 0.54 * s, gy - 0.7 * s, 0.3 * s, 0.09 * s);
+      if (cla > 0.3) {
+        const wy = gy - (1.42 + Math.min(0.25, cla * 0.04)) * s;
+        ctx.fillStyle = P.text; ctx.fillRect(cx - 0.88 * s, wy, 1.76 * s, 0.07 * s);
+        ctx.fillRect(cx - 0.5 * s, wy, 0.05 * s, gy - 1.25 * s - wy); ctx.fillRect(cx + 0.45 * s, wy, 0.05 * s, gy - 1.25 * s - wy);
+        ctx.fillRect(cx - 0.9 * s, wy - 0.1 * s, 0.04 * s, 0.26 * s); ctx.fillRect(cx + 0.86 * s, wy - 0.1 * s, 0.04 * s, 0.26 * s);
+      }
+      // forces
+      const top0 = gy - 1.75 * s;
+      CB.arrow(ctx, cx - 0.3 * s, gy - 0.55 * s - unit, cx - 0.3 * s, gy - 0.55 * s, P.dim, 3);
+      label(ctx, "무게 mg", cx - 0.3 * s - 6, gy - 0.55 * s - unit * 0.6, P.dim, "right", 11, 700);
+      if (Math.abs(df) / mg > 0.01) {
+        const L = (df / mg) * unit;
+        if (df > 0) CB.arrow(ctx, cx + 0.3 * s, top0 - L, cx + 0.3 * s, top0, P.accent2, 3);
+        else CB.arrow(ctx, cx + 0.3 * s, top0, cx + 0.3 * s, top0 + L, P.accent2, 3);
+        label(ctx, (df > 0 ? "다운포스 " : "양력 ") + (Math.abs(df) / mg * 100).toFixed(0) + "% mg", cx + 0.3 * s + 7, top0 - Math.abs(L) * 0.5, P.accent2, "left", 11, 700);
+      }
+      const Ll = (lat / mg) * unit;
+      CB.arrow(ctx, cx, gy + 12, cx - Ll, gy + 12, P.accent, 3.5);
+      label(ctx, "타이어 횡력 = 구심력", cx - Ll * 0.5, gy + 28, P.accent, "center", 11, 700);
+      label(ctx, "← 코너 안쪽", 8, gy - 10, P.faint, "left", 11);
+      label(ctx, (c.v * 3.6).toFixed(0) + " km/h", w - 8, 16, P.text, "right", 13, 700);
+    }
+    function drawC(ctx, w, h) {
+      const P = CB.palette(), R = gR(), c = calc(R), d1 = [], d0 = [];
+      for (let r = 20; r <= 400; r += 5) { const q = calc(r); d1.push([r, q.v * 3.6]); d0.push([r, q.v0 * 3.6]); }
+      CB.chart(ctx, null, {
+        x: [20, 400], y: [0, 360], xLabel: "코너 반경 R (m)", yLabel: "한계 속도 (km/h)",
+        series: [{ data: d0, color: P.dim, width: 2, dash: [5, 4] }, { data: d1, color: P.accent, width: 2.8 }],
+        hlines: [{ y: c.vt * 3.6, color: P.faint, label: "직선 최고 속도" }], vlines: [{ x: R, color: P.text }],
+        points: [{ x: R, y: c.v * 3.6, color: P.accent, r: 5 }, { x: R, y: c.v0 * 3.6, color: P.dim, r: 4 }],
+      });
+      const df = c.k * c.v * c.v;
+      CB.stat("o-cn-v", (c.v * 3.6).toFixed(0) + sm(c.limited ? "km/h (출력 한계)" : "km/h"));
+      CB.stat("o-cn-v0", (c.v0 * 3.6).toFixed(0) + sm("km/h"));
+      CB.stat("o-cn-g", ((c.v * c.v) / (R * G)).toFixed(2) + sm("g"));
+      CB.stat("o-cn-df", df.toFixed(0) + sm("N"));
+      CB.stat("o-cn-top", (c.vt * 3.6).toFixed(0) + sm("km/h"));
+      CB.stat("o-cn-loss", "−" + ((c.vt0 - c.vt) * 3.6).toFixed(0) + sm("km/h"));
+    }
+    const cvA = CB.canvas($("cv-cn"), draw, { aspect: 0.5, minHeight: 210, maxHeight: 320 });
+    const cvB = CB.canvas($("cv-cnc"), drawC, { aspect: 0.48, minHeight: 230, maxHeight: 320 });
+    function redraw() { cvA.redraw(); cvB.redraw(); }
+  })();
+
+  /* =================================================== Sim: crosswind */
+  (function () {
+    const AREA = 2.2, MASS = 1500, IZ = 2600, LA = 1.2, LB = 1.5, CF = 80000, CR = 90000, NSP = -(LB * CR - LA * CF) / (CF + CR);
+    const gV = CB.range("cw-v", (v) => v.toFixed(0) + " km/h", () => redraw());
+    const gW = CB.range("cw-w", (v) => v.toFixed(1) + " m/s", () => redraw());
+    const gP = CB.range("cw-cp", (v) => (Math.abs(v) < 0.025 ? "무게중심" : (v > 0 ? "앞 " : "뒤 ") + Math.abs(v).toFixed(2) + " m"), () => redraw());
+    function calc() {
+      const V = gV() / 3.6, W = gW(), xcp = gP(), beta = Math.atan2(W, V);
+      const Fy = 0.5 * RHO * (V * V + W * W) * AREA * 1.9 * Math.sin(beta);
+      let vy = 0, r = 0, psi = 0, Y = 0; const dt = 0.002, path = [[0, 0]];
+      for (let n = 1; n <= 750; n++) {
+        const Ff = -CF * (vy + LA * r) / V, Fr = -CR * (vy - LB * r) / V;
+        const dvy = (Ff + Fr + Fy) / MASS - V * r, dr = (LA * Ff - LB * Fr + xcp * Fy) / IZ;
+        vy += dvy * dt; r += dr * dt; psi += r * dt; Y += (vy + V * psi) * dt;
+        if (n % 15 === 0) path.push([n * dt, Y]);
+      }
+      return { V, W, xcp, beta, Fy, N: Fy * xcp, Y, psi, path };
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), c = calc();
+      const len = Math.min(w * 0.36, h * 0.9), s = len / 4.5, cx = w * 0.4, cy = h * 0.56;
+      // relative wind streaks
+      const dx = -Math.cos(c.beta), dy = Math.sin(c.beta);
+      ctx.strokeStyle = rgba(P.accent2, 0.3); ctx.lineWidth = 1.2;
+      for (let i = -6; i <= 8; i++) {
+        const ox = cx + i * w * 0.13 * dy, oy = cy + i * w * 0.13 * dx;
+        ctx.beginPath(); ctx.moveTo(ox - dx * w, oy - dy * w); ctx.lineTo(ox + dx * w, oy + dy * w); ctx.stroke();
+      }
+      CB.carTop(ctx, cx, cy, 0, { len, wid: 1.8 * s, wheels: true, alpha: 0.9 });
+      // CG and CP
+      ctx.strokeStyle = P.text; ctx.fillStyle = P.bg; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.arc(cx, cy, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx - 7, cy); ctx.lineTo(cx + 7, cy); ctx.moveTo(cx, cy - 7); ctx.lineTo(cx, cy + 7); ctx.stroke();
+      label(ctx, "CG", cx, cy + 0.9 * s + 20, P.text, "center", 11, 700);
+      const px = cx + c.xcp * s, fl = Math.min(h * 0.36, (c.Fy / 2500) * h * 0.36);
+      if (fl > 2) {
+        CB.arrow(ctx, px, cy - 0.9 * s - fl - 4, px, cy - 0.9 * s - 4, P.accent, 3.5);
+        label(ctx, "횡력 " + c.Fy.toFixed(0) + " N", px + 7, cy - 0.9 * s - fl * 0.6 - 6, P.accent, "left", 11, 700);
+      }
+      ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(px, cy, 4, 0, Math.PI * 2); ctx.fill();
+      label(ctx, "CP", px, cy - 14, P.accent, "center", 11, 700);
+      // yaw moment arc
+      if (Math.abs(c.N) > 30) {
+        const cwDir = c.N > 0, rr = 0.9 * s + 30, a0 = cwDir ? -0.5 : 0.5, a1 = cwDir ? 0.35 : -0.35;
+        ctx.strokeStyle = P.bad; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(cx, cy, len * 0.62, a0, a1, !cwDir); ctx.stroke();
+        const ex = cx + len * 0.62 * Math.cos(a1), ey = cy + len * 0.62 * Math.sin(a1), t = cwDir ? 1 : -1;
+        ctx.fillStyle = P.bad; ctx.beginPath(); ctx.moveTo(ex, ey + 9 * t); ctx.lineTo(ex - 6, ey - 3 * t); ctx.lineTo(ex + 7, ey - 2 * t); ctx.closePath(); ctx.fill();
+        label(ctx, "요 모멘트", Math.min(w - 6, cx + len * 0.62 + 8), cy + (cwDir ? 1 : -1) * (rr * 0.2 + 26), P.bad, "right", 11, 700);
+      }
+      // velocity triangle
+      const k = Math.min((w * 0.26) / 55.6, (h * 0.3) / 30), ox = w - 14, oy = 26;
+      const hx = ox - c.V * k, wy2 = oy + c.W * k;
+      CB.arrow(ctx, ox, oy, hx, oy, P.dim, 2);
+      if (c.W > 0.3) CB.arrow(ctx, hx, oy, hx, wy2, P.dim, 2);
+      CB.arrow(ctx, ox, oy, hx, wy2, P.accent2, 2.6);
+      label(ctx, "주행풍 −V", (ox + hx) / 2, oy - 11, P.dim, "center", 11);
+      if (c.W > 3) label(ctx, "옆바람 W", hx - 5, (oy + wy2) / 2, P.dim, "right", 11);
+      label(ctx, "β = " + ((c.beta * 180) / Math.PI).toFixed(1) + "°", ox, wy2 + 14, P.accent2, "right", 12, 700);
+    }
+    function drawP(ctx, w, h) {
+      const P = CB.palette(), c = calc();
+      let mx = 1.2, mn = -0.3; c.path.forEach((p) => { mx = Math.max(mx, p[1] * 1.1); mn = Math.min(mn, p[1] * 1.1); });
+      CB.chart(ctx, null, {
+        x: [0, 1.5], y: [mn, mx], xLabel: "바람이 불기 시작한 뒤 시간 (s)", yLabel: "횡 이동 (m, 풍하 +)",
+        series: [{ data: c.path, color: P.accent, width: 2.8, fill: rgba(P.accent, 0.1) }],
+        hlines: [{ y: 0.85, color: P.bad, label: "차로 경계에 닿음 (0.85 m)" }, { y: 0, color: P.faint }],
+        points: [{ x: 1.5, y: c.Y, color: P.accent, r: 5 }],
+      });
+      CB.stat("o-cw-beta", ((c.beta * 180) / Math.PI).toFixed(1) + sm("°"));
+      CB.stat("o-cw-fy", c.Fy.toFixed(0) + sm("N"));
+      CB.stat("o-cw-n", (c.N >= 0 ? "" : "−") + Math.abs(c.N).toFixed(0) + sm("N·m"));
+      CB.stat("o-cw-y", c.Y.toFixed(2) + sm("m"));
+      const pd = (c.psi * 180) / Math.PI;
+      CB.stat("o-cw-psi", Math.abs(pd).toFixed(2) + sm(Math.abs(pd) < 0.02 ? "°" : pd > 0 ? "° 풍하" : "° 풍상"));
+      CB.stat("o-cw-st", c.W < 0.3 ? "바람 없음" : c.xcp > NSP + 0.08 ? "머리가 풍하로 돈다 (불리)" : c.xcp < NSP - 0.08 ? "머리가 바람 쪽으로 돈다 (유리)" : "방향 변화 없이 밀림");
+    }
+    const cvA = CB.canvas($("cv-cw"), draw, { aspect: 0.52, minHeight: 220, maxHeight: 340 });
+    const cvB = CB.canvas($("cv-cwp"), drawP, { aspect: 0.42, minHeight: 210, maxHeight: 280 });
+    function redraw() { cvA.redraw(); cvB.redraw(); }
+  })();
+
+  /* =================================================== Sim: drafting */
+  (function () {
+    const LEN = 4.5;
+    const trail = (gap) => { const g = gap / LEN; return 0.48 * Math.exp(-g / 1.6) + 0.07 * Math.exp(-g / 8); };
+    const lead = (gap) => 0.18 * Math.exp(-gap / LEN / 0.45);
+    const gG = CB.range("df-gap", (v) => v.toFixed(1) + " m", () => redraw());
+    const gV = CB.range("df-v", (v) => v.toFixed(0) + " km/h", () => redraw());
+    function draw(ctx, w, h) {
+      const P = CB.palette(), gap = gG(), tr = trail(gap), ld = lead(gap);
+      const s = Math.min((w - 30) / (gap + 2 * LEN + 1), h / 4.2, 34), gy = h * 0.8;
+      const xT = (w - (gap + 2 * LEN) * s) / 2 + (LEN / 2) * s, xL = xT + (LEN + gap) * s, xRear = xL - (LEN / 2) * s;
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
+      // wake of the lead car
+      const wl = 45 * s, gr = ctx.createLinearGradient(xRear, 0, xRear - wl, 0);
+      for (let i = 0; i <= 6; i++) { const f = i / 6; gr.addColorStop(f, rgba(P.accent, 0.5 * trail(f * 45) / 0.55)); }
+      ctx.fillStyle = gr;
+      ctx.beginPath(); ctx.moveTo(xRear, gy - 1.42 * s); ctx.lineTo(xRear - wl, gy - 1.9 * s); ctx.lineTo(xRear - wl, gy - 0.05 * s); ctx.lineTo(xRear, gy - 0.2 * s); ctx.closePath(); ctx.fill();
+      CB.carSide(ctx, xL, gy, s, { color: P.accent2 });
+      CB.carSide(ctx, xT, gy, s, { color: P.accent });
+      // drag arrows
+      const base = Math.min(3.2 * s, w * 0.2), ay = gy - 1.45 * s - 16;
+      [[xL, ld, P.accent2, "앞차"], [xT, tr, P.accent, "뒤차"]].forEach(([x, red, col, name]) => {
+        CB.arrow(ctx, x + base * 0.5, ay, x + base * 0.5 - base * (1 - red), ay, col, 3);
+        label(ctx, name + " 항력 −" + (red * 100).toFixed(0) + "%", x, ay - 14, col, "center", 11, 700);
+      });
+      ctx.strokeStyle = P.dim; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(xT + (LEN / 2) * s, gy + 10); ctx.lineTo(xRear, gy + 10); ctx.moveTo(xT + (LEN / 2) * s, gy + 5); ctx.lineTo(xT + (LEN / 2) * s, gy + 15); ctx.moveTo(xRear, gy + 5); ctx.lineTo(xRear, gy + 15); ctx.stroke();
+      label(ctx, gap.toFixed(1) + " m", (xT + (LEN / 2) * s + xRear) / 2, gy + 22, P.dim, "center", 11);
+      CB.arrow(ctx, w - 12, 16, w - 12 - Math.max(16, w * 0.06), 16, P.accent2, 2);
+      label(ctx, "상대풍", w - 18 - Math.max(16, w * 0.06), 16, P.dim, "right", 11);
+    }
+    function drawC(ctx, w, h) {
+      const P = CB.palette(), gap = gG(), v = gV() / 3.6, dT = [], dL = [];
+      for (let g = 0; g <= 60; g += 0.5) { dT.push([g, trail(g) * 100]); dL.push([g, lead(g) * 100]); }
+      const d2 = 2 * v, tr = trail(gap), ld = lead(gap);
+      CB.chart(ctx, null, {
+        x: [0, 60], y: [0, 60], xLabel: "차간 거리 (m)", yLabel: "항력 감소 (%)",
+        series: [{ data: dT, color: P.accent, width: 2.8 }, { data: dL, color: P.accent2, width: 2.2 }],
+        vlines: [{ x: gap, color: P.text }].concat(d2 <= 60 ? [{ x: d2, color: P.ok, label: "2초 간격" }] : []),
+        points: [{ x: gap, y: tr * 100, color: P.accent, r: 5 }, { x: gap, y: ld * 100, color: P.accent2, r: 4 }],
+      });
+      const fa = 0.5 * RHO * 0.3 * 2.2 * v * v, fr = 0.01 * 1500 * G, t = gap / v;
+      CB.stat("o-df-tr", "−" + (tr * 100).toFixed(0) + sm("%"));
+      CB.stat("o-df-ld", "−" + (ld * 100).toFixed(1) + sm("%"));
+      CB.stat("o-df-fuel", "−" + ((fa * tr) / (fa + fr) * 100).toFixed(1) + sm("%"));
+      CB.stat("o-df-t", t.toFixed(2) + sm("s"));
+      CB.stat("o-df-safe", t >= 2 ? "안전 거리 확보" : t >= 1 ? "부족 (2초 미만)" : "위험: 반응 시간보다 짧음");
+      $("o-df-safe").style.color = t >= 2 ? P.ok : t >= 1 ? P.warn : P.bad;
+    }
+    const cvA = CB.canvas($("cv-df"), draw, { aspect: 0.36, minHeight: 170, maxHeight: 250 });
+    const cvB = CB.canvas($("cv-dfc"), drawC, { aspect: 0.44, minHeight: 220, maxHeight: 290 });
+    function redraw() { cvA.redraw(); cvB.redraw(); }
+  })();
+})();
+</script>
+</body>
+</html>

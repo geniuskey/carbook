@@ -1,0 +1,1259 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>차체와 충돌 안전 · CarBook</title>
+<meta name="description" content="모노코크 차체와 굽힘·비틀림 강성, 차체 재료와 경량화, 크럼플 존의 충돌 물리, 안전벨트와 에어백, HIC 상해 기준, 충돌 시험과 차 대 차 충돌의 질량 효과를 시뮬레이터로 배운다.">
+<link rel="canonical" href="https://carbook.euiyun.com/chapters/body.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="CarBook">
+<meta property="og:title" content="차체와 충돌 안전 · CarBook">
+<meta property="og:description" content="모노코크 차체와 굽힘·비틀림 강성, 차체 재료와 경량화, 크럼플 존의 충돌 물리, 안전벨트와 에어백, HIC 상해 기준, 충돌 시험과 차 대 차 충돌의 질량 효과를 시뮬레이터로 배운다.">
+<meta property="og:url" content="https://carbook.euiyun.com/chapters/body.html">
+<meta property="og:image" content="https://carbook.euiyun.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TechArticle","headline":"차체와 충돌 안전","name":"차체와 충돌 안전 · CarBook","url":"https://carbook.euiyun.com/chapters/body.html","mainEntityOfPage":"https://carbook.euiyun.com/chapters/body.html","inLanguage":"ko","isAccessibleForFree":true,"learningResourceType":"interactive textbook chapter","position":11,"image":"https://carbook.euiyun.com/og.png","dateModified":"2026-10-02","isPartOf":{"@type":"Book","@id":"https://carbook.euiyun.com/#book","name":"CarBook — 인터랙티브 자동차 교과서","url":"https://carbook.euiyun.com/"},"publisher":{"@type":"Organization","name":"CarBook","url":"https://carbook.euiyun.com/"},"description":"모노코크 차체와 굽힘·비틀림 강성, 차체 재료와 경량화, 크럼플 존의 충돌 물리, 안전벨트와 에어백, HIC 상해 기준, 충돌 시험과 차 대 차 충돌의 질량 효과를 시뮬레이터로 배운다."},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"CarBook","item":"https://carbook.euiyun.com/"},{"@type":"ListItem","position":2,"name":"11 차체와 충돌 안전","item":"https://carbook.euiyun.com/chapters/body.html"}]}]}</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="../css/style.css">
+<script src="../js/common.js"></script>
+<style>
+  .fig-lg svg .t, .fig-lg svg .t-acc { font-size: 17px; }
+  .fig-lg svg .t-dim { font-size: 15px; }
+  .fig-lg svg .t-mono { font-size: 14px; }
+  .fig-lg svg .t-b { fill: var(--accent-2); font-family: var(--font); font-size: 17px; font-weight: 700; }
+  .fig-lg svg .s-b { stroke: var(--accent-2); fill: none; stroke-width: 2; }
+  .fig-lg svg .member { fill: var(--text-dim); stroke: none; }
+</style>
+</head>
+<body data-chapter="body">
+<main class="chapter">
+  <header class="chapter-hero">
+    <div class="eyebrow">Chapter 11</div>
+    <h1>차체와 충돌 안전</h1>
+    <p class="lead">차체는 엔진과 서스펜션을 붙잡아 주는 뼈대이면서, 사고가 났을 때 사람을 지키는 마지막 구조물이다. 평소에는 휘지도 비틀리지도 않을 만큼 단단해야 하고, 충돌하는 0.1초 동안에는 계획한 순서대로 찌그러져야 한다. 이 장에서는 이 두 요구가 어떻게 한 구조 안에 함께 들어가는지, 그리고 안전벨트와 에어백이 그 위에서 무엇을 하는지를 계산으로 따라가 본다.</p>
+    <ul class="objectives">
+      <li>차체의 네 가지 역할과 보디 온 프레임·모노코크 구조의 차이를 설명한다.</li>
+      <li>단면 2차 모멘트와 박판 폐단면의 비틀림으로 닫힌 단면이 강한 이유를 계산한다.</li>
+      <li>강판·알루미늄·CFRP를 같은 강성, 같은 강도 기준으로 비교하고 경량화 효과를 어림한다.</li>
+      <li>감속도 \(a = v^2/2d\)에서 출발해 크럼플 존과 강한 승객실이 필요한 이유를 이끌어 낸다.</li>
+      <li>안전벨트, 프리텐셔너, 로드 리미터, 에어백이 승객의 감속을 어떻게 바꾸는지 이해한다.</li>
+      <li>HIC, 충돌 시험의 종류, 차 대 차 충돌에서 질량이 만드는 차이를 설명한다.</li>
+    </ul>
+  </header>
+
+  <!-- =============================================================== 1 -->
+  <section id="role">
+    <h2>차체가 하는 일</h2>
+    <p><a href="overview.html">1장</a>에서 본 것처럼 자동차의 모든 부품은 결국 차체에 매달려 있다. 차체가 맡는 일은 크게 넷이다.</p>
+    <ul>
+      <li><b>하중 지지</b>: 파워트레인·승객·짐의 무게, 그리고 서스펜션을 통해 올라오는 노면 하중과 가감속·선회 하중을 받는다.</li>
+      <li><b>강성</b>: 하중을 받아도 모양이 변하지 않아야 한다. 차체가 휘거나 비틀리면 <a href="suspension.html">서스펜션</a>이 설계한 대로 움직이지 못하고, 문틀이 어긋나 삐걱거린다.</li>
+      <li><b>승객 보호</b>: 충돌할 때 앞뒤는 찌그러져 에너지를 흡수하고, 승객이 앉은 공간은 형태를 지킨다.</li>
+      <li><b>NVH</b><span class="en">(Noise, Vibration, Harshness)</span>: 엔진·노면·바람이 만드는 진동과 소음이 실내로 들어오는 길을 끊는다. 차체의 고유 진동수가 낮으면 서스펜션이나 엔진의 진동수와 겹쳐 공진한다.</li>
+    </ul>
+
+    <h3>보디 온 프레임과 모노코크</h3>
+    <p>초기 자동차는 마차처럼 튼튼한 사다리꼴 <span class="term">프레임</span><span class="en">(Ladder Frame)</span> 위에 엔진과 차축을 달고, 그 위에 따로 만든 차체(보디)를 얹었다. 이것이 <span class="term">보디 온 프레임</span><span class="en">(Body-on-Frame)</span>이다. 하중은 프레임이 받고 보디는 덮개에 가깝다. 지금도 큰 하중과 험로를 견뎌야 하는 픽업트럭, 대형 SUV, 화물차가 이 구조를 쓴다.</p>
+    <p>승용차는 거의 모두 <span class="term">모노코크</span><span class="en">(Monocoque, Unibody)</span>다. 프레임을 따로 두지 않고, 프레스로 찍은 얇은 강판 수백 장을 용접해 만든 껍데기 전체가 하중을 받는다. 바닥, 지붕, 필러, 옆판이 모두 구조 부재로 일하므로 같은 강성을 훨씬 가볍게 얻고, 바닥이 낮아져 실내가 넓어진다.</p>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 680 250" role="img" aria-label="보디 온 프레임과 모노코크 비교">
+        <g>
+          <text x="170" y="24" class="t" text-anchor="middle">보디 온 프레임</text>
+          <path d="M40 120 L60 90 L120 86 L150 56 L250 54 L285 88 L310 92 L312 120 Z" class="f-surface"/>
+          <text x="180" y="100" class="t-dim" text-anchor="middle">보디(덮개)</text>
+          <g fill="var(--warn)"><circle cx="75" cy="136" r="5"/><circle cx="140" cy="136" r="5"/><circle cx="215" cy="136" r="5"/><circle cx="285" cy="136" r="5"/></g>
+          <rect x="30" y="150" width="290" height="16" rx="3" class="f-acc"/>
+          <circle cx="85" cy="186" r="22" class="s-line" stroke-dasharray="4 4"/><circle cx="265" cy="186" r="22" class="s-line" stroke-dasharray="4 4"/>
+          <text x="175" y="188" class="t-acc" text-anchor="middle">프레임이 하중을 받음</text>
+          <text x="175" y="232" class="t-dim" text-anchor="middle">고무 마운트로 보디를 얹는다</text>
+        </g>
+        <line x1="340" y1="20" x2="340" y2="235" stroke="var(--border)"/>
+        <g transform="translate(350,0)">
+          <text x="165" y="24" class="t" text-anchor="middle">모노코크(유니보디)</text>
+          <path d="M30 150 L34 104 L60 90 L120 86 L150 56 L250 54 L285 88 L310 92 L314 150 Z" class="f-acc-soft" stroke-width="3"/>
+          <path d="M120 86 L122 150 M200 55 L202 150 M285 88 L283 150 M34 128 L120 128 M283 128 L314 128" class="s-acc"/>
+          <circle cx="85" cy="176" r="22" class="s-line" stroke-dasharray="4 4"/><circle cx="265" cy="176" r="22" class="s-line" stroke-dasharray="4 4"/>
+          <text x="170" y="120" class="t-acc" text-anchor="middle">껍데기 전체가 구조</text>
+          <text x="170" y="232" class="t-dim" text-anchor="middle">바닥·지붕·필러가 함께 하중을 받는다</text>
+        </g>
+      </svg>
+      <figcaption><b>그림 11-1.</b> 보디 온 프레임은 프레임 한 장이 굽힘과 비틀림을 떠맡는다. 모노코크는 차체 전체가 하나의 속 빈 상자로 일하므로 같은 질량으로 훨씬 높은 강성을 얻는다.</figcaption>
+    </figure>
+
+    <div class="table-wrap"><table>
+      <thead><tr><th>항목</th><th>보디 온 프레임</th><th>모노코크</th></tr></thead>
+      <tbody>
+        <tr><td>하중을 받는 곳</td><td>사다리꼴 프레임</td><td>차체 껍데기 전체</td></tr>
+        <tr><td>질량·강성</td><td>무겁고, 비틀림 강성이 낮은 편</td><td>가볍고 강성이 높다</td></tr>
+        <tr><td>장점</td><td>큰 견인·적재 하중, 험로 내구, 보디 교체 쉬움</td><td>연비, 조종 안정성, 충돌 에너지 설계가 쉬움</td></tr>
+        <tr><td>쓰는 곳</td><td>픽업트럭, 일부 대형 SUV, 상용차</td><td>승용차와 대부분의 SUV</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>화이트 보디와 필러</h3>
+    <p>도장과 조립을 하기 전, 용접만 끝난 맨 차체를 <span class="term">화이트 보디</span><span class="en">(Body in White, BIW)</span>라 한다. 중형 승용차의 BIW는 대표적으로 약 300~400 kg으로, 차 전체 질량의 20~25%쯤이다. 옆에서 보면 지붕을 받치는 기둥이 앞에서부터 <span class="term">A·B·C 필러</span>로 불린다. 필러와 루프 레일, 바닥 양옆의 <span class="term">사이드 실</span><span class="en">(Side Sill, Rocker)</span>이 고리 모양으로 이어져 승객실을 둘러싼 튼튼한 우리를 만든다. 그 앞뒤로는 <span class="term">사이드 멤버</span>라 부르는 세로 보가 뻗어 나와 엔진과 서스펜션을 붙잡고, 충돌 때는 찌그러지며 에너지를 흡수한다.</p>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 680 290" role="img" aria-label="화이트 보디 측면 구조와 필러">
+        <rect x="44" y="132" width="151" height="76" class="f-acc-soft" stroke-dasharray="5 4"/>
+        <rect x="525" y="132" width="115" height="76" class="f-acc-soft" stroke-dasharray="5 4"/>
+        <path d="M195 208 L195 140 L270 72 L450 70 L525 140 L525 208 Z" class="f-acc2-soft" stroke-width="1"/>
+        <g stroke="var(--text)" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M195 205 L195 140 L270 72 L450 70 L525 140 L525 205"/>
+          <path d="M346 205 L350 71"/>
+          <path d="M195 207 L525 207" stroke-width="12"/>
+        </g>
+        <rect x="70" y="178" width="125" height="13" class="member"/>
+        <rect x="525" y="178" width="105" height="13" class="member"/>
+        <path d="M195 142 L88 150" stroke="var(--text-dim)" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <rect x="52" y="176" width="18" height="17" class="f-acc"/>
+        <rect x="42" y="164" width="10" height="40" rx="3" class="member"/>
+        <rect x="630" y="164" width="10" height="40" rx="3" class="member"/>
+        <circle cx="135" cy="222" r="30" class="s-line" stroke-dasharray="4 4"/><circle cx="578" cy="222" r="30" class="s-line" stroke-dasharray="4 4"/>
+        <line x1="20" y1="252" x2="660" y2="252" class="s-axis"/>
+        <text x="120" y="28" class="t-acc" text-anchor="middle">크럼플 존</text>
+        <text x="360" y="28" class="t-b" text-anchor="middle">승객실 (세이프티 셀)</text>
+        <text x="585" y="28" class="t-acc" text-anchor="middle">크럼플 존</text>
+        <text x="222" y="100" class="t" text-anchor="end">A</text>
+        <text x="362" y="140" class="t">B</text>
+        <text x="502" y="100" class="t">C</text>
+        <text x="360" y="58" class="t-dim" text-anchor="middle">루프 레일</text>
+        <text x="270" y="232" class="t-dim" text-anchor="middle">사이드 실</text>
+        <text x="120" y="122" class="t-dim" text-anchor="middle">어퍼 레일</text>
+        <line x1="150" y1="126" x2="150" y2="144" class="s-line"/>
+        <text x="455" y="170" class="t-dim" text-anchor="middle">사이드 멤버</text>
+        <line x1="500" y1="174" x2="535" y2="182" class="s-line"/>
+        <line x1="408" y1="174" x2="180" y2="184" class="s-line"/>
+        <text x="30" y="276" class="t-dim">범퍼 빔 · 크래시 박스</text>
+        <line x1="56" y1="262" x2="58" y2="196" class="s-line"/>
+      </svg>
+      <figcaption><b>그림 11-2.</b> 옆에서 본 화이트 보디의 뼈대. 필러–루프 레일–사이드 실이 이루는 고리가 승객실을 지키고, 앞뒤의 사이드 멤버와 크래시 박스가 찌그러지는 영역을 이룬다.</figcaption>
+    </figure>
+  </section>
+
+  <!-- =============================================================== 2 -->
+  <section id="stiffness">
+    <h2>강성: 닫힌 단면이 강한 이유</h2>
+    <p>차체 강성은 두 가지로 잰다. 앞뒤 차축에서 받치고 가운데를 눌렀을 때 처지는 정도가 <span class="term">굽힘 강성</span>, 앞 차축과 뒤 차축을 서로 반대로 비틀었을 때 돌아가는 정도가 <span class="term">비틀림 강성</span>이다. 두 값 모두 재료의 탄성 계수와 단면의 모양으로 결정된다. 두께 1 mm 안팎의 얇은 강판으로 단단한 차체를 만드는 비결은 재료가 아니라 모양에 있다.</p>
+
+    <h3>굽힘: 재료를 중립축에서 멀리</h3>
+    <p>보가 휘면 한쪽은 늘어나고 반대쪽은 줄어든다. 가운데의 늘지도 줄지도 않는 선이 중립축이고, 중립축에서 \(y\)만큼 떨어진 재료는 \(y\)에 비례해 늘어나며 그 힘이 다시 팔 길이 \(y\)로 모멘트를 만든다. 그래서 굽힘에 대한 단면의 저항은 거리의 제곱으로 센다.</p>
+    <div class="formula">$$I = \int y^2\,dA,\qquad \delta = \frac{F L^3}{3EI}\ \ (\text{cantilever})$$
+      <div class="where">\(I\): 단면 2차 모멘트, \(E\): 탄성 계수(강 약 210 GPa), \(\delta\): 길이 \(L\)인 외팔보 끝에 힘 \(F\)를 걸었을 때의 처짐. 굽힘 강성은 \(EI\)다.</div>
+    </div>
+    <p>같은 양의 강판이라도 눕혀 놓으면 \(y\)가 두께의 절반뿐이지만, 접어서 상자를 만들면 재료가 중립축에서 수십 mm 떨어진다. \(I\)가 수천 배로 커지는 이유다.</p>
+
+    <h3>비틀림: 전단류가 한 바퀴 돌 수 있는가</h3>
+    <p>비틀림에서는 단면이 닫혀 있는지가 결정적이다. 속 빈 닫힌 단면을 비틀면 벽을 따라 일정한 전단력의 흐름, 곧 <span class="term">전단류</span><span class="en">(Shear Flow)</span>가 한 바퀴 돈다. 벽 전체가 중심에서 멀리 떨어진 채 힘을 내므로 팔 길이가 길다. 반면 한 군데라도 터진 열린 단면에서는 전단류가 돌 길이 끊긴다. 전단 응력은 얇은 벽 두께 안에서 방향을 바꿔 되돌아와야 하고, 팔 길이가 두께 \(t\) 수준으로 줄어든다.</p>
+    <div class="formula">$$J_{\text{closed}} = \frac{4A_m^2\,t}{s},\qquad J_{\text{open}} = \frac{s\,t^3}{3},\qquad \theta = \frac{T L}{G J}$$
+      <div class="where">\(A_m\): 벽 중심선이 둘러싼 넓이, \(s\): 중심선 둘레 길이, \(t\): 두께, \(G\): 전단 탄성 계수(강 약 79 GPa), \(\theta\): 토크 \(T\)에 의한 비틀림 각. 첫 식은 브레트<span class="en">(Bredt)</span>의 식이다.</div>
+    </div>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 680 250" role="img" aria-label="열린 단면과 닫힌 단면의 비틀림 전단 응력">
+        <defs><marker id="bd-ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker></defs>
+        <text x="170" y="26" class="t" text-anchor="middle">열린 단면 (틈이 있음)</text>
+        <path d="M250 96 L250 60 L90 60 L90 190 L250 190 L250 154" fill="none" stroke="var(--surface-2)" stroke-width="22"/>
+        <path d="M250 96 L250 60 L90 60 L90 190 L250 190 L250 154" fill="none" stroke="var(--text-dim)" stroke-width="1.2" stroke-dasharray="3 4"/>
+        <g class="s-acc" marker-end="url(#bd-ar)">
+          <path d="M240 66 L100 66"/><path d="M96 70 L96 180"/><path d="M100 184 L240 184"/>
+        </g>
+        <g class="s-acc" marker-end="url(#bd-ar)" stroke-dasharray="5 3">
+          <path d="M240 54 L100 54" transform="rotate(180 170 54)"/><path d="M84 70 L84 180" transform="rotate(180 84 125)"/><path d="M100 196 L240 196" transform="rotate(180 170 196)"/>
+        </g>
+        <text x="170" y="118" class="t-dim" text-anchor="middle">응력이 두께 안에서</text>
+        <text x="170" y="138" class="t-dim" text-anchor="middle">되돌아온다</text>
+        <text x="170" y="234" class="t-acc" text-anchor="middle">팔 길이 ≈ 두께 t</text>
+        <line x1="340" y1="20" x2="340" y2="235" stroke="var(--border)"/>
+        <text x="510" y="26" class="t" text-anchor="middle">닫힌 단면</text>
+        <rect x="430" y="60" width="160" height="130" fill="var(--accent-2-soft)" stroke="var(--surface-2)" stroke-width="22"/>
+        <g class="s-acc" marker-end="url(#bd-ar)">
+          <path d="M580 60 L440 60"/><path d="M430 70 L430 180"/><path d="M440 190 L580 190"/><path d="M590 180 L590 70"/>
+        </g>
+        <text x="510" y="122" class="t-b" text-anchor="middle">A_m</text>
+        <text x="510" y="144" class="t-dim" text-anchor="middle">전단류 q가 한 바퀴</text>
+        <text x="510" y="234" class="t-acc" text-anchor="middle">팔 길이 ≈ 단면 크기</text>
+      </svg>
+      <figcaption><b>그림 11-3.</b> 같은 강판으로 만든 두 단면을 비틀 때의 전단 응력. 열린 단면은 벽 두께 안에서 반대 방향 응력 쌍(실선과 점선)이 생길 뿐이지만, 닫힌 단면은 벽 전체가 한 방향으로 돌며 큰 토크를 낸다.</figcaption>
+    </figure>
+
+    <div class="callout tip">
+      <strong>계산 예: 100 mm 사각관에 틈을 내면</strong>
+      <p>두께 1.2 mm 강판으로 만든 100 × 100 mm 사각관은 \(A_m = 0.01\ \text{m}^2\), \(s = 0.4\ \text{m}\)이므로 \(J_{\text{closed}} = 4\times(0.01)^2\times0.0012/0.4 = 1.2\times10^{-6}\ \text{m}^4\). 용접선을 따라 틈이 나 열린 단면이 되면 \(J_{\text{open}} = 0.4\times(0.0012)^3/3 = 2.3\times10^{-10}\ \text{m}^4\). 비틀림 강성이 <b>약 5,200분의 1</b>로 떨어진다. 굽힘 강성은 그대로다.</p>
+    </div>
+
+    <div class="sim" id="sim-sc">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>단면과 강성: 같은 강판 띠를 네 가지로 접는다</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-sc"></canvas><canvas id="cv-scb"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>단면 모양</span><div class="seg" id="sc-shape"><button data-value="plate">평판</button><button data-value="chan">ㄷ자</button><button data-value="box" class="on">사각관</button><button data-value="tube">원형관</button></div></div>
+          <div class="ctrl"><span>하중</span><div class="seg" id="sc-load"><button data-value="bend" class="on">굽힘</button><button data-value="twist">비틀림</button></div></div>
+          <label class="ctrl"><span>폭 b <output id="sc-b-out"></output></span><input type="range" id="sc-b" min="40" max="160" value="100" step="5"></label>
+          <label class="ctrl"><span>높이 h <output id="sc-h-out"></output></span><input type="range" id="sc-h" min="40" max="160" value="100" step="5"></label>
+          <label class="ctrl"><span>두께 t <output id="sc-t-out"></output></span><input type="range" id="sc-t" min="0.6" max="3" value="1.2" step="0.1"></label>
+          <label class="ctrl"><span>끝에 거는 힘 F <output id="sc-f-out"></output></span><input type="range" id="sc-f" min="0" max="1000" value="300" step="10"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">단면 2차 모멘트 I</span><span class="v" id="o-sc-i">—</span></div>
+        <div class="stat"><span class="k">비틀림 상수 J</span><span class="v" id="o-sc-j">—</span></div>
+        <div class="stat"><span class="k" id="k-sc-d">끝단 처짐</span><span class="v" id="o-sc-d">—</span></div>
+        <div class="stat"><span class="k">닫힌/열린 비틀림 강성비</span><span class="v" id="o-sc-r">—</span></div>
+        <div class="stat"><span class="k">질량 (1 m당)</span><span class="v" id="o-sc-m">—</span></div>
+      </div>
+      <div class="sim-note">폭 2(b+h), 두께 t인 강판 띠 하나를 평판 그대로 두거나, ㄷ자로 접거나, 사각관·원형관으로 말아 붙인 네 단면이다. 재료량은 모두 같다. 길이 1 m 외팔보 끝에 힘 F를 아래로 걸거나(굽힘), 20 cm 팔 끝에 걸어 비튼다(비틀림). 변형은 차이가 수만 배라서 로그 눈금으로 압축해 그렸다. 해볼 것: 굽힘에서는 ㄷ자와 사각관이 비슷하지만 비틀림으로 바꾸면 ㄷ자가 평판과 같아진다. 두께를 두 배로 하면 열린 단면의 J는 8배, 닫힌 단면은 2배가 된다.</div>
+    </div>
+
+    <p>차체는 이 원리를 그대로 쓴다. 사이드 실, 필러, 루프 레일, 사이드 멤버는 모두 모자 모양으로 찍은 강판 두 장을 맞붙여 만든 닫힌 단면이다. 그리고 차체 전체도 바닥·지붕·옆판·격벽으로 둘러싸인 하나의 큰 닫힌 상자다. 지붕을 잘라 낸 오픈카는 이 상자가 열린 단면이 되므로 비틀림 강성이 크게 떨어지고, 바닥과 사이드 실을 두껍게 보강해 일부를 되찾는다.</p>
+
+    <h3>차체 비틀림 강성</h3>
+    <p>비틀림 강성 시험에서는 뒤 서스펜션 장착부를 고정하고 앞 서스펜션 장착부 좌우에 반대 방향 힘을 걸어 차체를 비튼다. 건 토크를 비틀린 각으로 나눈 값이 비틀림 강성이다. 오늘날 승용차는 대표적으로 약 20,000~40,000 N·m/deg, 지붕이 없는 차는 그 절반 이하인 경우가 많다.</p>
+    <p>이 숫자가 중요한 까닭은 차체가 앞뒤 서스펜션을 잇는 스프링이기 때문이다. 한쪽 앞바퀴가 턱을 밟으면 앞 서스펜션, 차체, 뒤 서스펜션이 직렬로 이어진 세 개의 비틀림 스프링이 그 변위를 나눠 가진다. 차체가 서스펜션보다 훨씬 단단해야 변위를 서스펜션이 받아 스프링과 댐퍼가 설계대로 일한다. 차체가 무르면 댐퍼가 없는 스프링인 차체가 대신 비틀리고, 앞뒤 롤 강성 배분으로 조절하려던 <a href="steering.html">언더스티어·오버스티어 특성</a>도 뜻대로 되지 않는다.</p>
+    <div class="formula">$$\frac{1}{K_{\text{total}}} = \frac{1}{K_f} + \frac{1}{K_{\text{body}}} + \frac{1}{K_r},\qquad \frac{\phi_{\text{body}}}{\alpha} = \frac{K_{\text{total}}}{K_{\text{body}}}$$
+      <div class="where">\(K_f, K_r\): 앞뒤 서스펜션의 롤 강성, \(K_{\text{body}}\): 차체 비틀림 강성, \(\alpha\): 앞뒤 차축 사이의 비틀림 입력 각, \(\phi_{\text{body}}\): 그중 차체가 비틀린 각.</div>
+    </div>
+
+    <div class="sim" id="sim-tw">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>비틀림 강성 시험: 한쪽 앞바퀴를 들어 올린다</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-tw"></canvas><canvas id="cv-twc"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>차체 비틀림 강성 <output id="tw-k-out"></output></span><input type="range" id="tw-k" min="1000" max="50000" value="25000" step="500"></label>
+          <div class="ctrl-row"><button class="btn" id="tw-p1">구형 오픈카</button><button class="btn" id="tw-p2">세단</button><button class="btn" id="tw-p3">스포츠 쿠페</button></div>
+          <label class="ctrl"><span>왼쪽 앞바퀴 들림 <output id="tw-z-out"></output></span><input type="range" id="tw-z" min="0" max="120" value="80" step="1"></label>
+          <div class="ctrl"><span>서스펜션</span><div class="seg" id="tw-sus"><button data-value="comfort" class="on">컴포트</button><button data-value="sport">스포츠(단단함)</button></div></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">차축 사이 비틀림 입력</span><span class="v" id="o-tw-a">—</span></div>
+        <div class="stat"><span class="k">차체 비틀림 각</span><span class="v" id="o-tw-b">—</span></div>
+        <div class="stat"><span class="k">차체가 가져간 비율</span><span class="v" id="o-tw-s">—</span></div>
+        <div class="stat"><span class="k">차체에 걸린 토크</span><span class="v" id="o-tw-t">—</span></div>
+        <div class="stat"><span class="k">차체 / 서스펜션 강성</span><span class="v" id="o-tw-r">—</span></div>
+      </div>
+      <div class="sim-note">앞에서 본 그림이다. 실선 상자는 앞 격벽, 점선 상자는 뒤 격벽이고 두 상자의 각도 차가 차체 비틀림이다(10배 과장). 뒷바퀴는 평지에 있다. 서스펜션 롤 강성은 컴포트가 앞 900·뒤 600 N·m/deg, 스포츠가 앞 2,500·뒤 1,800 N·m/deg인 대표값이다. 아래 그래프는 차체 강성에 따라 차체가 가져가는 비틀림 비율. 해볼 것: 강성을 1,000대로 낮추면 턱을 넘을 때 서스펜션 대신 차체가 비틀린다. 스포츠 서스펜션으로 바꾸면 같은 차체가 상대적으로 무른 차체가 된다. 단단한 서스펜션일수록 더 단단한 차체가 필요한 이유다.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 3 -->
+  <section id="material">
+    <h2>재료, 접합, 경량화</h2>
+    <p>차체 재료를 고를 때는 탄성 계수 \(E\)(강성), 항복 강도 \(\sigma_y\)(강도), 밀도 \(\rho\), 그리고 성형성과 값을 함께 본다. 중요한 사실 하나는 <b>강의 탄성 계수는 강종에 상관없이 거의 같다</b>는 것이다. 초고장력강은 연강보다 다섯 배 넘게 강하지만 똑같이 휜다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>재료</th><th class="num">E (GPa)</th><th class="num">강도 (MPa)</th><th class="num">밀도 (kg/m³)</th><th>쓰는 곳</th></tr></thead>
+      <tbody>
+        <tr><td>연강</td><td class="num">210</td><td class="num">인장 270~350</td><td class="num">7,850</td><td>깊게 성형하는 외판, 바닥</td></tr>
+        <tr><td>고장력강(HSS/AHSS)</td><td class="num">210</td><td class="num">인장 440~1,180</td><td class="num">7,850</td><td>사이드 멤버, 크래시 박스, 보강재</td></tr>
+        <tr><td>핫스탬핑강</td><td class="num">210</td><td class="num">인장 약 1,500 이상</td><td class="num">7,850</td><td>B 필러, 루프 레일, 사이드 실, 도어 빔</td></tr>
+        <tr><td>알루미늄 합금</td><td class="num">70</td><td class="num">항복 150~350</td><td class="num">2,700</td><td>후드·도어, 압출 범퍼 빔, 주조 부품</td></tr>
+        <tr><td>CFRP</td><td class="num">50~150</td><td class="num">500~1,500</td><td class="num">1,500~1,600</td><td>스포츠카 모노코크, 지붕</td></tr>
+      </tbody>
+    </table></div>
+    <p><span class="term">핫스탬핑</span><span class="en">(Hot Stamping, Press Hardening)</span>은 붕소강 판을 약 900 °C 이상으로 달궈 부드러운 상태에서 프레스로 찍고, 금형 안에서 급랭해 마르텐사이트 조직으로 만드는 공법이다. 상온에서는 성형할 수 없는 1,500 MPa급 강도를 복잡한 모양으로 얻는다. 승객실 고리를 이루는 부재에 주로 쓴다. 찌그러지며 에너지를 흡수해야 하는 앞쪽 사이드 멤버에는 강도와 연신율을 함께 갖춘 고장력강을 쓴다.</p>
+    <p>알루미늄은 밀도가 강의 약 1/3이지만 탄성 계수도 1/3이다. 그래서 같은 모양으로 재료만 바꾸면 강성 기준으로는 이득이 거의 없다. 이득은 두께를 키울 수 있는 판과 주조·압출로 단면을 자유롭게 설계할 때 나온다. <span class="term">기가캐스팅</span>은 수천 톤급 다이캐스팅 기계로 차체 뒤쪽이나 앞쪽 하부 전체를 알루미늄 한 덩어리로 주조하는 방식으로, 수십 개의 프레스 부품과 그 사이 용접을 없앤다. 대신 사고 뒤 부분 수리가 어렵다는 단점이 따른다.</p>
+
+    <h3>접합</h3>
+    <ul>
+      <li><b>저항 스폿 용접</b>: 겹친 강판을 전극으로 누르고 큰 전류를 흘려 한 점을 녹여 붙인다. 승용차 한 대에 대표적으로 수천 점이 들어간다.</li>
+      <li><b>구조용 접착제</b>: 플랜지를 따라 선으로 붙인다. 점과 점 사이를 이어 주므로 강성과 피로 수명이 올라가고, 이종 금속 사이의 부식도 막는다. 스폿 용접과 함께 쓰는 경우가 많다.</li>
+      <li><b>리벳·기계적 체결</b>: 녹여 붙이기 어려운 알루미늄이나 강–알루미늄 조합에는 셀프 피어싱 리벳<span class="en">(SPR)</span>, 플로 드릴 스크루 등을 쓴다.</li>
+      <li><b>레이저 용접·브레이징</b>: 지붕과 옆판의 이음처럼 연속된 선이 필요한 곳에 쓴다.</li>
+    </ul>
+
+    <h3>경량화: 무엇을 기준으로 같은가</h3>
+    <p>"더 강한 재료를 쓰면 가벼워진다"는 말은 그 부재가 무엇 때문에 그 두께인지에 따라 맞기도 하고 틀리기도 하다. 외곽 치수가 정해진 얇은 벽 부재에서 두께만 바꾼다면 강성은 \(E\,t\), 강도는 \(\sigma_y t\)에 비례한다. 평판이 굽힘을 받을 때는 강성이 \(E\,t^3\), 강도가 \(\sigma_y t^2\)에 비례한다. 같은 성능을 내는 질량은 다음과 같다.</p>
+    <div class="formula">$$\text{thin wall:}\quad m \propto \frac{\rho}{E}\ \ \text{or}\ \ \frac{\rho}{\sigma_y}\qquad\qquad \text{panel:}\quad m \propto \frac{\rho}{E^{1/3}}\ \ \text{or}\ \ \frac{\rho}{\sigma_y^{1/2}}$$
+      <div class="where">왼쪽 항은 같은 강성, 오른쪽 항은 같은 강도 기준. 값이 작을수록 가볍다.</div>
+    </div>
+
+    <div class="sim" id="sim-lw">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>경량화 계산기: 같은 성능을 내는 부재의 질량</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-lw"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>부재 형태</span><div class="seg" id="lw-form"><button data-value="wall" class="on">박판 부재(두께만)</button><button data-value="panel">평판 굽힘</button></div></div>
+          <div class="ctrl"><span>맞추는 기준</span><div class="seg" id="lw-crit"><button data-value="stiff" class="on">같은 강성</button><button data-value="strength">같은 강도</button></div></div>
+          <div class="ctrl"><span>바꿀 재료</span><div class="seg" id="lw-mat"><button data-value="mild">연강</button><button data-value="phs" class="on">핫스탬핑강</button><button data-value="al">알루미늄</button><button data-value="cfrp">CFRP</button></div></div>
+          <label class="ctrl"><span>연강 기준 질량 <output id="lw-m-out"></output></span><input type="range" id="lw-m" min="10" max="400" value="100" step="5"></label>
+          <div class="ctrl"><span>파워트레인</span><div class="seg" id="lw-pt"><button data-value="ice" class="on">가솔린</button><button data-value="ev">전기차</button></div></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">두께 (연강 대비)</span><span class="v" id="o-lw-t">—</span></div>
+        <div class="stat"><span class="k">부재 질량</span><span class="v" id="o-lw-m">—</span></div>
+        <div class="stat"><span class="k">줄어든 질량</span><span class="v" id="o-lw-s">—</span></div>
+        <div class="stat"><span class="k">연료·전력 소비 변화</span><span class="v" id="o-lw-f">—</span></div>
+      </div>
+      <div class="sim-note">재료 값은 대표값이다(연강 항복 200 MPa, 핫스탬핑강 1,100 MPa, 알루미늄 70 GPa·250 MPa, 준등방성 CFRP 60 GPa·600 MPa). 소비 변화는 질량에 비례하는 구름 저항과 가감속 에너지만 센 어림값으로, 가솔린차는 구동 효율 25%, 전기차는 85%와 회생 60%를 가정했다. 해볼 것: 박판 부재를 강성 기준으로 보면 핫스탬핑강도 알루미늄도 이득이 없다. 강도 기준으로 바꾸면 핫스탬핑강이 1/5 아래로 줄어든다. 평판 굽힘에서는 두껍게 쓸 수 있는 가벼운 재료가 유리하다.</div>
+    </div>
+
+    <p>질량이 줄면 <a href="dynamics.html">2장</a>에서 본 구름 저항과 가속 저항이 그만큼 준다. 가솔린 승용차에서 100 kg을 덜면 연료 소비가 대표적으로 100 km당 약 0.3~0.5 L 줄어든다. 가벼워진 차는 브레이크, 서스펜션, 엔진도 작게 만들 수 있어 2차 경량화가 따라온다.</p>
+
+    <h3>전기차의 스케이트보드 플랫폼</h3>
+    <p>전기차는 수백 kg의 배터리 팩을 바닥 아래 앞뒤 차축 사이에 평평하게 깐다. 모터와 서스펜션까지 이 바닥판에 모은 구조를 <span class="term">스케이트보드 플랫폼</span>이라 한다. 무게 중심이 낮아지고 실내 바닥이 평평해지며, 튼튼한 팩 케이스가 차체 바닥에 볼트로 묶여 비틀림 강성을 보탠다.</p>
+    <p>대신 충돌 설계의 과제가 달라진다. <a href="battery.html">배터리</a> 셀이 눌리거나 뚫리면 열폭주로 이어질 수 있으므로 팩은 어떤 충돌에서도 변형되면 안 된다. 정면에서는 엔진이 없어 찌그러질 길이를 온전히 쓸 수 있지만, 측면에서는 문 바깥에서 팩까지의 거리가 수십 cm뿐이다. 그래서 사이드 실 안에 알루미늄 압출재를 벌집처럼 넣어 그 짧은 거리에서 에너지를 흡수하고, 팩 안팎의 가로 보가 좌우 사이드 실을 버텨 준다.</p>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 680 240" role="img" aria-label="전기차 바닥 단면과 측면 기둥 충돌">
+        <rect x="150" y="60" width="380" height="10" class="member"/>
+        <text x="340" y="50" class="t-dim" text-anchor="middle">바닥 패널 · 시트 크로스 멤버</text>
+        <rect x="175" y="92" width="330" height="70" rx="6" class="f-acc2-soft"/>
+        <g fill="var(--accent-2)" opacity="0.55">
+          <rect x="188" y="104" width="54" height="46" rx="3"/><rect x="250" y="104" width="54" height="46" rx="3"/><rect x="312" y="104" width="54" height="46" rx="3"/><rect x="374" y="104" width="54" height="46" rx="3"/><rect x="436" y="104" width="54" height="46" rx="3"/>
+        </g>
+        <text x="340" y="186" class="t-b" text-anchor="middle">배터리 팩 (변형 금지)</text>
+        <g>
+          <rect x="112" y="72" width="56" height="88" rx="6" class="f-acc-soft" stroke-width="2"/>
+          <path d="M112 94 H168 M112 116 H168 M112 138 H168 M131 72 V160 M150 72 V160" class="s-acc" stroke-width="1.2"/>
+          <rect x="512" y="72" width="56" height="88" rx="6" class="f-acc-soft" stroke-width="2"/>
+          <path d="M512 94 H568 M512 116 H568 M512 138 H568 M531 72 V160 M550 72 V160" class="s-acc" stroke-width="1.2"/>
+        </g>
+        <text x="140" y="214" class="t-acc" text-anchor="middle">사이드 실 압출재</text>
+        <circle cx="62" cy="116" r="34" class="f-surface" stroke-width="2"/>
+        <text x="62" y="121" class="t" text-anchor="middle">기둥</text>
+        <path d="M24 30 L92 30" class="s-acc" marker-end="url(#bd-ar)"/>
+        <text x="30" y="22" class="t-dim">충돌 방향</text>
+        <path d="M168 116 L175 116" stroke="var(--bad)" stroke-width="3"/>
+        <path d="M600 90 L575 106" class="s-line"/><text x="606" y="88" class="t-dim">찌그러질</text><text x="606" y="108" class="t-dim">거리</text>
+      </svg>
+      <figcaption><b>그림 11-4.</b> 전기차 바닥의 가로 단면. 측면 기둥 충돌에서 쓸 수 있는 거리는 사이드 실의 폭뿐이다. 속을 여러 칸으로 나눈 압출재가 이 거리에서 차례로 접히며 에너지를 흡수한다.</figcaption>
+    </figure>
+  </section>
+
+  <!-- =============================================================== 4 -->
+  <section id="crash">
+    <h2>충돌의 물리: 거리를 벌어야 산다</h2>
+    <p>질량 \(m\)인 차가 속도 \(v\)로 달릴 때의 운동 에너지는 \(\tfrac12 mv^2\)이다. 벽에 부딪혀 멈추려면 이 에너지를 모두 다른 형태로 바꿔야 한다. <a href="brake.html">브레이크</a>는 수십 m에 걸쳐 열로 바꾸지만, 충돌에서는 차체가 찌그러지는 소성 변형 일이 그 일을 맡는다. 찌그러지는 동안의 평균 힘을 \(\bar F\), 찌그러진 거리를 \(d\)라 하면</p>
+    <div class="formula">$$\tfrac12 m v^2 = \bar F\,d \quad\Rightarrow\quad \bar a = \frac{\bar F}{m} = \frac{v^2}{2d},\qquad t_{\text{stop}} = \frac{2d}{v}$$
+      <div class="where">\(\bar a\): 평균 감속도, \(t_{\text{stop}}\): 일정 감속일 때 멈추는 데 걸리는 시간. 충격량으로 보면 \(\bar F\,t_{\text{stop}} = mv\)로, 같은 운동량을 긴 시간에 걸쳐 없앨수록 힘이 작다.</div>
+    </div>
+    <p>속도는 정해져 있으므로 감속도를 낮출 방법은 <b>정지 거리 \(d\)를 늘리는 것</b>뿐이다. 차의 앞부분을 일부러 찌그러지게 만든 구역이 <span class="term">크럼플 존</span><span class="en">(Crumple Zone)</span>이다. 딱딱해서 5 cm밖에 찌그러지지 않는 차와 60 cm 찌그러지는 차는 같은 속도에서 감속도가 12배 차이 난다.</p>
+    <div class="callout tip">
+      <strong>계산 예: 시속 56 km 정면 충돌</strong>
+      <p>\(v = 15.6\ \text{m/s}\), 질량 1,500 kg이면 운동 에너지는 약 181 kJ. 60 cm 찌그러지면 \(\bar a = 15.6^2/(2\times0.6) = 202\ \text{m/s}^2 \approx 21\,g\), 정지 시간 77 ms, 평균 힘 약 300 kN이다. 5 cm만 찌그러지면 \(\bar a \approx 2{,}420\ \text{m/s}^2 = 247\,g\)가 된다. 벨트를 맨 사람이 견디는 한계는 대략 수십 g 수준이다.</p>
+    </div>
+
+    <h3>찌그러지는 앞뒤, 버티는 가운데</h3>
+    <p>그렇다고 차 전체가 물러서는 안 된다. 승객이 앉은 공간까지 찌그러지면 감속도가 낮아도 사람이 눌린다. 그래서 차체는 두 구역으로 나뉜다. 앞뒤의 크럼플 존은 정해진 힘에서 주름지며 접히고, 가운데 <span class="term">세이프티 셀</span>은 그 힘보다 훨씬 강해 형태를 지킨다. 크럼플 존의 힘 수준이 설계의 핵심이다. 너무 낮으면 주어진 길이로 에너지를 다 흡수하지 못해 승객실이 밀려 들어오고, 너무 높으면 길이를 다 쓰지 않은 채 높은 감속도로 멈춘다. 이상적인 구조는 시험 속도에서 가진 길이를 거의 다 쓰면서 일정한 힘을 낸다.</p>
+    <p>앞 구조는 한 덩어리가 아니다. 범퍼 빔 뒤의 <span class="term">크래시 박스</span>가 먼저 접혀 저속 충돌을 처리하고, 이어서 사이드 멤버가 주름지며, 단단한 엔진이 벽에 닿은 뒤에는 그 뒤쪽 구조가 찌그러진다. 그래서 승객실이 느끼는 감속도는 시간에 따라 계단처럼 변하는데, 이 파형을 <span class="term">충돌 펄스</span><span class="en">(Crash Pulse)</span>라 한다. 구속 장치는 이 펄스에 맞춰 조율한다.</p>
+
+    <div class="sim" id="sim-cz">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>크럼플 존 충돌 실험: 벽에 정면으로 부딪힌다</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-cz"></canvas><canvas id="cv-czc"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>충돌 속도 <output id="cz-v-out"></output></span><input type="range" id="cz-v" min="20" max="100" value="56" step="1"></label>
+          <label class="ctrl"><span>크럼플 길이 <output id="cz-l-out"></output></span><input type="range" id="cz-l" min="0.2" max="1" value="0.6" step="0.05"></label>
+          <label class="ctrl"><span>차 질량 <output id="cz-m-out"></output></span><input type="range" id="cz-m" min="900" max="2500" value="1500" step="50"></label>
+          <label class="ctrl"><span>구조 강성(찌그러지는 힘) <output id="cz-f-out"></output></span><input type="range" id="cz-f" min="100" max="800" value="350" step="10"></label>
+          <label class="ctrl"><span>시각 <output id="cz-t-out"></output></span><input type="range" id="cz-t" min="0" max="1000" value="1000" step="any"></label>
+          <div class="ctrl-row"><button class="btn primary" id="cz-play">충돌 재생</button></div>
+          <label class="check"><input type="checkbox" id="cz-cmp" checked> 딱딱한 차(8 cm에 정지)와 비교</label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">운동 에너지</span><span class="v" id="o-cz-e">—</span></div>
+        <div class="stat"><span class="k">승객실 피크 감속도</span><span class="v" id="o-cz-pk">—</span></div>
+        <div class="stat"><span class="k">평균 감속도</span><span class="v" id="o-cz-avg">—</span></div>
+        <div class="stat"><span class="k">정지 시간</span><span class="v" id="o-cz-ts">—</span></div>
+        <div class="stat"><span class="k">찌그러진 거리</span><span class="v" id="o-cz-cr">—</span></div>
+        <div class="stat"><span class="k">승객실 침입</span><span class="v" id="o-cz-in">—</span></div>
+        <div class="stat"><span class="k">딱딱한 차 피크</span><span class="v" id="o-cz-rg">—</span></div>
+      </div>
+      <div class="sim-note">모델: 벽 – 구간 A – 엔진 질량(차의 25%) – 구간 B – 승객실 질량(75%)을 잇는 2질량 탄소성 스프링 계를 0.02 ms 간격으로 적분한다. 각 구간은 정해진 힘에서 접히고(A는 B의 80%), 길이를 다 쓰면 급격히 단단해진다. 그래프의 감속도는 3 ms 이동 평균이다. 해볼 것: 힘을 800 kN으로 올리고 길이를 0.2 m로 줄이면 차는 멀쩡해 보이지만 감속도가 치솟는다. 반대로 힘을 150 kN으로 낮추면 길이를 다 쓰고도 에너지가 남아 승객실이 밀려 들어온다. 속도를 56에서 80 km/h로 올리면 에너지는 두 배가 된다.</div>
+    </div>
+
+    <h3>하중 경로</h3>
+    <p>충돌 힘이 승객실을 뚫지 않고 돌아 나가게 하려면 힘이 지나갈 길, 곧 <span class="term">하중 경로</span><span class="en">(Load Path)</span>를 여러 갈래로 마련해야 한다. 정면 충돌에서는 대개 세 갈래다. 가운데의 사이드 멤버가 주된 길로, 바닥 아래 보와 사이드 실로 힘을 넘긴다. 위쪽의 어퍼 레일은 A 필러와 루프 레일로, 아래쪽의 서브프레임은 바닥으로 힘을 보낸다. 길이 여럿이면 한쪽만 부딪히는 옵셋 충돌에서도 힘이 반대편으로 나뉘고, 낮은 차와 높은 차가 만났을 때 서로의 구조가 엇갈릴 가능성도 준다.</p>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 680 270" role="img" aria-label="정면 충돌 하중 경로 평면도">
+        <path d="M70 60 Q60 135 70 210 L230 222 L600 215 Q628 135 600 55 L230 48 Z" class="f-surface"/>
+        <rect x="240" y="62" width="300" height="146" rx="14" class="f-acc2-soft"/>
+        <rect x="74" y="78" width="12" height="114" rx="4" class="member"/>
+        <g stroke="var(--accent)" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M90 100 L225 100 L262 72 L530 72"/>
+          <path d="M90 170 L225 170 L262 198 L530 198"/>
+          <path d="M225 100 L262 120 L500 120"/>
+          <path d="M225 170 L262 150 L500 150"/>
+        </g>
+        <g stroke="var(--text-dim)" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="2 9">
+          <path d="M100 64 L240 62"/><path d="M100 206 L240 208"/>
+        </g>
+        <g class="s-line" stroke="var(--bad)" stroke-width="3" marker-end="url(#bd-ar2)">
+          <path d="M20 100 L64 100"/><path d="M20 135 L64 135"/><path d="M20 170 L64 170"/>
+        </g>
+        <defs><marker id="bd-ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--bad)"/></marker></defs>
+        <text x="150" y="140" class="t-dim" text-anchor="middle">엔진룸</text>
+        <text x="390" y="140" class="t-b" text-anchor="middle">승객실</text>
+        <text x="158" y="92" class="t-acc" text-anchor="middle">① 사이드 멤버</text>
+        <text x="170" y="40" class="t-dim" text-anchor="middle">② 어퍼 레일 → A 필러</text>
+        <text x="420" y="64" class="t-dim" text-anchor="middle">사이드 실</text>
+        <text x="400" y="112" class="t-dim" text-anchor="middle">바닥 멤버 · 터널</text>
+        <text x="340" y="256" class="t-dim" text-anchor="middle">③ 서브프레임은 사이드 멤버 아래층에서 바닥으로 이어진다</text>
+      </svg>
+      <figcaption><b>그림 11-5.</b> 위에서 본 정면 충돌 하중 경로. 사이드 멤버로 들어온 힘은 승객실 앞에서 갈라져 사이드 실, 바닥 멤버, 센터 터널로 흩어진다. 승객실은 힘이 통과하는 곳이지 흡수하는 곳이 아니다.</figcaption>
+    </figure>
+  </section>
+
+  <!-- =============================================================== 5 -->
+  <section id="restraint">
+    <h2>구속 장치: 승객의 2차 충돌</h2>
+    <p>차가 벽에 부딪히는 것이 1차 충돌이라면, 그 안의 사람이 차 안의 무언가에 부딪히는 것이 <span class="term">2차 충돌</span>이다. 차체가 감속을 시작해도 붙잡히지 않은 승객은 관성으로 원래 속도 그대로 나아간다. 차가 60 cm에 걸쳐 멈춘 뒤, 승객은 이미 서 버린 스티어링 휠이나 대시보드에 처음 속도 가까이로 부딪혀 몇 cm 만에 멈춘다. 크럼플 존이 벌어 준 거리를 하나도 쓰지 못한 것이다.</p>
+    <p>구속 장치의 목적은 승객을 되도록 일찍 차체에 묶어, 차가 찌그러지는 거리를 승객도 함께 쓰게 하는 것이다. 이를 <span class="term">라이드 다운</span><span class="en">(Ride-Down)</span>이라 한다. 여기에 실내에서 앞으로 나아갈 수 있는 수십 cm를 더해 승객의 정지 거리를 최대한 늘린다.</p>
+    <ul>
+      <li><b>3점식 안전벨트</b>: 어깨와 골반이라는 단단한 뼈대에 힘을 싣는다. 평소에는 풀려 나오다가 급감속이나 벨트가 급히 당겨질 때 리트랙터가 잠긴다.</li>
+      <li><b>프리텐셔너</b><span class="en">(Pretensioner)</span>: 충돌을 감지하면 화약으로 벨트를 순식간에 되감아 옷과 몸 사이의 느슨함을 없앤다. 승객이 더 일찍 차와 함께 감속하기 시작한다.</li>
+      <li><b>로드 리미터</b><span class="en">(Load Limiter)</span>: 벨트 힘이 정해진 값(어깨 벨트 장력 기준 대표적으로 약 3~6 kN)에 이르면 리트랙터 안의 토션 바가 비틀리며 벨트를 조금씩 풀어 준다. 갈비뼈에 걸리는 힘의 꼭대기를 잘라 내고, 대신 승객이 조금 더 앞으로 나간다.</li>
+      <li><b>에어백</b>: 로드 리미터가 내준 거리를 받아 주는 장치다. 머리와 가슴을 넓은 면으로 받쳐 압력을 낮추고, 배기 구멍으로 가스를 빼며 에너지를 흡수한다. 벨트를 맨 승객을 전제로 한 보조 구속 장치<span class="en">(SRS)</span>다.</li>
+    </ul>
+
+    <h3>0.1초의 시간표</h3>
+    <p>충돌은 눈 한 번 깜박이는 시간(약 0.1~0.15초) 안에 끝난다. 에어백 제어기는 가속도 센서 신호를 보고 대표적으로 10~20 ms 안에 전개 여부를 결정해야 하고, 에어백은 점화 뒤 약 30 ms 만에 다 부푼다. 승객이 닿기 전에 다 부풀어 있어야 하기 때문이다. 너무 늦으면 승객이 이미 스티어링 휠 가까이 와 있고, 시속 200~300 km로 부풀어 오르는 에어백 자체가 승객을 친다.</p>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 680 250" role="img" aria-label="정면 충돌 시간표">
+        <line x1="40" y1="150" x2="650" y2="150" class="s-axis"/>
+        <g class="t-mono" text-anchor="middle">
+          <text x="50" y="174" class="t-mono">0</text><text x="170" y="174" class="t-mono">30</text><text x="290" y="174" class="t-mono">60</text><text x="410" y="174" class="t-mono">90</text><text x="530" y="174" class="t-mono">120</text><text x="640" y="174" class="t-mono">ms</text>
+        </g>
+        <g class="s-axis"><line x1="50" y1="144" x2="50" y2="156"/><line x1="170" y1="144" x2="170" y2="156"/><line x1="290" y1="144" x2="290" y2="156"/><line x1="410" y1="144" x2="410" y2="156"/><line x1="530" y1="144" x2="530" y2="156"/></g>
+        <rect x="50" y="132" width="320" height="12" class="f-acc-soft"/>
+        <text x="210" y="124" class="t-acc" text-anchor="middle">차가 찌그러지는 구간</text>
+        <rect x="130" y="186" width="120" height="12" class="f-acc2-soft"/>
+        <text x="190" y="218" class="t-b" text-anchor="middle">에어백 팽창</text>
+        <rect x="250" y="186" width="230" height="12" fill="var(--accent-2)" opacity="0.5"/>
+        <text x="372" y="218" class="t-dim" text-anchor="middle">승객이 에어백에 실림</text>
+        <g class="s-line">
+          <line x1="50" y1="132" x2="50" y2="40"/><line x1="110" y1="132" x2="110" y2="64"/><line x1="130" y1="132" x2="130" y2="88"/><line x1="250" y1="186" x2="250" y2="88"/><line x1="480" y1="186" x2="480" y2="64"/>
+        </g>
+        <text x="56" y="40" class="t">범퍼 접촉</text>
+        <text x="116" y="64" class="t">충돌 판정 · 프리텐셔너</text>
+        <text x="136" y="92" class="t-dim">에어백 점화</text>
+        <text x="256" y="92" class="t-dim">완전 전개</text>
+        <text x="486" y="64" class="t">승객 되돌아옴</text>
+        <rect x="50" y="232" width="560" height="6" rx="3" fill="var(--text-faint)" opacity="0.5"/>
+        <text x="620" y="240" class="t-dim">눈 깜박임</text>
+      </svg>
+      <figcaption><b>그림 11-6.</b> 시속 50~60 km 정면 충돌의 대표적인 시간표. 수치는 차와 충돌 조건에 따라 달라진다. 구속 장치가 일해야 하는 시간은 사람이 반응할 수 있는 시간보다 훨씬 짧다.</figcaption>
+    </figure>
+
+    <div class="sim" id="sim-oc">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>승객과 구속 장치: 같은 충돌, 다른 결과</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-oc"></canvas><canvas id="cv-occ"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>구속 장치</span><div class="seg" id="oc-mode"><button data-value="none">없음</button><button data-value="belt">벨트</button><button data-value="bll">벨트+프리텐셔너+리미터</button><button data-value="all" class="on">+에어백</button><button data-value="bag">에어백만</button></div></div>
+          <label class="ctrl"><span>충돌 속도 <output id="oc-v-out"></output></span><input type="range" id="oc-v" min="30" max="64" value="56" step="1"></label>
+          <label class="ctrl"><span>에어백 점화 시각 <output id="oc-tb-out"></output></span><input type="range" id="oc-tb" min="5" max="90" value="20" step="1"></label>
+          <label class="ctrl"><span>로드 리미터 한계 <output id="oc-fl-out"></output></span><input type="range" id="oc-fl" min="6" max="20" value="12" step="0.5"></label>
+          <label class="ctrl"><span>시각 <output id="oc-t-out"></output></span><input type="range" id="oc-t" min="0" max="1000" value="420" step="any"></label>
+          <div class="ctrl-row"><button class="btn primary" id="oc-play">재생</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">승객 피크 감속도</span><span class="v" id="o-oc-pk">—</span></div>
+        <div class="stat"><span class="k">3 ms 지속 감속도</span><span class="v" id="o-oc-c3">—</span></div>
+        <div class="stat"><span class="k">최대 전방 이동</span><span class="v" id="o-oc-x">—</span></div>
+        <div class="stat"><span class="k">2차 충돌</span><span class="v" id="o-oc-hit">—</span></div>
+        <div class="stat"><span class="k">벨트 최대 힘</span><span class="v" id="o-oc-fb">—</span></div>
+        <div class="stat"><span class="k">에어백 최대 힘</span><span class="v" id="o-oc-fa">—</span></div>
+      </div>
+      <div class="sim-note">차 안에서 본 그림이다. 차는 60 cm 찌그러지는 반사인 모양 펄스로 감속하고, 승객의 상체는 75 kg 질량점으로 계산한다. 스티어링 휠은 45 cm 앞에 있다. 벨트 힘은 어깨·골반 벨트가 몸에 주는 힘의 합이라서 실제 어깨 벨트 장력보다 크게 나온다. 위 그래프는 차 안에서 앞으로 나간 거리, 아래 그래프는 승객(실선)과 차(점선)의 감속도. 해볼 것: '없음'에서는 차가 거의 멈춘 뒤에야 승객이 휠에 부딪힌다. '벨트'는 피크를 절반 아래로 낮춘다. 리미터만 더하면 힘은 줄지만 휠에 닿고, 에어백이 그 거리를 받아 준다. 에어백 점화를 60 ms로 늦추면 어떻게 되는가? '에어백만'으로는 왜 부족한가?</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 6 -->
+  <section id="injury">
+    <h2>상해 기준: 얼마나 세게, 얼마나 오래</h2>
+    <p>충돌 시험에서는 사람 대신 더미<span class="en">(Anthropomorphic Test Device)</span>가 탄다. 더미의 머리·가슴·골반에는 가속도계가, 목·넓적다리·정강이에는 하중계가, 가슴에는 눌린 깊이를 재는 변위계가 들어 있다. 측정값을 사람의 부상 확률로 바꿔 주는 것이 <span class="term">상해 기준</span>이다.</p>
+    <p>머리의 기준이 <span class="term">HIC</span><span class="en">(Head Injury Criterion)</span>다. 머리 부상은 가속도의 크기만이 아니라 지속 시간에도 달려 있다. 아주 짧은 순간이라면 높은 가속도도 견디지만, 같은 가속도가 오래 이어지면 뇌가 다친다. HIC는 이 관계를 한 숫자로 줄인 것이다.</p>
+    <div class="formula">$$\mathrm{HIC} = \max_{t_1,\,t_2}\left\{ (t_2 - t_1)\left[\frac{1}{t_2 - t_1}\int_{t_1}^{t_2} a(t)\,dt\right]^{2.5}\right\}$$
+      <div class="where">\(a(t)\): 머리 무게 중심의 합성 가속도(g 단위), \(t\): 초. \(t_2 - t_1\)을 15 ms 이하로 제한한 값이 HIC15다. 구간 평균 가속도의 2.5제곱에 구간 길이를 곱한 값이 가장 커지는 구간을 찾는다.</div>
+    </div>
+    <p>지수 2.5 때문에 가속도가 두 배가 되면 HIC는 약 5.7배가 되지만, 지속 시간이 두 배가 되면 두 배에 그친다. 미국 법규는 성인 남성 더미에 대해 HIC15 700 이하를 요구한다. 딱딱한 필러에 머리가 직접 닿으면 수 ms 동안 수백 g이 걸려 이 값을 쉽게 넘고, 에어백은 같은 속도 변화를 수십 ms로 펴서 값을 낮춘다.</p>
+    <div class="callout tip">
+      <strong>계산 예: 사각 펄스의 HIC</strong>
+      <p>가속도가 일정한 사각 펄스에서는 평균이 곧 그 값이므로 \(\mathrm{HIC} = T\,A^{2.5}\). 80 g가 10 ms 이어지면 \(0.010 \times 80^{2.5} = 572\). 같은 속도 변화(약 28 km/h)를 40 g, 20 ms로 펴면 \(0.015 \times 40^{2.5} = 152\)로, 4분의 1 가까이 준다(창이 15 ms로 제한된다).</p>
+    </div>
+
+    <div class="sim" id="sim-hc">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>HIC 놀이: 펄스의 높이와 길이</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-hc"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>펄스 모양</span><div class="seg" id="hc-shape"><button data-value="sine" class="on">반사인</button><button data-value="tri">삼각</button><button data-value="sq">사각</button></div></div>
+          <label class="ctrl"><span>피크 가속도 <output id="hc-a-out"></output></span><input type="range" id="hc-a" min="20" max="250" value="100" step="1"></label>
+          <label class="ctrl"><span>지속 시간 <output id="hc-d-out"></output></span><input type="range" id="hc-d" min="2" max="60" value="15" step="0.5"></label>
+          <label class="check"><input type="checkbox" id="hc-dv"> 속도 변화 Δv를 유지한 채 지속 시간 바꾸기</label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">HIC15</span><span class="v" id="o-hc-v">—</span></div>
+        <div class="stat"><span class="k">최대가 되는 구간</span><span class="v" id="o-hc-w">—</span></div>
+        <div class="stat"><span class="k">머리 속도 변화 Δv</span><span class="v" id="o-hc-dv">—</span></div>
+        <div class="stat"><span class="k">중상(AIS 3+) 확률</span><span class="v" id="o-hc-r">—</span></div>
+        <div class="stat"><span class="k">판정</span><span class="v" id="o-hc-z">—</span></div>
+      </div>
+      <div class="sim-note">음영은 HIC 값을 최대로 만드는 구간 \([t_1, t_2]\)다. 아래 막대는 HIC15 눈금으로, 700이 법규 한계다. 중상 확률은 미국 NCAP이 쓰는 위험 곡선으로 계산한 참고값이다. 해볼 것: 'Δv 유지'를 켜고 지속 시간을 늘려 보자. 같은 속도 변화라도 펄스를 길게 펴면 HIC가 급격히 떨어진다. 에어백과 푹신한 내장재가 하는 일이 바로 이것이다. 지속 시간이 15 ms보다 길면 음영이 펄스의 가운데 15 ms만 고른다.</div>
+    </div>
+
+    <p>가슴은 두 가지로 본다. 하나는 <b>흉부 가속도</b>로, 3 ms 이상 지속된 값이 60 g를 넘지 않아야 한다. 다른 하나는 <b>흉부 압박량</b>으로, 벨트나 스티어링 휠이 갈비뼈를 누른 깊이다. 로드 리미터가 겨냥하는 것이 이 압박량이다. 그 밖에 목의 인장·굽힘 모멘트, 넓적다리 축 하중, 정강이 지수 등을 함께 평가한다.</p>
+    <div class="callout warn">
+      <strong>기준값은 확률이다</strong>
+      <p>HIC 700은 그 아래면 안전하고 넘으면 다친다는 경계가 아니다. 사람마다 내성이 달라서 값이 커질수록 중상 확률이 연속적으로 올라간다. 고령자와 체구가 작은 승객은 같은 하중에서 더 크게 다치므로, 최근 시험은 여러 체격의 더미와 더 낮은 한계값을 쓴다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 7 -->
+  <section id="test">
+    <h2>충돌 시험과 별점</h2>
+    <p>실제 사고는 모양이 제각각이라, 시험은 사상자가 많이 나오는 대표 유형을 골라 표준화한다. 법규 시험은 판매를 위한 최소 요건이고, <span class="term">NCAP</span><span class="en">(New Car Assessment Program)</span>은 법규보다 가혹한 조건으로 시험해 그 결과를 별점으로 공개하는 소비자 평가다. 미국(NHTSA, IIHS), 유럽(Euro NCAP), 한국(KNCAP) 등 지역마다 운영하며, 제조사가 법규 이상의 안전을 경쟁하게 만든 주역이다.</p>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 680 330" role="img" aria-label="대표적인 충돌 시험 형태">
+        <defs><pattern id="bd-hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="var(--text-dim)" stroke-width="3"/></pattern></defs>
+        <g>
+          <rect x="60" y="50" width="110" height="52" rx="12" class="f-acc-soft"/><rect x="172" y="36" width="16" height="80" fill="url(#bd-hatch)" stroke="var(--text-dim)"/>
+          <path d="M20 76 L52 76" class="s-acc" marker-end="url(#bd-ar)"/>
+          <text x="115" y="140" class="t" text-anchor="middle">정면 풀랩</text>
+        </g>
+        <g transform="translate(225,0)">
+          <rect x="60" y="50" width="110" height="52" rx="12" class="f-acc-soft"/><rect x="172" y="36" width="22" height="37" class="f-acc2-soft"/><rect x="194" y="36" width="10" height="37" fill="url(#bd-hatch)" stroke="var(--text-dim)"/>
+          <path d="M20 76 L52 76" class="s-acc" marker-end="url(#bd-ar)"/>
+          <text x="115" y="140" class="t" text-anchor="middle">옵셋 (40%)</text>
+        </g>
+        <g transform="translate(450,0)">
+          <rect x="60" y="50" width="110" height="52" rx="12" class="f-acc-soft"/><path d="M172 36 H196 V63 H180 Q172 63 172 55 Z" fill="url(#bd-hatch)" stroke="var(--text-dim)"/>
+          <path d="M20 76 L52 76" class="s-acc" marker-end="url(#bd-ar)"/>
+          <text x="115" y="140" class="t" text-anchor="middle">스몰 오버랩 (25%)</text>
+        </g>
+        <g transform="translate(0,160)">
+          <rect x="60" y="74" width="110" height="52" rx="12" class="f-acc-soft"/><rect x="88" y="20" width="60" height="38" rx="6" class="f-surface"/><rect x="88" y="58" width="60" height="12" class="f-acc2-soft"/>
+          <path d="M40 22 L40 60" class="s-acc" marker-end="url(#bd-ar)"/>
+          <text x="115" y="156" class="t" text-anchor="middle">측면 (이동 대차)</text>
+        </g>
+        <g transform="translate(225,160)">
+          <rect x="60" y="56" width="110" height="52" rx="12" class="f-acc-soft" transform="rotate(-12 115 82)"/><circle cx="108" cy="40" r="11" fill="url(#bd-hatch)" stroke="var(--text-dim)"/>
+          <path d="M150 128 L138 108" class="s-acc" marker-end="url(#bd-ar)"/>
+          <text x="115" y="156" class="t" text-anchor="middle">측면 폴</text>
+        </g>
+        <g transform="translate(450,160)">
+          <rect x="90" y="56" width="110" height="52" rx="12" class="f-acc-soft"/><rect x="22" y="60" width="52" height="44" rx="6" class="f-surface"/><rect x="74" y="60" width="12" height="44" class="f-acc2-soft"/>
+          <path d="M20 122 L60 122" class="s-acc" marker-end="url(#bd-ar)"/>
+          <text x="115" y="156" class="t" text-anchor="middle">후방 추돌</text>
+        </g>
+      </svg>
+      <figcaption><b>그림 11-7.</b> 위에서 본 대표적인 시험 형태. 빗금은 단단한 벽·기둥, 파란 부분은 상대 차의 앞 구조를 흉내 낸 변형 장벽(알루미늄 허니콤)이다.</figcaption>
+    </figure>
+
+    <div class="table-wrap"><table>
+      <thead><tr><th>시험</th><th>대표 조건</th><th>무엇을 보는가</th></tr></thead>
+      <tbody>
+        <tr><td>정면 풀랩</td><td>약 50~56 km/h, 고정벽에 전폭 충돌</td><td>차 앞 전체가 버티므로 감속도가 가장 크다. 구속 장치의 성능</td></tr>
+        <tr><td>정면 옵셋</td><td>약 64 km/h, 폭의 40%가 변형 장벽에 충돌(최근에는 마주 달리는 이동 장벽 방식도 사용)</td><td>한쪽 구조만으로 에너지를 흡수해야 한다. 승객실 변형, 다리 상해</td></tr>
+        <tr><td>스몰 오버랩</td><td>약 64 km/h, 폭의 25%가 고정벽에 충돌</td><td>사이드 멤버 바깥을 스쳐 바퀴와 A 필러가 직접 맞는다. 승객실 유지</td></tr>
+        <tr><td>측면</td><td>약 50~60 km/h의 이동 대차가 운전석 옆을 충돌</td><td>찌그러질 거리가 짧다. B 필러, 도어 빔, 사이드·커튼 에어백</td></tr>
+        <tr><td>측면 폴</td><td>약 32 km/h로 지름 254 mm 기둥에 비스듬히 충돌</td><td>좁은 면적에 집중되는 하중. 머리 보호, 전기차는 배터리 보호</td></tr>
+        <tr><td>후방</td><td>시트를 썰매에 올려 추돌 펄스 재현, 연료·고전압 계통은 실차 추돌</td><td>목 상해(편타), 연료 누출, 배터리 안전</td></tr>
+      </tbody>
+    </table></div>
+    <p>풀랩과 옵셋은 서로 반대되는 것을 요구한다. 풀랩은 감속도가 높아 부드러운 구조와 좋은 구속 장치가 유리하고, 옵셋과 스몰 오버랩은 좁은 구조에 힘이 몰려 단단한 승객실이 유리하다. 한 차가 이 모두를 통과해야 하므로 크럼플 존의 힘 수준과 승객실 강도를 함께 올리게 된다. 스몰 오버랩 시험이 도입된 뒤 A 필러와 사이드 실에 핫스탬핑강이 크게 늘어난 것이 좋은 예다.</p>
+
+    <h3>보행자 보호</h3>
+    <p>차 바깥의 사람도 보호 대상이다. 보행자는 먼저 범퍼에 다리를 맞고 후드 위로 쓰러지며 머리가 후드나 앞 유리 아래쪽에 부딪힌다. 시험에서는 머리와 다리 모양의 충격자를 약 40 km/h로 후드와 범퍼 곳곳에 쏘아 HIC와 무릎 굽힘을 잰다. 후드 철판 자체는 부드럽지만 바로 아래에 엔진과 서스펜션 타워 같은 단단한 부품이 있으면 머리가 멈출 거리가 없다. 그래서 후드 아래에 수 cm의 빈 공간을 두고, 범퍼 안쪽에 발포 흡수재를 넣으며, 일부 차는 충돌을 감지해 후드 뒤쪽을 들어 올리는 액티브 후드를 쓴다. 여기서도 원리는 같다. 멈출 거리를 번다.</p>
+  </section>
+
+  <!-- =============================================================== 8 -->
+  <section id="compat">
+    <h2>차 대 차 충돌: 질량의 불공평</h2>
+    <p>벽 충돌 시험은 자기 자신과 같은 차와 정면으로 부딪히는 상황에 해당한다. 그러나 길에서는 질량이 다른 차끼리 만난다. 두 차가 부딪히는 동안 서로에게 주는 힘은 크기가 같고 방향이 반대이므로 전체 운동량이 보존된다. 충돌 뒤 두 차가 한 덩어리로 움직인다고 하면</p>
+    <div class="formula">$$v_c = \frac{m_1 v_1 - m_2 v_2}{m_1 + m_2},\qquad \Delta v_1 = \frac{m_2}{m_1+m_2}(v_1+v_2),\qquad \Delta v_2 = \frac{m_1}{m_1+m_2}(v_1+v_2)$$
+      <div class="where">\(v_1, v_2\): 서로 마주 달리는 두 차의 속력, \(v_c\): 충돌 뒤 공통 속도(차 1의 진행 방향이 +), \(\Delta v\): 각 차의 속도 변화. \(\Delta v_1/\Delta v_2 = m_2/m_1\)이다.</div>
+    </div>
+    <p>승객의 상해를 가장 잘 설명하는 양은 충돌 속도가 아니라 속도 변화 <span class="term">Δv</span>다. 그리고 Δv는 질량에 반비례한다. 같은 힘을 받아도 가벼운 차가 더 크게 감속하고, 무거운 차는 가던 방향으로 계속 밀고 나간다.</p>
+    <div class="callout tip">
+      <strong>계산 예: 1,000 kg 대 2,000 kg</strong>
+      <p>두 차가 각각 시속 50 km로 마주 달리다 정면 충돌한다. \(v_c = (1000\times50 - 2000\times50)/3000 = -16.7\) km/h, 곧 무거운 차 방향으로 시속 16.7 km. 가벼운 차의 Δv는 66.7 km/h, 무거운 차는 33.3 km/h다. 가벼운 차의 승객은 시속 67 km로 벽에 부딪힌 것과 같은 속도 변화를 겪고, 무거운 차의 승객은 시속 33 km에 해당한다. 에너지는 속도의 제곱에 비례하므로 네 배 차이다.</p>
+    </div>
+
+    <div class="sim" id="sim-cc">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>차 대 차 정면 충돌: 운동량 보존과 Δv</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-cc"></canvas><canvas id="cv-ccc"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>차 1 질량 <output id="cc-m1-out"></output></span><input type="range" id="cc-m1" min="800" max="2800" value="1000" step="50"></label>
+          <label class="ctrl"><span>차 1 속도 (→) <output id="cc-v1-out"></output></span><input type="range" id="cc-v1" min="0" max="100" value="50" step="1"></label>
+          <label class="ctrl"><span>차 2 질량 <output id="cc-m2-out"></output></span><input type="range" id="cc-m2" min="800" max="2800" value="2000" step="50"></label>
+          <label class="ctrl"><span>차 2 속도 (←) <output id="cc-v2-out"></output></span><input type="range" id="cc-v2" min="0" max="100" value="50" step="1"></label>
+          <label class="ctrl"><span>시각 <output id="cc-t-out"></output></span><input type="range" id="cc-t" min="0" max="1000" value="1000" step="any"></label>
+          <div class="ctrl-row"><button class="btn primary" id="cc-play">충돌 재생</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">충돌 뒤 공통 속도</span><span class="v" id="o-cc-vc">—</span></div>
+        <div class="stat"><span class="k">차 1의 Δv</span><span class="v" id="o-cc-d1">—</span></div>
+        <div class="stat"><span class="k">차 2의 Δv</span><span class="v" id="o-cc-d2">—</span></div>
+        <div class="stat"><span class="k">차 1 평균 감속도</span><span class="v" id="o-cc-a1">—</span></div>
+        <div class="stat"><span class="k">차 2 평균 감속도</span><span class="v" id="o-cc-a2">—</span></div>
+        <div class="stat"><span class="k">변형으로 소산된 에너지</span><span class="v" id="o-cc-e">—</span></div>
+      </div>
+      <div class="sim-note">두 차가 서로에게 300 kN의 일정한 힘을 주며 찌그러지다 속도가 같아지면 함께 움직이는 완전 비탄성 충돌로 계산한다. 아래는 두 차의 속도–시간 그래프(오른쪽이 +). 기울기가 감속도다. 해볼 것: 질량을 같게 하면 두 선이 대칭으로 0에서 만난다. 차 2를 2,800 kg으로 올리면 차 1의 선이 0을 지나 음수로 내려간다. 뒤로 튕겨 나간다는 뜻이다. 차 2를 세워 두고(속도 0) 차 1만 달리게 해도 Δv의 비는 질량비 그대로다.</div>
+    </div>
+
+    <p>소산되는 에너지는 \(\tfrac12\mu(v_1+v_2)^2\) (\(\mu = m_1 m_2/(m_1+m_2)\)는 환산 질량)이고, 이것을 두 차의 앞 구조가 나눠 흡수한다. 여기서 두 번째 불공평이 생긴다. 무거운 차는 자기 질량에 맞춰 앞 구조도 더 단단하게 만들어져 있어서, 가벼운 차의 구조가 먼저, 더 많이 찌그러진다. 범퍼 높이가 다르면 구조끼리 만나지 못하고 한쪽이 다른 쪽 위로 올라타기도 한다. 이런 문제를 <span class="term">충돌 상호 안전성</span><span class="en">(Compatibility)</span>이라 하며, 최근의 이동 장벽 옵셋 시험은 자기 승객 보호와 함께 상대 차에 준 피해도 평가한다. 배터리 때문에 무거워진 전기차가 늘면서 더 중요해진 주제다.</p>
+
+    <h3>수동 안전에서 능동 안전으로</h3>
+    <p>이 장에서 다룬 것은 모두 사고가 난 뒤에 피해를 줄이는 <span class="term">수동 안전</span><span class="en">(Passive Safety)</span>이다. 안전벨트 하나만으로도 앞좌석 승객의 사망 위험이 대표적으로 40~50% 줄어들 만큼 효과가 크지만, 물리 법칙이 정한 한계는 넘지 못한다. 에너지는 속도의 제곱에 비례하고 찌그러질 길이는 정해져 있다.</p>
+    <p>그래서 다음 걸음은 충돌 자체를 피하거나, 피하지 못해도 충돌 속도를 낮추는 <span class="term">능동 안전</span><span class="en">(Active Safety)</span>이다. <a href="brake.html">ABS</a>와 <a href="steering.html">ESC</a>가 그 시작이었고, 지금은 레이더와 카메라로 앞을 보고 스스로 제동하는 자동 긴급 제동이 뒤를 잇는다. 충돌 직전에 시속 60 km를 40 km로만 낮춰도 에너지는 절반 아래로 준다. 충돌이 임박하면 벨트를 미리 당기고 시트를 세우는 식으로 두 영역이 이어지기도 한다. 이 이야기는 <a href="adas.html">17장</a>에서 계속한다.</p>
+  </section>
+
+  <!-- =============================================================== summary -->
+  <section class="keypoints" id="summary">
+    <h2>핵심 정리</h2>
+    <ol>
+      <li>차체는 하중 지지, 강성, 승객 보호, NVH를 맡는다. 승용차는 껍데기 전체가 구조인 모노코크, 큰 하중을 받는 트럭류는 보디 온 프레임을 쓴다.</li>
+      <li>굽힘 강성은 \(EI\), 비틀림 강성은 \(GJ\)다. 얇은 판도 중립축에서 멀리 두고 닫힌 단면으로 만들면 강성이 수천 배가 된다. 닫힌 박판 단면은 \(J = 4A_m^2 t/s\), 열린 단면은 \(J = st^3/3\).</li>
+      <li>차체 비틀림 강성은 서스펜션 롤 강성보다 훨씬 커야 한다. 그래야 노면 입력을 차체가 아니라 서스펜션이 받는다.</li>
+      <li>강의 탄성 계수는 강종과 무관하다. 초고장력강은 강도가 지배하는 부재(승객실)를 가볍게 하고, 알루미늄·CFRP는 두께를 키울 수 있는 곳에서 강성 대비 질량을 줄인다.</li>
+      <li>충돌의 평균 감속도는 \(v^2/2d\)다. 크럼플 존은 정지 거리 \(d\)를 벌고, 강한 승객실은 생존 공간을 지킨다. 구조의 힘 수준은 너무 낮아도 너무 높아도 안 된다.</li>
+      <li>구속 장치는 승객을 일찍 차체에 묶어 차가 찌그러지는 거리를 함께 쓰게 한다. 프리텐셔너가 느슨함을 없애고, 로드 리미터가 힘의 꼭대기를 자르며, 에어백이 그 거리를 받아 준다.</li>
+      <li>HIC는 구간 길이 × (평균 가속도)^2.5의 최댓값이다. 같은 속도 변화라도 펄스를 길게 펴면 급격히 낮아진다.</li>
+      <li>차 대 차 충돌에서 Δv는 질량에 반비례한다. 수동 안전의 한계는 능동 안전이 충돌 속도를 낮춰 보완한다.</li>
+    </ol>
+  </section>
+
+  <!-- =============================================================== quiz -->
+  <section class="quiz-sec" id="quiz">
+    <h2>확인 퀴즈</h2>
+    <div class="quiz">
+      <div class="quiz-q"><p>Q1. 시속 72 km(20 m/s)로 벽에 충돌한 차가 0.8 m 찌그러지며 멈췄다. 평균 감속도는 약 얼마인가?</p><div class="opts">
+        <button class="opt">약 13 g</button><button class="opt" data-correct>약 25 g</button><button class="opt">약 50 g</button><button class="opt">약 250 g</button>
+      </div><div class="quiz-exp">\(\bar a = v^2/2d = 400/1.6 = 250\ \text{m/s}^2 \approx 25\,g\). 정지 시간은 \(2d/v = 80\) ms다.</div></div>
+
+      <div class="quiz-q"><p>Q2. 사각 강관의 용접선이 터져 길이 방향으로 틈이 생겼다. 강성은 어떻게 되는가?</p><div class="opts">
+        <button class="opt">굽힘과 비틀림 강성이 모두 절반쯤 된다</button>
+        <button class="opt">굽힘 강성이 크게 줄고 비틀림 강성은 그대로다</button>
+        <button class="opt" data-correct>굽힘 강성은 거의 그대로이고 비틀림 강성이 수천 분의 1로 줄어든다</button>
+        <button class="opt">재료량이 같으므로 변화가 없다</button>
+      </div><div class="quiz-exp">굽힘 강성을 정하는 \(I\)는 재료가 중립축에서 얼마나 떨어져 있는지로 결정되어 틈과 무관하다. 비틀림은 전단류가 한 바퀴 돌 수 있어야 하는데 틈이 그 길을 끊어, \(J\)가 \(4A_m^2t/s\)에서 \(st^3/3\)으로 떨어진다.</div></div>
+
+      <div class="quiz-q"><p>Q3. 외곽 치수가 정해진 사이드 멤버의 두께가 <b>강성</b> 요구 때문에 정해져 있다. 연강을 1,500 MPa급 핫스탬핑강으로 바꾸면?</p><div class="opts">
+        <button class="opt">강도가 다섯 배이므로 두께와 질량을 1/5로 줄일 수 있다</button>
+        <button class="opt" data-correct>탄성 계수가 같으므로 두께를 줄일 수 없고 질량도 그대로다</button>
+        <button class="opt">밀도가 낮아 30%쯤 가벼워진다</button>
+        <button class="opt">탄성 계수가 커져 절반으로 줄일 수 있다</button>
+      </div><div class="quiz-exp">강은 강종에 관계없이 \(E \approx 210\) GPa, 밀도 약 7,850 kg/m³다. 강성이 지배하는 부재는 강도를 높여도 얇게 만들 수 없다. 초고장력강이 효과를 내는 곳은 B 필러처럼 강도가 지배하는 부재다.</div></div>
+
+      <div class="quiz-q"><p>Q4. 로드 리미터가 있는 안전벨트가 에어백과 짝을 이루어야 하는 이유는?</p><div class="opts">
+        <button class="opt">로드 리미터가 에어백을 점화시키기 때문</button>
+        <button class="opt">에어백이 벨트의 느슨함을 없애 주기 때문</button>
+        <button class="opt" data-correct>리미터가 벨트를 풀어 주는 만큼 승객이 더 앞으로 나가므로 그 거리를 받아 줄 장치가 필요하기 때문</button>
+        <button class="opt">벨트 힘을 제한하면 차의 감속도가 커지기 때문</button>
+      </div><div class="quiz-exp">로드 리미터는 가슴에 걸리는 힘의 꼭대기를 잘라 내는 대신 승객의 전방 이동을 늘린다. 에어백이 없으면 스티어링 휠에 닿을 수 있다. 느슨함을 없애는 것은 프리텐셔너다.</div></div>
+
+      <div class="quiz-q"><p>Q5. 머리 가속도가 사각 펄스로 100 g, 5 ms였다. 같은 속도 변화를 50 g, 10 ms로 폈다면 HIC는 어떻게 변하는가?</p><div class="opts">
+        <button class="opt">같은 속도 변화이므로 변하지 않는다</button>
+        <button class="opt">절반이 된다</button>
+        <button class="opt" data-correct>약 35%로 줄어든다</button>
+        <button class="opt">두 배가 된다</button>
+      </div><div class="quiz-exp">\(0.005\times100^{2.5} = 500\), \(0.010\times50^{2.5} = 177\). 비는 \(2\times 2^{-2.5} = 0.354\). 가속도에는 2.5제곱, 시간에는 1제곱이 걸리므로 낮고 긴 펄스가 유리하다.</div></div>
+
+      <div class="quiz-q"><p>Q6. 1,200 kg 차와 2,400 kg 차가 각각 시속 60 km로 정면 충돌해 한 덩어리가 되었다. 가벼운 차의 Δv는?</p><div class="opts">
+        <button class="opt">40 km/h</button><button class="opt">60 km/h</button><button class="opt" data-correct>80 km/h</button><button class="opt">120 km/h</button>
+      </div><div class="quiz-exp">접근 속도 120 km/h를 질량에 반비례하게 나눈다. 가벼운 차는 \(120\times2400/3600 = 80\) km/h, 무거운 차는 40 km/h. 공통 속도는 무거운 차 방향으로 20 km/h다.</div></div>
+    </div>
+  </section>
+</main>
+<script>
+(function () {
+  "use strict";
+  /*PHYS-BEGIN*/
+  const G = 9.81;
+  const M = {};
+  M.smooth = function (arr, n) {
+    const pre = [0], h = n >> 1, out = [];
+    for (let i = 0; i < arr.length; i++) pre.push(pre[i] + arr[i]);
+    for (let i = 0; i < arr.length; i++) { const a = Math.max(0, i - h), b = Math.min(arr.length, i + h + 1); out.push((pre[b] - pre[a]) / (b - a)); }
+    return out;
+  };
+  // 벽 — [구간 A] — m1(엔진) — [구간 B] — m2(승객실). 각 구간은 탄소성 스프링, 스트로크를 다 쓰면 급격히 경화.
+  M.crash = function (v0, L, mass, F) {
+    const m1 = 0.25 * mass, m2 = 0.75 * mass, k = F / 0.005;
+    const A = { Y0: 0.8 * F, s: 0.45 * L, p: 0, H: 200 * F, c: 0.6 * Math.sqrt(k * m1) };
+    const B = { Y0: F, s: 0.55 * L, p: 0, H: 20 * F, c: Math.sqrt((k * m1 * m2) / mass) };
+    const force = (el, d, vel) => {
+      let e = k * (d - el.p);
+      if (e <= 0) return 0;
+      let Y = el.Y0 + el.H * Math.max(0, el.p - el.s);
+      if (e > Y) {
+        el.p += (e - Y) / (k + (el.p >= el.s ? el.H : 0));
+        Y = el.Y0 + el.H * Math.max(0, el.p - el.s);
+        e = k * (d - el.p);
+      }
+      return Math.min(Y, Math.max(0, e + el.c * vel));
+    };
+    const R = { t: [], x1: [], x2: [], tip: [], g: [], FA: [], v: [], dt: 2e-4 };
+    const dt = 2e-5;
+    let x1 = 0, x2 = 0, v1 = v0, v2 = v0, t = 0, n = 0, tStop = null, xStop = 0;
+    while (t < 0.4) {
+      const FA = force(A, x1, v1), FB = force(B, x2 - x1, v2 - v1);
+      if (n % 10 === 0) { R.t.push(t); R.x1.push(x1); R.x2.push(x2); R.tip.push(Math.min(0, x1 - A.p)); R.g.push(FB / m2 / G); R.FA.push(FA); R.v.push(v2); }
+      v1 += ((FB - FA) / m1) * dt; v2 -= (FB / m2) * dt;
+      x1 += v1 * dt; x2 += v2 * dt; t += dt; n++;
+      if (tStop === null && v2 <= 0) { tStop = t; xStop = x2; }
+      if (tStop !== null && t > tStop + 0.03) break;
+    }
+    R.g = M.smooth(R.g, 15);
+    R.peak = Math.max.apply(null, R.g);
+    R.tStop = tStop === null ? t : tStop;
+    R.crush = tStop === null ? x2 : xStop;
+    R.intr = Math.max(0, B.p - B.s);
+    R.avg = (v0 * v0) / (2 * Math.max(R.crush, 1e-3)) / G;
+    R.vReb = -v2;
+    R.a0 = 0.45 * L; R.b0 = 0.55 * L;
+    return R;
+  };
+  // 차량 감속 펄스(반사인, 찌그러짐 0.6 m)를 받는 승객 질량점. x는 차 안에서 앞으로 나간 거리.
+  M.occupant = function (v0, o) {
+    const m = 75, D = 0.45, T = (2 * 0.6) / v0, Ap = (Math.PI * v0) / (2 * T);
+    const kb = 1.0e5, cb = 500, kd = 5e5, cd = 3000, ka = 3e4, ca = 700, Bd = 0.3, tInf = 0.03;
+    const R = { t: [], x: [], g: [], gv: [], Fb: [], Fa: [], bag: [], dt: 5e-4, T, D, hit: false, hitV: 0 };
+    const dt = 5e-5;
+    let x = 0, v = 0, p = 0, t = 0, n = 0;
+    while (t < 0.2) {
+      const av = t < T ? Ap * Math.sin((Math.PI * t) / T) : 0;
+      let Fb = 0, Fa = 0, Fd = 0, depth = 0;
+      if (o.belt) {
+        const s = o.pt ? 0.04 - 0.06 * Math.min(1, Math.max(0, (t - 0.012) / 0.008)) : 0.04;
+        Fb = kb * (x - s - p);
+        if (Fb > 0) Fb = Math.max(0, Fb + cb * v); else Fb = 0;
+        if (o.ll && Fb > o.Flim) { p = Math.max(p, x - s - o.Flim / kb); Fb = o.Flim; }
+      }
+      if (o.bag && t > o.tBag) {
+        const f = Math.min(1, (t - o.tBag) / tInf);
+        depth = Bd * f;
+        const pen = x - (D - depth), close = v + (f < 1 ? Bd / tInf : 0);
+        if (pen > 0) Fa = Math.max(0, ka * pen + ca * Math.max(0, close));
+      }
+      if (x > D) { if (!R.hit) { R.hit = true; R.hitV = v; } Fd = Math.max(0, kd * (x - D) + cd * v); }
+      const F = Fb + Fa + Fd;
+      if (n % 10 === 0) { R.t.push(t); R.x.push(x); R.g.push(F / m / G); R.gv.push(av / G); R.Fb.push(Fb); R.Fa.push(Fa); R.bag.push(depth); }
+      v += (av - F / m) * dt; x += v * dt;
+      if (x < 0) { x = 0; if (v < 0) v = 0; }
+      t += dt; n++;
+    }
+    R.g = M.smooth(R.g, 5);
+    R.peak = Math.max.apply(null, R.g);
+    R.maxX = Math.max.apply(null, R.x);
+    R.maxFb = Math.max.apply(null, R.Fb);
+    R.maxFa = Math.max.apply(null, R.Fa);
+    R.peakV = Ap / G;
+    // 3 ms 연속으로 넘은 가속도(흉부 기준에 쓰는 3 ms 클립)
+    let c3 = 0; const w = 6;
+    for (let i = 0; i + w < R.g.length; i++) { let mn = Infinity; for (let j = 0; j <= w; j++) mn = Math.min(mn, R.g[i + j]); c3 = Math.max(c3, mn); }
+    R.clip3 = c3;
+    return R;
+  };
+  M.c2c = function (m1, v1, m2, v2, F) {
+    const vc = (m1 * v1 - m2 * v2) / (m1 + m2), mu = (m1 * m2) / (m1 + m2), vr = v1 + v2;
+    return { vc, dv1: v1 - vc, dv2: v2 + vc, a1: F / m1 / G, a2: F / m2 / G, T: (mu * vr) / F, E: 0.5 * mu * vr * vr, crush: (mu * vr * vr) / (2 * F), E0: 0.5 * m1 * v1 * v1 + 0.5 * m2 * v2 * v2 };
+  };
+  // 같은 강판 띠(전개 길이 P = 2(b+h), 두께 t)를 접어 만든 네 단면. 단위 m, m^4.
+  M.sections = function (b, h, t) {
+    const P = 2 * (b + h), bf = (P - h) / 2, r = P / (2 * Math.PI);
+    return {
+      P, bf, r,
+      plate: { I: (P * t * t * t) / 12, J: (P * t * t * t) / 3 },
+      chan: { I: (t * h * h * h) / 12 + 2 * bf * t * (h / 2) * (h / 2), J: (P * t * t * t) / 3 },
+      box: { I: (2 * t * h * h * h) / 12 + 2 * b * t * (h / 2) * (h / 2), J: (2 * t * b * b * h * h) / (b + h) },
+      tube: { I: Math.PI * r * r * r * t, J: 2 * Math.PI * r * r * r * t },
+    };
+  };
+  // 한쪽 앞바퀴를 z만큼 올린 비틀림 입력을 앞 서스펜션–차체–뒤 서스펜션 직렬 스프링이 나눠 갖는다. 강성 단위 N·m/deg.
+  M.warp = function (z, Kt, Kf, Kr) {
+    const alpha = (Math.atan(z / 1.56) * 180) / Math.PI, Keq = 1 / (1 / Kf + 1 / Kt + 1 / Kr), Tq = Keq * alpha;
+    return { alpha, Tq, body: Tq / Kt, front: Tq / Kf, rear: Tq / Kr, share: Keq / Kt, Keq };
+  };
+  M.MAT = {
+    mild: { name: "연강", E: 210, rho: 7850, s: 200 },
+    phs: { name: "핫스탬핑강", E: 210, rho: 7850, s: 1100 },
+    al: { name: "알루미늄", E: 70, rho: 2700, s: 250 },
+    cfrp: { name: "CFRP", E: 60, rho: 1550, s: 600 },
+  };
+  // 연강 대비 두께비·질량비. form: wall(외곽 치수 고정, 두께만 변경) | panel(평판 굽힘). crit: stiff | strength
+  M.massRatio = function (key, form, crit) {
+    const a = M.MAT[key], r = M.MAT.mild, q = crit === "stiff" ? a.E / r.E : a.s / r.s;
+    const tr = form === "wall" ? 1 / q : Math.pow(1 / q, crit === "stiff" ? 1 / 3 : 1 / 2);
+    return { t: tr, m: (tr * a.rho) / r.rho };
+  };
+  M.pulse = function (shape, A, T, dt) {
+    const a = [], n = Math.round(T / dt);
+    for (let i = 0; i <= n; i++) { const u = i / n; a.push(shape === "sine" ? A * Math.sin(Math.PI * u) : shape === "tri" ? A * (1 - Math.abs(2 * u - 1)) : A); }
+    return a;
+  };
+  // HIC = max (t2-t1)·[구간 평균 가속도(g)]^2.5, 창 길이 ≤ win(초)
+  M.hic = function (a, dt, win) {
+    const pre = [0];
+    for (let i = 0; i < a.length; i++) pre.push(pre[i] + a[i] * dt);
+    const wmax = Math.round(win / dt);
+    let best = 0, i1 = 0, i2 = 0;
+    for (let i = 0; i < a.length; i++) for (let j = i + 1; j <= Math.min(a.length, i + wmax); j++) {
+      const d = (j - i) * dt, hv = d * Math.pow((pre[j] - pre[i]) / d, 2.5);
+      if (hv > best) { best = hv; i1 = i; i2 = j; }
+    }
+    return { hic: best, t1: i1 * dt, t2: i2 * dt };
+  };
+  M.Phi = function (z) {
+    const t = 1 / (1 + 0.2316419 * Math.abs(z)), d = 0.3989423 * Math.exp((-z * z) / 2);
+    const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+    return z > 0 ? 1 - p : p;
+  };
+  M.headRisk = (hic) => (hic > 0 ? M.Phi((Math.log(hic) - 7.45231) / 0.73998) : 0);
+  /*PHYS-END*/
+
+  const $ = (id) => document.getElementById(id);
+  const FONT = getComputedStyle(document.documentElement).getPropertyValue("--font") || "sans-serif";
+  const label = (ctx, s, x, y, color, align, size) => { ctx.fillStyle = color; ctx.font = (size || 12) + "px " + FONT; ctx.textAlign = align || "left"; ctx.textBaseline = "middle"; ctx.fillText(s, x, y); };
+  const zig = (ctx, x1, y1, x2, y2, amp, n) => {
+    const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+    ctx.beginPath(); ctx.moveTo(x1, y1);
+    for (let i = 1; i < n; i++) { const u = i / n, a = (i % 2 ? amp : -amp); ctx.lineTo(x1 + dx * u + nx * a, y1 + dy * u + ny * a); }
+    ctx.lineTo(x2, y2); ctx.stroke();
+  };
+  const logc = (v, lo, hi) => CB.clamp(Math.log10(1 + v / lo) / Math.log10(1 + hi / lo), 0, 1);
+  const rad = (d) => (d * Math.PI) / 180;
+  const sample = (arr, i) => { const a = CB.clamp(i, 0, arr.length - 1), i0 = Math.floor(a), i1 = Math.min(arr.length - 1, i0 + 1); return arr[i0] + (arr[i1] - arr[i0]) * (a - i0); };
+  const wheel = (ctx, x, y, r) => {
+    ctx.fillStyle = "#1c2028"; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#aeb6c6"; ctx.beginPath(); ctx.arc(x, y, r * 0.58, 0, Math.PI * 2); ctx.fill();
+  };
+  // 시간 슬라이더(0~1000)를 dur초 동안 처음부터 끝까지 움직이는 재생 버튼
+  const player = (canvasId, btnId, tt, dur) => {
+    let playing = false;
+    const loop = CB.loop($(canvasId), (dt) => {
+      if (!playing) return;
+      const nv = tt() + (dt / dur) * 1000;
+      if (nv >= 1000) { tt.set(1000); playing = false; loop.stop(); } else tt.set(nv);
+    });
+    loop.stop();
+    $(btnId).addEventListener("click", () => { tt.set(0); playing = true; loop.start(); });
+  };
+
+  /* ---------------------------------------------------------------- 단면과 강성 */
+  (function () {
+    const E = 210e9, Gs = 79e9, NAMES = { plate: "평판", chan: "ㄷ자", box: "사각관", tube: "원형관" }, KEYS = Object.keys(NAMES);
+    const redraw = () => { cv.redraw(); cb.redraw(); stats(); };
+    const shape = CB.seg("sc-shape", redraw), load = CB.seg("sc-load", redraw);
+    const bR = CB.range("sc-b", (v) => v + " mm", redraw), hR = CB.range("sc-h", (v) => v + " mm", redraw);
+    const tR = CB.range("sc-t", (v) => v.toFixed(1) + " mm", redraw), fR = CB.range("sc-f", (v) => v + " N", redraw);
+    const calc = () => {
+      const S = M.sections(bR() / 1000, hR() / 1000, tR() / 1000), sec = S[shape()];
+      return { S, sec, delta: fR() / (3 * E * sec.I), theta: ((fR() * 0.2) / (Gs * sec.J)) * (180 / Math.PI) };
+    };
+    const fmtLen = (d) => (d < 1e-3 ? CB.fmt(d * 1e6, 2) + " µm" : d < 1 ? CB.fmt(d * 1e3, 3) + " mm" : CB.fmt(d, 2) + " m");
+    const fmtAng = (a) => (a < 0.1 ? CB.fmt(a, 2) + "°" : a < 360 ? CB.fmt(a, 3) + "°" : CB.fmt(a / 360, 2) + " 바퀴");
+    function stats() {
+      const c = calc(), twist = load() === "twist";
+      CB.stat("o-sc-i", CB.fmt(c.sec.I * 1e8, 3) + "<small>cm⁴</small>");
+      CB.stat("o-sc-j", CB.fmt(c.sec.J * 1e8, 3) + "<small>cm⁴</small>");
+      $("k-sc-d").textContent = twist ? "끝단 비틀림 각" : "끝단 처짐";
+      CB.stat("o-sc-d", twist ? fmtAng(c.theta) : fmtLen(c.delta));
+      CB.stat("o-sc-r", CB.fmt(c.S.box.J / c.S.chan.J, 2) + "<small>배</small>");
+      CB.stat("o-sc-m", CB.fmt(7850 * c.S.P * (tR() / 1000), 3) + "<small>kg</small>");
+    }
+    const cv = CB.canvas($("cv-sc"), (ctx, w, h) => {
+      const P = CB.palette(), c = calc(), k = shape(), twist = load() === "twist";
+      const bw = bR(), hh = hR(), Pm = c.S.P * 1000, bf = c.S.bf * 1000, r = c.S.r * 1000;
+      const ext = k === "plate" ? Pm : k === "chan" ? Math.max(bf, hh) : k === "tube" ? 2 * r : Math.max(bw, hh);
+      const sc = Math.min(w * 0.36, h * 0.6) / ext, cx = w * 0.23, cy = h * 0.52;
+      const path = () => {
+        ctx.beginPath();
+        if (k === "plate") { ctx.moveTo((-Pm / 2) * sc, 0); ctx.lineTo((Pm / 2) * sc, 0); }
+        else if (k === "chan") { ctx.moveTo((bf / 2) * sc, (-hh / 2) * sc); ctx.lineTo((-bf / 2) * sc, (-hh / 2) * sc); ctx.lineTo((-bf / 2) * sc, (hh / 2) * sc); ctx.lineTo((bf / 2) * sc, (hh / 2) * sc); }
+        else if (k === "box") ctx.rect((-bw / 2) * sc, (-hh / 2) * sc, bw * sc, hh * sc);
+        else ctx.arc(0, 0, r * sc, 0, Math.PI * 2);
+      };
+      const ang = twist ? rad(logc(c.theta, 0.01, 1000) * 80) : 0;
+      ctx.save(); ctx.translate(cx, cy); ctx.lineJoin = "round"; ctx.lineCap = "round";
+      if (twist) { ctx.strokeStyle = P.faint; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]); path(); ctx.stroke(); ctx.setLineDash([]); }
+      ctx.rotate(ang);
+      ctx.strokeStyle = P.accent; ctx.lineWidth = Math.max(2.5, tR() * sc * 1.4); path(); ctx.stroke();
+      if (!twist) { ctx.strokeStyle = P.dim; ctx.lineWidth = 1; ctx.setLineDash([6, 3, 1, 3]); ctx.beginPath(); ctx.moveTo(-w * 0.2, 0); ctx.lineTo(w * 0.2, 0); ctx.stroke(); ctx.setLineDash([]); }
+      ctx.restore();
+      label(ctx, NAMES[k] + (k === "plate" ? " " + Pm + " × " + tR().toFixed(1) : k === "tube" ? " ⌀" + CB.fmt(2 * r, 3) : k === "chan" ? " " + CB.fmt(bf, 3) + " × " + hh : " " + bw + " × " + hh) + " mm", 12, 16, P.text);
+      label(ctx, twist ? (k === "box" || k === "tube" ? "닫힌 단면: 전단류가 한 바퀴 돈다" : "열린 단면: 전단류가 돌 길이 없다") : "점선: 중립축", 12, h - 14, P.dim, "left", 11);
+      // 외팔보
+      const x0 = w * 0.52, x1 = w - 26, Lp = x1 - x0;
+      if (!twist) {
+        const y0 = h * 0.3, dp = logc(c.delta, 1e-4, 10) * h * 0.5, depth = k === "plate" ? 3 : 9;
+        ctx.fillStyle = P.dim; ctx.fillRect(x0 - 10, y0 - 34, 10, 68);
+        ctx.strokeStyle = P.faint; ctx.lineWidth = 1; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y0); ctx.stroke(); ctx.setLineDash([]);
+        ctx.strokeStyle = P.accent; ctx.lineWidth = depth; ctx.lineCap = "butt"; ctx.beginPath();
+        for (let i = 0; i <= 24; i++) { const u = i / 24, y = y0 + (dp * (3 * u * u - u * u * u)) / 2; i ? ctx.lineTo(x0 + Lp * u, y) : ctx.moveTo(x0, y); }
+        ctx.stroke();
+        const al = 10 + (fR() / 1000) * 34;
+        if (fR() > 0) CB.arrow(ctx, x1, y0 + dp - depth / 2 - 4 - al, x1, y0 + dp - depth / 2 - 4, P.bad, 2.5);
+        label(ctx, "F", x1 - 12, y0 + dp - al - 8, P.bad, "right", 12);
+        label(ctx, "처짐 δ = " + fmtLen(c.delta), x0 + 4, h - 34, P.text);
+        if (c.delta > 0.3) label(ctx, "선형 이론 범위를 넘음(사실상 접힘)", x0 + 4, h - 16, P.bad, "left", 11);
+      } else {
+        const mx = x0 + Lp / 2, my = h * 0.48, R = Math.min(Lp, h) * 0.34;
+        ctx.strokeStyle = P.border; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(mx, my, R, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = P.faint; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(mx - R, my); ctx.lineTo(mx + R, my); ctx.stroke(); ctx.setLineDash([]);
+        ctx.strokeStyle = P.accent; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(mx - Math.cos(ang) * R, my - Math.sin(ang) * R); ctx.lineTo(mx + Math.cos(ang) * R, my + Math.sin(ang) * R); ctx.stroke();
+        ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(mx, my, R * 0.6, 0, ang); ctx.stroke();
+        label(ctx, "끝단을 축 방향에서 본 모습", mx, my - R - 12, P.dim, "center", 11);
+        label(ctx, "θ = " + fmtAng(c.theta) + "  (T = " + CB.fmt(fR() * 0.2, 3) + " N·m)", mx, h - 20, P.text, "center");
+      }
+    }, { aspect: 0.5, minHeight: 230, maxHeight: 340 });
+    const cb = CB.canvas($("cv-scb"), (ctx, w, h) => {
+      const P = CB.palette(), S = M.sections(bR() / 1000, hR() / 1000, tR() / 1000), cur = shape();
+      const groups = [["굽힘 강성 EI (N·m²)", (k) => E * S[k].I], ["비틀림 강성 GJ (N·m²/rad)", (k) => Gs * S[k].J]];
+      const x0 = 62, x1 = w - 78, rowH = (h - 12) / 10;
+      groups.forEach((g, gi) => {
+        const top = 6 + gi * rowH * 5;
+        label(ctx, g[0] + " · 로그 눈금", 12, top + rowH * 0.55, load() === (gi ? "twist" : "bend") ? P.text : P.dim, "left", 12);
+        KEYS.forEach((k, i) => {
+          const y = top + rowH * (i + 1) + 2, v = g[1](k), L = CB.clamp((Math.log10(v) + 1) / 8, 0.01, 1) * (x1 - x0);
+          ctx.fillStyle = k === cur ? P.accent : P.faint; ctx.fillRect(x0, y, L, rowH - 6);
+          label(ctx, NAMES[k], x0 - 6, y + (rowH - 6) / 2, k === cur ? P.text : P.dim, "right", 12);
+          label(ctx, CB.fmt(v, 3), x0 + L + 6, y + (rowH - 6) / 2, k === cur ? P.text : P.dim, "left", 11);
+        });
+      });
+    }, { height: 250 });
+    stats();
+  })();
+
+  /* ---------------------------------------------------------------- 비틀림 강성 시험 */
+  (function () {
+    const SUS = { comfort: [900, 600], sport: [2500, 1800] };
+    const redraw = () => { cv.redraw(); cc.redraw(); stats(); };
+    const kR = CB.range("tw-k", (v) => v.toLocaleString("en-US") + " N·m/deg", redraw), zR = CB.range("tw-z", (v) => v + " mm", redraw), sus = CB.seg("tw-sus", redraw);
+    [["tw-p1", 4000], ["tw-p2", 25000], ["tw-p3", 40000]].forEach(([id, v]) => $(id).addEventListener("click", () => kR.set(v)));
+    const res = () => M.warp(zR() / 1000, kR(), SUS[sus()][0], SUS[sus()][1]);
+    function stats() {
+      const R = res(), ks = 1 / (1 / SUS[sus()][0] + 1 / SUS[sus()][1]);
+      CB.stat("o-tw-a", R.alpha.toFixed(2) + "<small>°</small>");
+      CB.stat("o-tw-b", R.body.toFixed(3) + "<small>°</small>");
+      CB.stat("o-tw-s", (R.share * 100).toFixed(1) + "<small>%</small>");
+      CB.stat("o-tw-t", CB.fmt(R.Tq, 3) + "<small>N·m</small>");
+      CB.stat("o-tw-r", CB.fmt(kR() / ks, 3) + "<small>배</small>");
+    }
+    const cv = CB.canvas($("cv-tw"), (ctx, w, h) => {
+      const P = CB.palette(), R = res(), s = Math.min(w * 0.44, 250) / 1.56, cx = w / 2, gy = h - 24, r = 0.33 * s, tr = 1.56 * s, zp = (zR() / 1000) * s;
+      const xl = cx - tr / 2, xr = cx + tr / 2, yl = gy - zp - r, yr = gy - r, tw = 0.22 * s;
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(8, gy); ctx.lineTo(w - 8, gy); ctx.stroke();
+      ctx.fillStyle = P.dim; ctx.fillRect(xl - tw, gy - zp, tw * 2, zp);
+      ctx.strokeStyle = P.faint; ctx.lineWidth = 1.2; ctx.setLineDash([4, 3]);
+      [xl, xr].forEach((x) => ctx.strokeRect(x - tw / 2, gy - 2 * r, tw, 2 * r));
+      ctx.setLineDash([]);
+      const mid = (R.alpha - R.front + R.rear) / 2, af = rad(mid + 5 * R.body), ar = rad(mid - 5 * R.body);
+      const bx = cx, by = (yl + yr) / 2 - 0.78 * s, bw = 1.4 * s, bh = 0.8 * s;
+      ctx.save(); ctx.translate(bx, by - 6); ctx.rotate(ar); ctx.strokeStyle = P.dim; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]); ctx.strokeRect(-bw / 2, -bh / 2, bw, bh); ctx.setLineDash([]); ctx.restore();
+      ctx.save(); ctx.translate(bx, by); ctx.rotate(af); ctx.fillStyle = CB.color("accent-soft"); ctx.strokeStyle = P.accent; ctx.lineWidth = 2.5; ctx.fillRect(-bw / 2, -bh / 2, bw, bh); ctx.strokeRect(-bw / 2, -bh / 2, bw, bh); ctx.restore();
+      ctx.strokeStyle = P.dim; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(xl, yl); ctx.lineTo(xr, yr); ctx.stroke();
+      ctx.strokeStyle = P.accent2; ctx.lineWidth = 2;
+      [-1, 1].forEach((sd) => {
+        const ax = cx + sd * 0.6 * s, ay = CB.map(ax, xl, xr, yl, yr), lx = sd * 0.6 * s, ly = bh / 2;
+        zig(ctx, ax, ay, bx + lx * Math.cos(af) - ly * Math.sin(af), by + lx * Math.sin(af) + ly * Math.cos(af), 5, 9);
+      });
+      ctx.fillStyle = "#1c2028";
+      [[xl, yl], [xr, yr]].forEach(([x, y]) => ctx.fillRect(x - tw / 2, y - r, tw, 2 * r));
+      label(ctx, "앞 격벽 " + (R.alpha - R.front).toFixed(2) + "°", 12, 16, P.accent);
+      label(ctx, "뒤 격벽 " + R.rear.toFixed(2) + "°", 12, 34, P.dim);
+      label(ctx, "차체 비틀림 " + R.body.toFixed(3) + "° (10배 과장)", w - 12, 16, P.text, "right");
+    }, { aspect: 0.5, minHeight: 220, maxHeight: 330 });
+    const cc = CB.canvas($("cv-twc"), (ctx) => {
+      const P = CB.palette(), mk = (key) => { const d = []; for (let e = 3; e <= 4.7; e += 0.02) { const k = Math.pow(10, e); d.push([k, M.warp(0.05, k, SUS[key][0], SUS[key][1]).share * 100]); } return d; };
+      CB.chart(ctx, null, {
+        x: [1000, 50000], y: [0, 60], logX: true, xTicks: [1000, 2000, 5000, 10000, 20000, 50000], xFmt: (v) => v / 1000 + "k",
+        xLabel: "차체 비틀림 강성 (N·m/deg)", yLabel: "차체가 가져간 비율 (%)",
+        series: [{ data: mk("comfort"), color: sus() === "comfort" ? P.accent : P.faint }, { data: mk("sport"), color: sus() === "sport" ? P.accent : P.faint, dash: [5, 4] }],
+        points: [{ x: kR(), y: res().share * 100, color: P.accent, r: 5 }],
+      });
+    }, { height: 220 });
+    stats();
+  })();
+
+  /* ---------------------------------------------------------------- 경량화 계산기 */
+  (function () {
+    const KEYS = Object.keys(M.MAT);
+    const redraw = () => { cv.redraw(); stats(); };
+    const form = CB.seg("lw-form", redraw), crit = CB.seg("lw-crit", redraw), mat = CB.seg("lw-mat", redraw), pt = CB.seg("lw-pt", redraw);
+    const mR = CB.range("lw-m", (v) => v + " kg", redraw);
+    function stats() {
+      const q = M.massRatio(mat(), form(), crit()), m = mR() * q.m, saved = mR() - m;
+      const per = pt() === "ice" ? ((0.098 + 0.12) * 1e5) / 0.25 / 32e6 : ((0.098 + 0.12 * 0.4) * 1e5) / 0.85 / 3.6e6;
+      CB.stat("o-lw-t", "×" + q.t.toFixed(2));
+      CB.stat("o-lw-m", CB.fmt(m, 3) + "<small>kg</small>");
+      CB.stat("o-lw-s", (saved >= 0 ? "−" : "+") + CB.fmt(Math.abs(saved), 3) + "<small>kg</small>");
+      CB.stat("o-lw-f", (saved >= 0 ? "−" : "+") + (Math.abs(saved) * per).toFixed(2) + "<small>" + (pt() === "ice" ? "L/100 km" : "kWh/100 km") + "</small>");
+    }
+    const cv = CB.canvas($("cv-lw"), (ctx, w, h) => {
+      const P = CB.palette(), x0 = 92, x1 = w - 96, rowH = (h - 44) / 4;
+      label(ctx, "연강 대비 질량 (" + (crit() === "stiff" ? "같은 강성" : "같은 강도") + ")", 12, 16, P.text);
+      ctx.strokeStyle = P.faint; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(x0 + (x1 - x0) / 1.1, 30); ctx.lineTo(x0 + (x1 - x0) / 1.1, h - 8); ctx.stroke(); ctx.setLineDash([]);
+      KEYS.forEach((k, i) => {
+        const q = M.massRatio(k, form(), crit()), y = 34 + i * rowH, L = (Math.min(q.m, 1.1) / 1.1) * (x1 - x0), on = k === mat();
+        ctx.fillStyle = on ? P.accent : P.faint; ctx.fillRect(x0, y, L, rowH - 10);
+        label(ctx, M.MAT[k].name, x0 - 8, y + (rowH - 10) / 2, on ? P.text : P.dim, "right", 12);
+        label(ctx, Math.round(q.m * 100) + "% · 두께 ×" + q.t.toFixed(2), x0 + L + 6, y + (rowH - 10) / 2, on ? P.text : P.dim, "left", 11);
+      });
+    }, { height: 220 });
+    stats();
+  })();
+
+  /* ---------------------------------------------------------------- 크럼플 존 충돌 */
+  (function () {
+    let R, tLead, tTot;
+    const upd = () => { calc(); tt.set(tt()); };
+    const vR = CB.range("cz-v", (v) => v + " km/h", upd), lR = CB.range("cz-l", (v) => v.toFixed(2) + " m", upd);
+    const mR = CB.range("cz-m", (v) => v.toLocaleString("en-US") + " kg", upd), fR = CB.range("cz-f", (v) => v + " kN", upd);
+    const rigidPk = () => (CB.ms(vR()) * CB.ms(vR())) / 0.08 / G;
+    function calc() {
+      const v0 = CB.ms(vR());
+      R = M.crash(v0, lR(), mR(), fR() * 1e3);
+      tLead = Math.min(0.06, 1.2 / v0); tTot = tLead + R.t[R.t.length - 1];
+      CB.stat("o-cz-e", CB.fmt((0.5 * mR() * v0 * v0) / 1e3, 3) + "<small>kJ</small>");
+      CB.stat("o-cz-pk", R.peak.toFixed(1) + "<small>g</small>");
+      CB.stat("o-cz-avg", R.avg.toFixed(1) + "<small>g</small>");
+      CB.stat("o-cz-ts", (R.tStop * 1e3).toFixed(0) + "<small>ms</small>");
+      CB.stat("o-cz-cr", (R.crush * 100).toFixed(0) + "<small>cm</small>");
+      CB.stat("o-cz-in", R.intr > 0.005 ? '<span style="color:var(--bad)">' + (R.intr * 100).toFixed(0) + "<small>cm</small></span>" : "없음");
+      CB.stat("o-cz-rg", rigidPk().toFixed(0) + "<small>g</small>");
+    }
+    calc();
+    const time = () => -tLead + (tt() / 1000) * tTot;
+    const tt = CB.range("cz-t", (v) => ((-tLead + (v / 1000) * tTot) * 1e3).toFixed(0) + " ms", () => { cv.redraw(); cc.redraw(); });
+    $("cz-cmp").addEventListener("change", () => cc.redraw());
+    const cv = CB.canvas($("cv-cz"), (ctx, w, h) => {
+      const P = CB.palette(), s = (w - 46) / 6.3, gy = h - 18, wx = w - 24, t = time(), v0 = CB.ms(vR()), i = t / R.dt;
+      const x2 = t < 0 ? v0 * t : sample(R.x2, i), x1 = t < 0 ? v0 * t : sample(R.x1, i), tip = t < 0 ? v0 * t : sample(R.tip, i);
+      const e0 = 1.3 - R.a0 - R.b0, lenA = Math.max(0.01, R.a0 - (x1 - tip)), fw = -1.3 + x2;
+      const bF = tip - lenA, bR_ = bF - e0, fwE = Math.min(fw, bR_ - 0.01), lenB = bR_ - fwE;
+      const X = (m) => wx + m * s, Y = (m) => gy - m * s;
+      const mapU = (u) => (u <= R.b0 ? fwE + (u / R.b0) * lenB : u <= R.b0 + e0 ? bR_ + (u - R.b0) : bF + ((u - R.b0 - e0) / R.a0) * (tip - bF));
+      const comp = (u) => (u <= R.b0 ? 1 - lenB / R.b0 : u <= R.b0 + e0 ? 0 : 1 - lenA / R.a0);
+      // 지면과 벽
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
+      ctx.fillStyle = P.dim; ctx.fillRect(wx, gy - 1.9 * s, 18, 1.9 * s);
+      ctx.strokeStyle = P.bg; ctx.lineWidth = 1.5;
+      for (let k = 0; k < 9; k++) { const yy = gy - 1.9 * s + k * 0.24 * s; ctx.beginPath(); ctx.moveTo(wx, yy + 12); ctx.lineTo(wx + 18, yy); ctx.stroke(); }
+      // 승객실(방화벽 뒤쪽)
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, X(fw), h); ctx.clip();
+      CB.carSide(ctx, X(fw - 0.95), gy, s, { color: P.accent2 });
+      ctx.restore();
+      // 찌그러지는 앞부분
+      const top = [];
+      for (let k = 0; k <= 14; k++) {
+        const u = (k / 14) * 1.3, y = u <= 1.0 ? 1.0 - 0.15 * u : 0.85 - ((u - 1.0) / 0.3) * 0.25;
+        top.push([mapU(u), y + (k % 2 ? 0.07 : -0.03) * comp(u)]);
+      }
+      ctx.fillStyle = P.accent; ctx.globalAlpha = 0.9; ctx.beginPath();
+      ctx.moveTo(X(fwE), Y(0.28));
+      top.forEach(([xm, ym]) => ctx.lineTo(X(xm), Y(ym)));
+      ctx.lineTo(X(mapU(1.27)), Y(0.28)); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+      if (fwE < fw - 0.011) { ctx.fillStyle = P.bad; ctx.globalAlpha = 0.75; ctx.fillRect(X(fwE), Y(1.0), (fw - fwE) * s, 0.7 * s); ctx.globalAlpha = 1; label(ctx, "침입", X((fw + fwE) / 2), Y(1.12), P.bad, "center", 11); }
+      ctx.fillStyle = "#4a5266"; ctx.fillRect(X(bR_), Y(0.8), e0 * s, 0.42 * s);
+      ctx.strokeStyle = P.bg; ctx.lineWidth = 2;
+      zig(ctx, X(fwE), Y(0.58), X(bR_), Y(0.58), 0.11 * s, 9);
+      zig(ctx, X(bF), Y(0.58), X(tip), Y(0.58), 0.11 * s, 9);
+      const wxm = mapU(0.4);
+      ctx.fillStyle = P.bg; ctx.beginPath(); ctx.arc(X(wxm), Y(0.33), 0.4 * s, Math.PI, 0); ctx.fill();
+      wheel(ctx, X(wxm), Y(0.33), 0.33 * s);
+      if (s > 40) { label(ctx, "B", X((fwE + bR_) / 2), Y(0.9), P.bg, "center", 11); label(ctx, "A", X((bF + tip) / 2), Y(0.86), P.bg, "center", 11); }
+      // 화살표와 수치
+      const g = t < 0 ? 0 : sample(R.g, i), FA = t < 0 ? 0 : sample(R.FA, i), vel = t < 0 ? v0 : sample(R.v, i);
+      const cxp = X(fw - 0.95), ay = Y(1.72);
+      if (g > 0.5) { CB.arrow(ctx, cxp, ay, cxp - Math.min(g * 1.6, w * 0.3) - 8, ay, P.bad, 3); label(ctx, g.toFixed(0) + " g", cxp + 6, ay, P.bad); }
+      if (FA > 1e3) { const al = Math.min(FA / 1e3 / 8, w * 0.25) + 8; CB.arrow(ctx, wx - 2, Y(1.25), wx - 2 - al, Y(1.25), P.warn, 3); label(ctx, (FA / 1e3).toFixed(0) + " kN", wx - 8 - al, Y(1.25), P.warn, "right", 11); }
+      label(ctx, "t = " + (t * 1e3).toFixed(0) + " ms", 10, 14, P.text);
+      label(ctx, "승객실 속도 " + (vel * 3.6).toFixed(0) + " km/h", 10, 32, P.dim, "left", 11);
+    }, { aspect: 0.36, minHeight: 170, maxHeight: 250 });
+    const cc = CB.canvas($("cv-czc"), (ctx) => {
+      const P = CB.palette(), cmp = $("cz-cmp").checked, tEnd = R.t[R.t.length - 1] * 1e3, v0 = CB.ms(vR());
+      const ymax = Math.ceil((Math.max(40, R.peak * 1.25)) / 20) * 20, data = R.t.map((t, i) => [t * 1e3, R.g[i]]), series = [{ data, color: P.accent, width: 2.5 }];
+      if (cmp) { const om = v0 / 0.08, d = []; for (let k = 0; k <= 60; k++) { const t = ((k / 60) * Math.PI) / om; d.push([t * 1e3, (v0 * om * Math.sin(om * t)) / G]); } series.push({ data: d, color: P.bad, dash: [5, 4] }); }
+      const C = CB.chart(ctx, null, {
+        x: [0, tEnd], y: [0, ymax], xLabel: "벽에 닿은 뒤 시간 (ms)", yLabel: "승객실 감속도 (g)", series,
+        hlines: [{ y: R.avg, color: P.dim, label: "평균 " + R.avg.toFixed(0) + " g" }],
+        vlines: time() >= 0 ? [{ x: time() * 1e3, color: P.text, dash: [] }] : [],
+      });
+      if (cmp) label(ctx, "딱딱한 차: 피크 " + rigidPk().toFixed(0) + " g", C.box.x + 46, C.box.y + 10, P.bad, "left", 11);
+    }, { height: 230 });
+    player("cv-cz", "cz-play", tt, 3.5);
+  })();
+
+  /* ---------------------------------------------------------------- 승객과 구속 장치 */
+  (function () {
+    const MODES = { none: {}, belt: { belt: 1 }, bll: { belt: 1, pt: 1, ll: 1 }, all: { belt: 1, pt: 1, ll: 1, bag: 1 }, bag: { bag: 1 } };
+    const TMAX = 0.16;
+    let R, o;
+    const upd = () => { calc(); cv.redraw(); cc.redraw(); };
+    const mode = CB.seg("oc-mode", upd), vR = CB.range("oc-v", (v) => v + " km/h", upd);
+    const tbR = CB.range("oc-tb", (v) => v + " ms", upd), flR = CB.range("oc-fl", (v) => v.toFixed(1) + " kN", upd);
+    const tt = CB.range("oc-t", (v) => ((v / 1000) * TMAX * 1e3).toFixed(0) + " ms", () => { cv.redraw(); cc.redraw(); });
+    function calc() {
+      o = Object.assign({ Flim: flR() * 1e3, tBag: tbR() / 1e3 }, MODES[mode()]);
+      R = M.occupant(CB.ms(vR()), o);
+      const col = (v, lim) => (v > lim ? '<span style="color:var(--bad)">' : "<span>");
+      CB.stat("o-oc-pk", col(R.peak, 60) + R.peak.toFixed(0) + "<small>g</small></span>");
+      CB.stat("o-oc-c3", col(R.clip3, 60) + R.clip3.toFixed(0) + "<small>g</small></span>");
+      CB.stat("o-oc-x", (Math.min(R.maxX, R.D) * 100).toFixed(0) + "<small>cm</small>");
+      CB.stat("o-oc-hit", R.hit ? '<span style="color:var(--bad)">' + (R.hitV * 3.6).toFixed(0) + "<small>km/h로 충돌</small></span>" : "없음");
+      CB.stat("o-oc-fb", o.belt ? (R.maxFb / 1e3).toFixed(1) + "<small>kN</small>" : "—");
+      CB.stat("o-oc-fa", o.bag ? (R.maxFa / 1e3).toFixed(1) + "<small>kN</small>" : "—");
+    }
+    calc();
+    const cv = CB.canvas($("cv-oc"), (ctx, w, h) => {
+      const P = CB.palette(), s = Math.min(w / 1.75, (h - 24) / 1.3), ox = 0.42 * s + (w - 1.75 * s) / 2, gy = h - 12;
+      const X = (m) => ox + m * s, Y = (m) => gy - m * s, t = (tt() / 1000) * TMAX, i = t / R.dt;
+      const x = Math.min(sample(R.x, i), R.D + 0.03), g = sample(R.g, i), Fb = sample(R.Fb, i), bag = sample(R.bag, i);
+      const line = (pts, color, lw) => { ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.beginPath(); pts.forEach(([a, b], k) => (k ? ctx.lineTo(X(a), Y(b)) : ctx.moveTo(X(a), Y(b)))); ctx.stroke(); };
+      const s0 = Math.sin(-0.26), hipX = o.belt ? 0.3 * x : x, sn = CB.clamp(o.belt ? s0 + (0.7 * x) / 0.4 : s0, -0.9, 0.95), cs = Math.sqrt(1 - sn * sn);
+      const at = (d) => [hipX + d * sn, 0.42 + d * cs], xw = 0.4 * s0 + 0.1 + R.D;
+      // 바닥, 시트, 대시보드
+      line([[-0.4, 0.06], [1.25, 0.06]], P.axis, 1.5);
+      line([[-0.16, 0.3], [-0.34, 1.0]], P.border, 0.11 * s);
+      line([[-0.36, 1.1], [-0.38, 1.24]], P.border, 0.09 * s);
+      line([[-0.2, 0.26], [0.34, 0.3]], P.border, 0.11 * s);
+      ctx.fillStyle = P.border; ctx.beginPath(); [[xw + 0.24, 0.98], [xw + 0.78, 1.04], [xw + 0.78, 0.4], [xw + 0.34, 0.5]].forEach(([a, b], k) => (k ? ctx.lineTo(X(a), Y(b)) : ctx.moveTo(X(a), Y(b)))); ctx.closePath(); ctx.fill();
+      line([[xw + 0.3, 1.0], [xw - 0.1, 1.28]], P.faint, 2);
+      line([[xw + 0.03, 0.82], [xw + 0.36, 0.68]], P.dim, 0.05 * s);
+      // 에어백
+      if (bag > 0.005) { ctx.fillStyle = "rgba(236,239,246,0.92)"; ctx.strokeStyle = P.dim; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(X(xw - bag / 2 + 0.03), Y(0.85), (bag / 2 + 0.03) * s, 0.27 * (bag / 0.3) * s, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+      line([[xw, 0.98], [xw + 0.07, 0.66]], P.text, 0.035 * s);
+      // 승객
+      const hip = at(0), sh = at(0.5), chest = at(0.4), head = at(0.68), knee = [hipX + 0.43, 0.47];
+      line([hip, knee, [hipX + 0.6, 0.1]], P.accent, 0.13 * s);
+      line([hip, sh], P.accent, 0.2 * s);
+      ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(X(head[0]), Y(head[1]), 0.11 * s, 0, Math.PI * 2); ctx.fill();
+      if (o.belt) {
+        const bc = Fb <= 0 ? P.dim : o.ll && Fb >= o.Flim - 1 ? P.bad : P.warn;
+        line([[-0.3, 1.08], [sh[0] + 0.06, sh[1]], [hip[0] + 0.05, hip[1] - 0.06]], bc, 3);
+        line([[hip[0] - 0.08, hip[1] - 0.1], [hip[0] + 0.1, hip[1] + 0.02]], bc, 3);
+      }
+      if (g > 0.5) { const al = Math.min(g * 1.4, w * 0.3) + 8; CB.arrow(ctx, X(chest[0]), Y(chest[1]), X(chest[0]) - al, Y(chest[1]), P.bad, 3); label(ctx, g.toFixed(0) + " g", X(chest[0]) - al - 4, Y(chest[1]) - 12, P.bad, "right"); }
+      label(ctx, "t = " + (t * 1e3).toFixed(0) + " ms", 10, 14, P.text);
+      label(ctx, "차 감속 " + sample(R.gv, i).toFixed(0) + " g", 10, 32, P.dim, "left", 11);
+      if (R.hit && sample(R.x, i) >= R.D) label(ctx, "2차 충돌", w - 10, 14, P.bad, "right", 13);
+      else if (o.ll && Fb >= o.Flim - 1) label(ctx, "로드 리미터 작동", w - 10, 14, P.bad, "right", 11);
+    }, { aspect: 0.48, minHeight: 200, maxHeight: 300 });
+    const cc = CB.canvas($("cv-occ"), (ctx, w, h) => {
+      const P = CB.palette(), hh = (h - 96) / 2, b1 = { x: 54, y: 14, w: w - 72, h: hh }, b2 = { x: 54, y: 14 + hh + 34, w: w - 72, h: hh };
+      const now = (tt() / 1000) * TMAX * 1e3, n = Math.round(TMAX / R.dt), ser = (arr, k) => { const d = []; for (let j = 0; j <= n; j++) d.push([R.t[j] * 1e3, arr[j] * k]); return d; };
+      CB.chart(ctx, b1, { x: [0, TMAX * 1e3], y: [0, 55], yLabel: "전방 이동 (cm)", series: [{ data: ser(R.x.map((v) => Math.min(v, R.D + 0.05)), 100), color: P.accent, width: 2.5 }], hlines: [{ y: R.D * 100, color: P.bad, label: "스티어링 휠" }], vlines: [{ x: now, color: P.text, dash: [] }].concat(o.bag ? [{ x: o.tBag * 1e3, color: P.accent2, label: "점화" }] : []) });
+      const ymax = Math.ceil(Math.max(60, R.peak * 1.15) / 20) * 20;
+      CB.chart(ctx, b2, { x: [0, TMAX * 1e3], y: [0, ymax], xLabel: "시간 (ms)", yLabel: "감속도 (g)", series: [{ data: ser(R.gv, 1), color: P.dim, dash: [5, 4] }, { data: ser(R.g, 1), color: P.accent, width: 2.5 }], hlines: [{ y: 60, color: P.bad, label: "흉부 기준 60 g" }], vlines: [{ x: now, color: P.text, dash: [] }] });
+    }, { height: 390 });
+    player("cv-oc", "oc-play", tt, 4);
+  })();
+
+  /* ---------------------------------------------------------------- HIC */
+  (function () {
+    const SF = { sine: 2 / Math.PI, tri: 0.5, sq: 1 }, DT = 1e-4;
+    let lock = 0, busy = false;
+    const chk = $("hc-dv");
+    const dv = () => aR() * G * (dR() / 1000) * SF[shape()];
+    const refit = () => { busy = true; aR.set(CB.clamp(Math.round(lock / (G * (dR() / 1000) * SF[shape()])), 20, 250)); busy = false; };
+    const shape = CB.seg("hc-shape", () => (chk.checked ? refit() : cv.redraw()));
+    const aR = CB.range("hc-a", (v) => v + " g", () => { if (!busy && chk.checked) lock = dv(); cv.redraw(); });
+    const dR = CB.range("hc-d", (v) => v.toFixed(1) + " ms", () => (chk.checked ? refit() : cv.redraw()));
+    chk.addEventListener("change", () => { lock = dv(); });
+    const cv = CB.canvas($("cv-hc"), (ctx, w, h) => {
+      const P = CB.palette(), T = dR() / 1000, a = M.pulse(shape(), aR(), T, DT), H = M.hic(a, DT, 0.015), risk = M.headRisk(H.hic);
+      const box = { x: 54, y: 14, w: w - 72, h: h - 14 - 46 - 62 }, xmax = Math.max(20, Math.ceil((T * 1e3 * 1.15) / 10) * 10);
+      const data = [[0, 0]].concat(a.map((v, i) => [i * DT * 1e3, v]), [[T * 1e3, 0]]);
+      CB.chart(ctx, box, {
+        x: [0, xmax], y: [0, 260], xLabel: "시간 (ms)", yLabel: "머리 가속도 (g)",
+        bands: [{ x0: H.t1 * 1e3, x1: H.t2 * 1e3, color: CB.color("accent-soft") }],
+        series: [{ data, color: P.accent, width: 2.5 }],
+      });
+      // 위험 눈금 막대
+      const gx = box.x, gw = box.w, gy = h - 34, X = (v) => gx + (Math.min(v, 2000) / 2000) * gw;
+      [[0, 250, P.ok], [250, 700, P.warn], [700, 2000, P.bad]].forEach(([a0, a1, c]) => { ctx.fillStyle = c; ctx.globalAlpha = 0.55; ctx.fillRect(X(a0), gy, X(a1) - X(a0), 10); });
+      ctx.globalAlpha = 1;
+      [0, 250, 700, 1000, 2000].forEach((v) => label(ctx, v === 2000 ? "2000+" : String(v), X(v), gy + 22, P.dim, v === 2000 ? "right" : v ? "center" : "left", 11));
+      ctx.fillStyle = P.text; ctx.beginPath(); ctx.moveTo(X(H.hic), gy - 2); ctx.lineTo(X(H.hic) - 6, gy - 12); ctx.lineTo(X(H.hic) + 6, gy - 12); ctx.closePath(); ctx.fill();
+      label(ctx, "HIC15", 10, gy + 5, P.dim, "left", 11);
+      CB.stat("o-hc-v", (H.hic > 700 ? '<span style="color:var(--bad)">' : "<span>") + H.hic.toFixed(0) + "</span>");
+      CB.stat("o-hc-w", (H.t1 * 1e3).toFixed(1) + "–" + (H.t2 * 1e3).toFixed(1) + "<small>ms</small>");
+      CB.stat("o-hc-dv", (dv() * 3.6).toFixed(0) + "<small>km/h</small>");
+      CB.stat("o-hc-r", (risk * 100).toFixed(risk < 0.1 ? 1 : 0) + "<small>%</small>");
+      CB.stat("o-hc-z", H.hic < 250 ? "낮음" : H.hic < 700 ? "주의" : H.hic < 1000 ? '<span style="color:var(--bad)">한계 초과</span>' : '<span style="color:var(--bad)">위험</span>');
+    }, { aspect: 0.55, minHeight: 300, maxHeight: 380 });
+  })();
+
+  /* ---------------------------------------------------------------- 차 대 차 충돌 */
+  (function () {
+    const F = 300e3, LEAD = 0.05, AFTER = 0.1;
+    let R, tTot;
+    const upd = () => { calc(); tt.set(tt()); };
+    const m1 = CB.range("cc-m1", (v) => v.toLocaleString("en-US") + " kg", upd), v1 = CB.range("cc-v1", (v) => v + " km/h", upd);
+    const m2 = CB.range("cc-m2", (v) => v.toLocaleString("en-US") + " kg", upd), v2 = CB.range("cc-v2", (v) => v + " km/h", upd);
+    function calc() {
+      R = M.c2c(m1(), CB.ms(v1()), m2(), CB.ms(v2()), F); tTot = LEAD + R.T + AFTER;
+      const moving = R.T > 0;
+      CB.stat("o-cc-vc", (R.vc >= 0 ? "→ " : "← ") + Math.abs(R.vc * 3.6).toFixed(1) + "<small>km/h</small>");
+      CB.stat("o-cc-d1", (R.dv1 * 3.6).toFixed(1) + "<small>km/h</small>");
+      CB.stat("o-cc-d2", (R.dv2 * 3.6).toFixed(1) + "<small>km/h</small>");
+      CB.stat("o-cc-a1", moving ? R.a1.toFixed(1) + "<small>g</small>" : "—");
+      CB.stat("o-cc-a2", moving ? R.a2.toFixed(1) + "<small>g</small>" : "—");
+      CB.stat("o-cc-e", CB.fmt(R.E / 1e3, 3) + "<small>kJ (" + (R.E0 > 0 ? Math.round((R.E / R.E0) * 100) : 0) + "%)</small>");
+    }
+    calc();
+    const time = () => -LEAD + (tt() / 1000) * tTot;
+    // 시각 t의 두 차 앞끝 위치(m)와 속도(m/s, 오른쪽 +)
+    const state = (t) => {
+      const u1 = CB.ms(v1()), u2 = CB.ms(v2()), a1 = R.a1 * G, a2 = R.a2 * G;
+      if (t < 0) return { f1: u1 * t, f2: -u2 * t, w1: u1, w2: -u2 };
+      const tc = Math.min(t, R.T), f1 = u1 * tc - 0.5 * a1 * tc * tc, f2 = -u2 * tc + 0.5 * a2 * tc * tc;
+      if (t < R.T) return { f1, f2, w1: u1 - a1 * t, w2: -u2 + a2 * t };
+      return { f1: f1 + R.vc * (t - R.T), f2: f2 + R.vc * (t - R.T), w1: R.vc, w2: R.vc };
+    };
+    const tt = CB.range("cc-t", (v) => ((-LEAD + (v / 1000) * tTot) * 1e3).toFixed(0) + " ms", () => { cv.redraw(); cc.redraw(); });
+    const cv = CB.canvas($("cv-cc"), (ctx, w, h) => {
+      const P = CB.palette(), s = w / 15, gy = h - 30, S = state(time()), k1 = Math.cbrt(m1() / 1500), k2 = Math.cbrt(m2() / 1500);
+      const X = (m) => w / 2 + m * s, xi = X((S.f1 + S.f2) / 2);
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
+      const c1 = X(S.f1 - 2.25 * k1), c2 = X(S.f2 + 2.25 * k2);
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, xi, h); ctx.clip(); CB.carSide(ctx, c1, gy, s * k1, { color: P.accent }); ctx.restore();
+      ctx.save(); ctx.beginPath(); ctx.rect(xi, 0, w - xi, h); ctx.clip(); CB.carSide(ctx, c2, gy, s * k2, { color: P.accent2, flip: true }); ctx.restore();
+      if (S.f1 > S.f2 + 0.01) { ctx.strokeStyle = P.text; ctx.lineWidth = 2; zig(ctx, xi, gy - 0.25 * s, xi, gy - 0.95 * s, 3, 8); }
+      const ay1 = gy - 1.45 * s * k1 - 14, ay2 = gy - 1.45 * s * k2 - 14;
+      [[c1, ay1, S.w1, P.accent], [c2, ay2, S.w2, P.accent2]].forEach(([x, y, v, c]) => {
+        const L = CB.clamp(v * 3.6 * 0.7, -w * 0.2, w * 0.2);
+        if (Math.abs(L) > 3) CB.arrow(ctx, x - L / 2, y, x + L / 2, y, c, 3);
+        label(ctx, Math.abs(v * 3.6).toFixed(0) + " km/h", x, y - 13, c, "center");
+      });
+      label(ctx, "차 1 · " + m1().toLocaleString("en-US") + " kg", c1, gy + 15, P.dim, "center", 11);
+      label(ctx, "차 2 · " + m2().toLocaleString("en-US") + " kg", c2, gy + 15, P.dim, "center", 11);
+      label(ctx, "t = " + (time() * 1e3).toFixed(0) + " ms", 10, 14, P.text);
+    }, { aspect: 0.34, minHeight: 170, maxHeight: 240 });
+    const cc = CB.canvas($("cv-ccc"), (ctx) => {
+      const P = CB.palette(), d1 = [], d2 = [];
+      for (let k = 0; k <= 120; k++) { const t = -LEAD + (k / 120) * tTot, S = state(t); d1.push([t * 1e3, S.w1 * 3.6]); d2.push([t * 1e3, S.w2 * 3.6]); }
+      CB.chart(ctx, null, {
+        x: [-LEAD * 1e3, (tTot - LEAD) * 1e3], y: [-110, 110], xLabel: "접촉 뒤 시간 (ms)", yLabel: "속도 (km/h, → 가 +)",
+        series: [{ data: d1, color: P.accent, width: 2.5 }, { data: d2, color: P.accent2, width: 2.5 }],
+        hlines: [{ y: R.vc * 3.6, color: P.dim, label: "공통 속도" }, { y: 0, color: P.axis, dash: [] }],
+        vlines: [{ x: time() * 1e3, color: P.text, dash: [] }],
+      });
+    }, { height: 230 });
+    player("cv-cc", "cc-play", tt, 3.5);
+  })();
+})();
+</script>
+</body>
+</html>

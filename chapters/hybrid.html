@@ -1,0 +1,1454 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>하이브리드 · CarBook</title>
+<meta name="description" content="하이브리드가 연비를 얻는 네 가지 방법, 직렬·병렬·동력 분기 구조와 유성 기어 e-CVT, 회생 제동 협조 제어, 에너지 관리 전략, PHEV 유틸리티 팩터를 시뮬레이터로 배운다.">
+<link rel="canonical" href="https://carbook.euiyun.com/chapters/hybrid.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="CarBook">
+<meta property="og:title" content="하이브리드 · CarBook">
+<meta property="og:description" content="하이브리드가 연비를 얻는 네 가지 방법, 직렬·병렬·동력 분기 구조와 유성 기어 e-CVT, 회생 제동 협조 제어, 에너지 관리 전략, PHEV 유틸리티 팩터를 시뮬레이터로 배운다.">
+<meta property="og:url" content="https://carbook.euiyun.com/chapters/hybrid.html">
+<meta property="og:image" content="https://carbook.euiyun.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TechArticle","headline":"하이브리드","name":"하이브리드 · CarBook","url":"https://carbook.euiyun.com/chapters/hybrid.html","mainEntityOfPage":"https://carbook.euiyun.com/chapters/hybrid.html","inLanguage":"ko","isAccessibleForFree":true,"learningResourceType":"interactive textbook chapter","position":14,"image":"https://carbook.euiyun.com/og.png","dateModified":"2026-10-02","isPartOf":{"@type":"Book","@id":"https://carbook.euiyun.com/#book","name":"CarBook — 인터랙티브 자동차 교과서","url":"https://carbook.euiyun.com/"},"publisher":{"@type":"Organization","name":"CarBook","url":"https://carbook.euiyun.com/"},"description":"하이브리드가 연비를 얻는 네 가지 방법, 직렬·병렬·동력 분기 구조와 유성 기어 e-CVT, 회생 제동 협조 제어, 에너지 관리 전략, PHEV 유틸리티 팩터를 시뮬레이터로 배운다."},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"CarBook","item":"https://carbook.euiyun.com/"},{"@type":"ListItem","position":2,"name":"14 하이브리드","item":"https://carbook.euiyun.com/chapters/hybrid.html"}]}]}</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="../css/style.css">
+<script src="../js/common.js"></script>
+<style>
+  .fig-lg svg .t, .fig-lg svg .t-acc { font-size: 17px; }
+  .fig-lg svg .t-dim { font-size: 15px; }
+  .fig-lg svg .t-mono { font-size: 14px; }
+  .arch-desc { padding: 12px 18px; border-top: 1px solid var(--border); font-size: 14.5px; line-height: 1.65; color: var(--text-dim); min-height: 5.2em; }
+  .arch-desc b { color: var(--text); }
+  .sim-view canvas + canvas { border-top: 1px solid var(--border); }
+  .drag-cv { touch-action: none; cursor: ns-resize; }
+</style>
+</head>
+<body data-chapter="hybrid">
+<main class="chapter">
+  <header class="chapter-hero">
+    <div class="eyebrow">Chapter 14</div>
+    <h1>하이브리드</h1>
+    <p class="lead">엔진은 힘껏 일할 때 효율이 좋고, 살살 일할 때 효율이 나쁘다. 그런데 도심을 달리는 차는 대부분의 시간을 살살 일하거나 멈춰 서 있고, 어렵게 만든 운동 에너지는 브레이크에서 열로 버린다. 하이브리드는 엔진 옆에 모터와 작은 배터리를 두어 이 세 가지 낭비를 줄인다. 이 장에서는 그 원리와 구조, 그리고 엔진과 모터를 언제 어떻게 쓸지 정하는 제어를 다룬다.</p>
+    <ul class="objectives">
+      <li>일반 내연기관차가 도심에서 연료를 낭비하는 세 가지 이유와, 하이브리드가 연비를 얻는 네 가지 방법을 설명한다.</li>
+      <li>마일드·풀·플러그인 하이브리드와 직렬·병렬(P0~P4)·직병렬 구조를 구분한다.</li>
+      <li>유성 기어 하나로 엔진·MG1·MG2를 묶는 동력 분기 장치의 속도·토크 관계를 윌리스 식과 레버 선도로 계산한다.</li>
+      <li>회생 제동의 한계(모터 출력, 배터리 수용 전력, 저속)와 마찰 브레이크 협조 제어를 이해한다.</li>
+      <li>충전 유지·충전 소진 전략과 ECMS의 개념, PHEV의 유틸리티 팩터와 Well-to-Wheel 관점을 안다.</li>
+    </ul>
+  </header>
+
+  <!-- =============================================================== 1 -->
+  <section id="why">
+    <h2>왜 하이브리드인가</h2>
+    <p><a href="combustion.html">4장</a>의 BSFC 맵을 떠올려 보자. 가솔린 엔진의 효율은 중간 회전수·높은 부하의 좁은 영역에서 35~40 %에 이르지만, 부하가 낮아질수록 급격히 떨어진다. 스로틀을 조금만 열면 흡기 부압 때문에 펌핑 손실이 커지고, 마찰 손실은 출력과 무관하게 거의 그대로 남기 때문이다. 문제는 차가 실제로 필요로 하는 출력이 대부분 이 저부하 영역이라는 점이다. <a href="dynamics.html">2장</a>에서 계산했듯 중형차가 시속 60 km로 정속 주행하는 데는 5~8 kW면 충분한데, 엔진의 최대 출력은 100 kW가 넘는다.</p>
+    <p>일반 내연기관차가 도심에서 연료를 낭비하는 경로는 크게 셋이다.</p>
+    <ul>
+      <li><b>저부하 운전</b>: 엔진이 효율 20 % 안팎의 영역에서 대부분의 시간을 보낸다.</li>
+      <li><b>공회전</b>: 신호 대기 중에도 엔진은 자기 마찰을 이기려고 시간당 대표적으로 약 0.6~1.0 L의 연료를 태운다. 이때 차가 하는 일은 0이다.</li>
+      <li><b>제동</b>: 가속하며 쌓은 운동 에너지 \(\tfrac12 mv^2\)을 <a href="brake.html">브레이크</a> 디스크에서 열로 바꿔 대기로 버린다.</li>
+    </ul>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 720 270" role="img" aria-label="도심 주행에서 연료 에너지가 가는 곳">
+        <text x="40" y="30" class="t">연료 에너지 100 % (도심 주행, 일반 가솔린차의 대략적인 분포)</text>
+        <rect x="40" y="50" width="396.8" height="62" class="f-surface"/>
+        <rect x="436.8" y="50" width="96" height="62" fill="var(--accent-soft)" stroke="var(--accent)"/>
+        <rect x="532.8" y="50" width="12.800" height="62" class="f-surface"/>
+        <rect x="545.6" y="50" width="32" height="62" class="f-surface"/>
+        <rect x="577.6" y="50" width="19.200" height="62" class="f-acc2-soft"/>
+        <rect x="596.8" y="50" width="25.600" height="62" class="f-acc2-soft"/>
+        <rect x="622.4" y="50" width="57.600" height="62" fill="var(--accent-soft)" stroke="var(--accent)"/>
+        <text x="238" y="78" class="t" text-anchor="middle">엔진 열·마찰·펌핑 손실</text>
+        <text x="238" y="100" class="t-mono" text-anchor="middle">약 62 %</text>
+        <text x="485" y="78" class="t-acc" text-anchor="middle">공회전</text>
+        <text x="485" y="100" class="t-mono" text-anchor="middle">15 %</text>
+        <text x="651" y="78" class="t-acc" text-anchor="middle">제동</text>
+        <text x="651" y="100" class="t-mono" text-anchor="middle">9 %</text>
+        <line x1="539" y1="112" x2="500" y2="150" class="s-line"/><text x="496" y="168" class="t-dim" text-anchor="end">보기류 2 %</text>
+        <line x1="561" y1="112" x2="545" y2="184" class="s-line"/><text x="541" y="202" class="t-dim" text-anchor="end">구동계 손실 5 %</text>
+        <line x1="587" y1="112" x2="587" y2="150" class="s-line"/><text x="590" y="168" class="t-dim" text-anchor="middle">공기 3 %</text>
+        <line x1="609" y1="112" x2="640" y2="184" class="s-line"/><text x="646" y="202" class="t-dim" text-anchor="middle">구름 4 %</text>
+        <line x1="577.6" y1="124" x2="680" y2="124" stroke="var(--accent-2)" stroke-width="2"/>
+        <text x="680" y="142" class="t-dim" text-anchor="end" style="fill:var(--accent-2)">바퀴에 도달 16 %</text>
+        <text x="40" y="150" class="t-acc">하이브리드가 노리는 곳</text>
+        <text x="40" y="176" class="t-dim">공회전 → 아이들 스톱</text>
+        <text x="40" y="200" class="t-dim">제동 → 회생 제동</text>
+        <text x="40" y="224" class="t-dim">엔진 손실 → 운전점 이동, 다운사이징</text>
+        <text x="40" y="256" class="t-mono">수치는 주행 조건에 따라 크게 달라지는 대표값</text>
+      </svg>
+      <figcaption><b>그림 14-1.</b> 도심 주행에서 연료 에너지의 행방. 바퀴까지 가는 것은 6분의 1 정도이고, 그중 절반 이상을 다시 브레이크에서 버린다. 주황색 칸이 하이브리드가 직접 되찾는 몫이다.</figcaption>
+    </figure>
+
+    <div class="callout tip">
+      <strong>계산 예: 한 번 멈출 때 버리는 에너지</strong>
+      <p>1,500 kg 차가 시속 60 km(16.7 m/s)로 달릴 때의 운동 에너지는 \(\tfrac12 \times 1500 \times 16.7^2 \approx 208\) kJ, 즉 약 58 Wh다. 작아 보이지만, 이만큼을 바퀴에 전달하려고 엔진이 태운 연료는 연료→바퀴 효율을 25 %로 잡으면 208/0.25 = 830 kJ, 휘발유 약 26 mL에 해당한다(휘발유 1 L ≈ 32 MJ). 1 km에 한 번꼴로 멈추는 도심이라면 제동 손실만으로 100 km당 2 L 이상이 사라진다.</p>
+    </div>
+    <p>이 에너지를 되찾으려면 두 가지가 필요하다. 운동 에너지를 전기로 바꿨다가 다시 구동력으로 돌려줄 <b>모터(겸 발전기)</b>와, 그 사이에 에너지를 맡아 둘 <b>배터리</b>다. 모터가 생기면 엔진을 끄고도 차를 움직일 수 있으므로, 공회전과 저부하 운전 문제까지 함께 풀린다. 이것이 <span class="term">하이브리드 전기차</span><span class="en">(Hybrid Electric Vehicle, HEV)</span>의 출발점이다.</p>
+  </section>
+
+  <!-- =============================================================== 2 -->
+  <section id="four">
+    <h2>연비를 얻는 네 가지 방법</h2>
+    <p>하이브리드의 연비 개선은 한 가지 마법이 아니라 네 가지 효과의 합이다.</p>
+    <div class="flow">
+      <div><b>회생 제동</b>감속할 때 모터를 발전기로 써서 운동 에너지를 배터리에 담는다. 도심일수록 효과가 크다.</div>
+      <div><b>엔진 운전점 이동</b>엔진을 효율 좋은 고부하 영역에서만 돌리고, 남는 출력은 충전, 모자란 출력은 모터가 메운다.</div>
+      <div><b>아이들 스톱·EV 주행</b>정차 중이나 아주 낮은 부하에서는 엔진을 아예 끈다. 효율 0 %인 구간을 없앤다.</div>
+      <div><b>엔진 다운사이징</b>최대 가속은 모터가 돕기 때문에 엔진을 작게, 또는 효율 위주(애트킨슨 사이클)로 설계할 수 있다.</div>
+    </div>
+    <p>이 가운데 가장 덜 직관적인 것이 <span class="term">운전점 이동</span><span class="en">(Load Point Shifting)</span>이다. 일반차에서는 차속과 기어 단이 엔진 회전수를 정하고, 운전자가 요구한 출력이 토크를 정한다. 엔진이 고를 수 있는 것은 없다. 하이브리드는 다르다. 같은 출력 \(P = T\omega\)를 내는 회전수와 토크의 조합은 등출력 쌍곡선 위에 무수히 많으므로, 그중 연료 소비율이 가장 낮은 점을 고를 수 있다. 출력별로 이런 최적점을 이은 선이 <span class="term">최적 운전선</span><span class="en">(Optimal Operating Line, OOL)</span>이다. 더 나아가 요구 출력보다 일부러 더 큰 출력을 내고 남는 만큼을 배터리에 충전해 둘 수도 있다.</p>
+
+    <div class="sim" id="sim-bsfc">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>운전점 이동: 같은 출력, 다른 효율</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-bsfc"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>요구 출력 <output id="bs-p-out"></output></span><input type="range" id="bs-p" min="3" max="80" value="8" step="1"></label>
+          <label class="ctrl"><span>일반차 엔진 회전수(차속·기어가 결정) <output id="bs-n-out"></output></span><input type="range" id="bs-n" min="1000" max="5000" value="2200" step="50"></label>
+          <label class="ctrl"><span>하이브리드: 충전용 추가 출력 <output id="bs-dp-out"></output></span><input type="range" id="bs-dp" min="0" max="25" value="0" step="1"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">일반차 운전점</span><span class="v" id="bs-c">—</span></div>
+        <div class="stat"><span class="k">일반차 효율 / BSFC</span><span class="v" id="bs-ce">—</span></div>
+        <div class="stat"><span class="k">하이브리드 운전점</span><span class="v" id="bs-h">—</span></div>
+        <div class="stat"><span class="k">하이브리드 효율 / BSFC</span><span class="v" id="bs-he">—</span></div>
+        <div class="stat"><span class="k">같은 출력의 연료 절감</span><span class="v" id="bs-save">—</span></div>
+        <div class="stat"><span class="k">추가 출력의 한계 효율</span><span class="v" id="bs-marg">—</span></div>
+      </div>
+      <div class="sim-note">배경색은 2.0 L 자연흡기 엔진을 흉내 낸 간이 모델의 열효율이다(마찰·펌핑 손실은 부하와 무관하게 남고, 전부하 근처에서는 농후 혼합기로 효율이 떨어진다). 점선은 등출력선, 굵은 선은 OOL. 해볼 것: 요구 출력을 5 kW로 낮추면 일반차 효율이 얼마나 떨어지는가? 그 상태에서 충전용 추가 출력을 10 kW 올려 보라. 추가로 태운 연료가 일로 바뀌는 비율(한계 효율)은 엔진의 최고 효율보다도 높다. 마찰 손실은 이미 치렀기 때문이다.</div>
+    </div>
+
+    <p>물론 충전해 둔 전기를 다시 꺼내 쓸 때는 발전기·인버터·배터리·모터를 왕복하며 대표적으로 20~30 %를 잃는다. 그래서 운전점 이동은 "언제나 이득"이 아니라, 엔진 효율 차이가 왕복 손실보다 클 때만 이득이다. 이 저울질이 뒤에서 다룰 에너지 관리 전략의 핵심이다.</p>
+
+    <h3>전동화의 정도</h3>
+    <p>모터와 배터리를 얼마나 크게 넣느냐에 따라 하이브리드는 여러 단계로 나뉜다. 전압이 높을수록 같은 전류로 큰 출력을 다룰 수 있으므로, 전동화 정도는 시스템 전압과 함께 올라간다. 12 V 전원의 한계는 <a href="electrical.html">13장</a>에서 다뤘다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>구분</th><th>전압</th><th>모터 출력</th><th>배터리</th><th>할 수 있는 일</th><th>연비 개선(대략)</th></tr></thead>
+      <tbody>
+        <tr><td>마일드<span class="en">(MHEV)</span></td><td>48 V</td><td>10~20 kW</td><td>0.3~1 kWh</td><td>아이들 스톱, 약한 회생, 가속 보조, 타력 주행 중 엔진 정지</td><td>5~15 %</td></tr>
+        <tr><td>풀<span class="en">(Full HEV)</span></td><td>200~650 V</td><td>30~100 kW</td><td>1~2 kWh</td><td>EV 주행, 강한 회생, 운전점 이동</td><td>25~40 %</td></tr>
+        <tr><td>플러그인<span class="en">(PHEV)</span></td><td>350~400 V</td><td>60~150 kW</td><td>8~25 kWh</td><td>외부 충전, 수십 km 전기 주행 후 풀 하이브리드로 동작</td><td>충전 습관에 좌우</td></tr>
+        <tr><td>주행거리 연장형<span class="en">(EREV)</span></td><td>350~800 V</td><td>100 kW 이상</td><td>20~40 kWh</td><td>항상 모터로 구동, 엔진은 발전 전용</td><td>충전 습관에 좌우</td></tr>
+      </tbody>
+    </table></div>
+    <p>48 V가 경계가 되는 이유는 안전 규정이다. 직류 60 V 미만은 감전 보호를 위한 별도의 절연·차폐 요구가 없어 비용이 낮다. 그 대신 20 kW를 내려면 400 A가 넘는 전류가 흘러야 하므로 출력에 한계가 있다.</p>
+  </section>
+
+  <!-- =============================================================== 3 -->
+  <section id="arch">
+    <h2>구조: 직렬, 병렬, 직병렬</h2>
+    <p>엔진과 모터의 힘을 바퀴까지 어떻게 합치느냐에 따라 하이브리드는 세 가지 구조로 나뉜다.</p>
+    <ul>
+      <li><span class="term">직렬형</span><span class="en">(Series)</span>: 엔진은 발전기만 돌리고, 바퀴는 오직 모터가 굴린다. 엔진과 바퀴 사이에 기계적 연결이 없어 엔진을 차속과 무관하게 최적점에서 돌릴 수 있고 변속기도 필요 없다. 그 대신 엔진의 일이 전부 발전기→인버터→모터를 거치며 손실을 입고, 모터와 발전기가 모두 커야 한다.</li>
+      <li><span class="term">병렬형</span><span class="en">(Parallel)</span>: 엔진과 모터가 같은 축에 기계적으로 물려 함께 바퀴를 굴린다. 엔진의 힘이 기어로 직접 전달되므로 고속 정속 주행 효율이 좋고 모터 하나로 충분하다. 그러나 엔진 회전수가 차속과 기어비에 묶이므로 변속기가 여전히 필요하다.</li>
+      <li><span class="term">직병렬형</span><span class="en">(Series-Parallel)</span>: 둘을 겸한다. 유성 기어로 엔진 출력을 기계 경로와 전기 경로로 나누는 <b>동력 분기식</b><span class="en">(Power Split)</span>, 클러치로 직렬과 병렬을 전환하는 방식이 있다.</li>
+    </ul>
+    <p>병렬형은 모터를 어디에 두느냐가 성격을 좌우한다. 업계에서는 위치를 P0부터 P4까지의 기호로 부른다.</p>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 720 300" role="img" aria-label="병렬 하이브리드의 모터 위치 P0부터 P4">
+        <line x1="150" y1="150" x2="560" y2="150" stroke="var(--text-dim)" stroke-width="5"/>
+        <rect x="70" y="105" width="110" height="90" rx="8" class="f-surface"/>
+        <text x="125" y="156" class="t" text-anchor="middle">엔진</text>
+        <circle cx="70" cy="150" r="12" class="f-elev"/><circle cx="70" cy="80" r="15" class="f-acc-soft"/>
+        <path d="M58 150 L55 80 M82 150 L85 80" class="s-line"/>
+        <text x="70" y="52" class="t-acc" text-anchor="middle">P0</text>
+        <text x="70" y="30" class="t-dim" text-anchor="middle">벨트 구동</text>
+        <rect x="196" y="126" width="28" height="48" rx="4" class="f-acc-soft"/>
+        <text x="210" y="112" class="t-acc" text-anchor="middle">P1</text>
+        <text x="210" y="206" class="t-dim" text-anchor="middle">크랭크</text>
+        <line x1="252" y1="122" x2="252" y2="178" stroke="var(--text)" stroke-width="3"/><line x1="262" y1="122" x2="262" y2="178" stroke="var(--text)" stroke-width="3"/>
+        <text x="257" y="236" class="t-dim" text-anchor="middle">클러치 K0</text>
+        <line x1="257" y1="182" x2="257" y2="220" class="s-line" stroke-dasharray="3 3"/>
+        <rect x="286" y="122" width="34" height="56" rx="4" class="f-acc-soft"/>
+        <text x="303" y="108" class="t-acc" text-anchor="middle">P2</text>
+        <rect x="346" y="110" width="104" height="80" rx="8" class="f-surface"/>
+        <text x="398" y="156" class="t" text-anchor="middle">변속기</text>
+        <rect x="466" y="126" width="28" height="48" rx="4" class="f-acc-soft"/>
+        <text x="480" y="112" class="t-acc" text-anchor="middle">P3</text>
+        <text x="480" y="206" class="t-dim" text-anchor="middle">출력축</text>
+        <line x1="545" y1="60" x2="545" y2="240" stroke="var(--text-dim)" stroke-width="5"/>
+        <circle cx="545" cy="150" r="16" class="f-elev"/>
+        <rect x="531" y="40" width="28" height="44" rx="6" fill="var(--text-dim)"/><rect x="531" y="216" width="28" height="44" rx="6" fill="var(--text-dim)"/>
+        <text x="545" y="284" class="t-dim" text-anchor="middle">앞 차축</text>
+        <line x1="660" y1="60" x2="660" y2="240" stroke="var(--text-dim)" stroke-width="5"/>
+        <rect x="642" y="124" width="36" height="52" rx="4" class="f-acc-soft"/>
+        <rect x="646" y="40" width="28" height="44" rx="6" fill="var(--text-dim)"/><rect x="646" y="216" width="28" height="44" rx="6" fill="var(--text-dim)"/>
+        <text x="620" y="156" class="t-acc" text-anchor="end">P4</text>
+        <text x="660" y="284" class="t-dim" text-anchor="middle">뒤 차축</text>
+      </svg>
+      <figcaption><b>그림 14-2.</b> 병렬 하이브리드의 모터 위치. P0·P1은 엔진과 떨어질 수 없어 EV 주행이 어렵고, P2부터는 클러치 K0로 엔진을 분리할 수 있다. P4는 엔진이 굴리지 않는 축에 모터를 달아 전기식 사륜구동을 겸한다.</figcaption>
+    </figure>
+
+    <div class="table-wrap"><table>
+      <thead><tr><th>위치</th><th>모터가 붙는 곳</th><th>특징</th></tr></thead>
+      <tbody>
+        <tr><td>P0</td><td>엔진 앞쪽, 벨트로 연결(발전기 자리)</td><td>가장 싸다. 48 V 마일드의 주류. 벨트가 전달 토크를 제한하고, 회생 때 엔진 마찰을 함께 끌고 간다.</td></tr>
+        <tr><td>P1</td><td>크랭크축 직결(플라이휠 자리)</td><td>벨트 없이 큰 토크. 여전히 엔진과 분리 불가.</td></tr>
+        <tr><td>P2</td><td>엔진과 변속기 사이, 클러치 뒤</td><td>엔진을 떼고 EV 주행·회생. 모터도 변속기의 기어비를 쓴다. 병렬 풀 하이브리드의 주류.</td></tr>
+        <tr><td>P3</td><td>변속기 출력축</td><td>변속 중에도 구동력이 끊기지 않고 회생 효율이 좋다. 모터가 기어비를 못 쓴다.</td></tr>
+        <tr><td>P4</td><td>엔진이 구동하지 않는 차축</td><td>전기식 AWD(<a href="driveline.html">6장</a>). 두 축은 노면을 통해서만 연결된다.</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="sim" id="sim-arch">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>구조 비교: 동력이 지나는 길과 부품 크기</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-arch"></canvas><canvas id="cv-arch-eff"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>구조</span><div class="seg" id="arch-type"><button data-value="series">직렬</button><button data-value="parallel">병렬(P2)</button><button data-value="split" class="on">직병렬</button></div></div>
+          <label class="ctrl"><span>정속 주행 속도 <output id="arch-v-out"></output></span><input type="range" id="arch-v" min="20" max="160" value="60" step="5"></label>
+        </div>
+      </div>
+      <div class="arch-desc" id="arch-desc"></div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">주행 저항 출력</span><span class="v" id="arch-p">—</span></div>
+        <div class="stat"><span class="k">직렬: 연료→바퀴</span><span class="v" id="arch-e1">—</span></div>
+        <div class="stat"><span class="k">병렬: 연료→바퀴</span><span class="v" id="arch-e2">—</span></div>
+        <div class="stat"><span class="k">직병렬: 연료→바퀴</span><span class="v" id="arch-e3">—</span></div>
+      </div>
+      <div class="sim-note">위: 실선은 기계 경로, 주황 점선은 고전압 전기 경로. 막대는 시스템 출력 약 100 kW급 차의 대표적인 부품 크기다. 아래 그래프는 1,500 kg 차가 평지를 정속 주행할 때 연료 에너지가 바퀴까지 가는 비율로, 실선은 "엔진을 계속 켜 둘 때"와 "최고 효율점에서 켰다 껐다 하며 배터리로 완충할 때" 중 나은 쪽, 가는 점선은 엔진을 계속 켜 둘 때다. 해볼 것: 저속에서 점선이 얼마나 낮은지 보라. 엔진을 끌 수 있다는 것이 하이브리드의 가장 큰 무기다. 직렬형은 모든 출력이 전기 경로를 지나기 때문에 어느 속도에서든 다른 구조보다 낮다.</div>
+    </div>
+    <p>그렇다면 직렬형은 왜 쓰는가. 변속기와 클러치가 없어 구조가 단순하고, 주행 감각이 전기차와 같으며, 엔진을 소음·진동이 가장 적은 조건으로만 돌릴 수 있기 때문이다. 배터리가 큰 주행거리 연장형에서는 엔진이 돌 일 자체가 드물어 전달 손실의 비중도 작아진다.</p>
+  </section>
+
+  <!-- =============================================================== 4 -->
+  <section id="psd">
+    <h2>동력 분기: 유성 기어 한 벌로 만든 무단 변속기</h2>
+    <p>직병렬형의 대표는 유성 기어 한 벌에 엔진과 모터 둘을 묶는 <span class="term">동력 분기 장치</span><span class="en">(Power Split Device, PSD)</span>다. 유성 기어의 세 요소(선 기어, 캐리어, 링 기어)에 대한 기초는 <a href="transmission.html">5장</a>에서 다뤘다. 여기서는 연결만 바꾼다.</p>
+    <ul>
+      <li><b>캐리어</b> ← 엔진</li>
+      <li><b>선 기어</b> ← MG1(주로 발전기로 일하는 모터)</li>
+      <li><b>링 기어</b> ← MG2(주로 구동 모터) 그리고 감속 기어를 거쳐 바퀴</li>
+    </ul>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 720 300" role="img" aria-label="동력 분기 장치의 연결 구성">
+        <rect x="24" y="92" width="96" height="76" rx="8" class="f-acc-soft"/>
+        <text x="72" y="136" class="t-acc" text-anchor="middle">엔진</text>
+        <line x1="120" y1="130" x2="230" y2="130" stroke="var(--accent)" stroke-width="5"/>
+        <text x="172" y="120" class="t-dim" text-anchor="middle">캐리어</text>
+        <!-- planetary symbol -->
+        <rect x="222" y="40" width="96" height="16" rx="3" fill="var(--accent-2)"/>
+        <rect x="222" y="204" width="96" height="16" rx="3" fill="var(--accent-2)"/>
+        <rect x="246" y="62" width="40" height="34" rx="4" class="f-elev"/>
+        <rect x="246" y="164" width="40" height="34" rx="4" class="f-elev"/>
+        <line x1="232" y1="79" x2="300" y2="79" stroke="var(--accent)" stroke-width="3"/>
+        <line x1="232" y1="181" x2="300" y2="181" stroke="var(--accent)" stroke-width="3"/>
+        <line x1="232" y1="79" x2="232" y2="181" stroke="var(--accent)" stroke-width="3"/>
+        <rect x="240" y="104" width="62" height="52" rx="4" fill="var(--ok)"/>
+        <text x="271" y="136" text-anchor="middle" class="t" style="fill:#fff">선</text>
+        <text x="270" y="30" class="t-dim" text-anchor="middle" style="fill:var(--accent-2)">링 기어</text>
+        <text x="330" y="84" class="t-dim">유성 기어</text>
+        <!-- MG1 below via sun shaft -->
+        <path d="M302 130 L340 130 L340 250 L300 250" fill="none" stroke="var(--ok)" stroke-width="4"/>
+        <rect x="204" y="228" width="96" height="46" rx="8" fill="none" stroke="var(--ok)" stroke-width="2"/>
+        <text x="252" y="257" class="t" text-anchor="middle">MG1</text>
+        <!-- ring to MG2 and wheels -->
+        <path d="M318 48 L420 48 L420 110" fill="none" stroke="var(--accent-2)" stroke-width="4"/>
+        <rect x="372" y="110" width="96" height="46" rx="8" class="f-acc2-soft"/>
+        <text x="420" y="139" class="t" text-anchor="middle">MG2</text>
+        <line x1="468" y1="133" x2="530" y2="133" stroke="var(--accent-2)" stroke-width="4"/>
+        <rect x="530" y="108" width="74" height="50" rx="8" class="f-surface"/>
+        <text x="567" y="130" class="t-dim" text-anchor="middle">감속·</text><text x="567" y="150" class="t-dim" text-anchor="middle">디퍼렌셜</text>
+        <line x1="604" y1="133" x2="660" y2="133" stroke="var(--text-dim)" stroke-width="4"/>
+        <rect x="660" y="98" width="30" height="70" rx="8" fill="var(--text-dim)"/>
+        <text x="675" y="190" class="t-dim" text-anchor="middle">바퀴</text>
+        <!-- electrical -->
+        <rect x="392" y="218" width="130" height="56" rx="8" class="f-surface"/>
+        <text x="457" y="242" class="t" text-anchor="middle">인버터</text><text x="457" y="264" class="t-dim" text-anchor="middle">+ 배터리</text>
+        <line x1="300" y1="262" x2="392" y2="262" stroke="#f08a00" stroke-width="3" stroke-dasharray="7 5"/>
+        <line x1="440" y1="218" x2="440" y2="156" stroke="#f08a00" stroke-width="3" stroke-dasharray="7 5"/>
+        <text x="540" y="212" class="t-dim" style="fill:#f08a00">전기 경로</text>
+        <text x="520" y="60" class="t-dim" style="fill:var(--accent-2)">기계 경로</text>
+      </svg>
+      <figcaption><b>그림 14-3.</b> 동력 분기 장치의 연결. 엔진 토크는 유성 기어에서 링 기어(기계 경로)와 선 기어(MG1)로 나뉜다. MG1이 만든 전기는 MG2로 가서 다시 링 기어 쪽에 합류한다(전기 경로). 클러치도, 변속 기어도 없다.</figcaption>
+    </figure>
+
+    <h3>속도 관계: 윌리스 식과 레버 선도</h3>
+    <p>유성 기어의 세 요소 회전 속도는 하나의 일차식으로 묶인다. 선 기어 잇수 \(Z_s\), 링 기어 잇수 \(Z_r\), 잇수비 \(\rho = Z_s/Z_r\)라 하면 <span class="term">윌리스 식</span>은 다음과 같다.</p>
+    <div class="formula">$$Z_s\,\omega_s + Z_r\,\omega_r = (Z_s + Z_r)\,\omega_c \quad\Longleftrightarrow\quad \omega_s = \frac{(1+\rho)\,\omega_c - \omega_r}{\rho}$$
+      <div class="where">여기서 \(\omega_s\)는 선 기어(MG1), \(\omega_c\)는 캐리어(엔진), \(\omega_r\)는 링 기어(MG2·바퀴)의 회전 속도. 이 장의 예에서는 \(Z_s = 30\), \(Z_r = 78\), \(\rho \approx 0.385\)를 쓴다.</div>
+    </div>
+    <p>이 식은 자유도가 2라는 뜻이다. 링 기어 속도는 차속이 정한다. 그러면 MG1의 속도를 조절하는 것만으로 엔진 회전수를 차속과 무관하게 원하는 값으로 맞출 수 있다. 기어를 바꿔 끼우지 않고도 변속비가 연속으로 변하므로 <span class="term">전기식 무단 변속기</span><span class="en">(e-CVT)</span>라 부른다. 벨트와 풀리를 쓰는 기계식 CVT와는 이름만 비슷할 뿐 전혀 다른 장치다.</p>
+    <p>윌리스 식을 그림으로 옮긴 것이 <span class="term">레버 선도</span><span class="en">(Lever Diagram)</span>다. 세 요소를 세로축 세 개로 세우되, 선–캐리어 간격과 캐리어–링 간격을 \(1 : \rho\)로 둔다. 그러면 세 축의 회전 속도는 언제나 한 직선 위에 놓인다. 엔진 점을 받침점으로 삼아 막대를 기울이는 시소를 떠올리면 된다.</p>
+
+    <div class="sim" id="sim-psd">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>동력 분기 유성 기어와 레버 선도</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-psd-gear"></canvas><canvas id="cv-psd-lever" class="drag-cv"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>엔진(캐리어) 회전수 <output id="psd-eng-out"></output></span><input type="range" id="psd-eng" min="0" max="4500" value="2000" step="100"></label>
+          <label class="ctrl"><span>차속(링 기어) <output id="psd-v-out"></output></span><input type="range" id="psd-v" min="0" max="180" value="40" step="0.5"></label>
+          <label class="ctrl"><span>엔진 토크 <output id="psd-tq-out"></output></span><input type="range" id="psd-tq" min="0" max="140" value="100" step="5"></label>
+          <div class="ctrl"><span>프리셋</span><div class="ctrl-row">
+            <button class="btn" id="psd-p-ev">EV 주행</button><button class="btn" id="psd-p-launch">발진 가속</button><button class="btn" id="psd-p-mech">기계점</button><button class="btn" id="psd-p-cruise">고속 크루즈</button>
+          </div></div>
+        </div>
+      </div>
+      <div class="legend"><span><i style="background:var(--ok)"></i>선 기어 = MG1</span><span><i style="background:var(--accent)"></i>캐리어 = 엔진</span><span><i style="background:var(--accent-2)"></i>링 기어 = MG2·바퀴</span></div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">MG1 회전수</span><span class="v" id="psd-ns">—</span></div>
+        <div class="stat"><span class="k">링 기어 회전수</span><span class="v" id="psd-nr">—</span></div>
+        <div class="stat"><span class="k">엔진 출력</span><span class="v" id="psd-pe">—</span></div>
+        <div class="stat"><span class="k">MG1 반력 토크</span><span class="v" id="psd-ts">—</span></div>
+        <div class="stat"><span class="k">링으로 가는 엔진 토크</span><span class="v" id="psd-tr">—</span></div>
+        <div class="stat"><span class="k">MG1 상태</span><span class="v" id="psd-st">—</span></div>
+        <div class="stat"><span class="k">전기 경로 비율</span><span class="v" id="psd-fr">—</span></div>
+      </div>
+      <div class="sim-note">아래 레버 선도에서 엔진 점(C)과 링 점(R)을 위아래로 끌 수 있다. 링 기어에서 바퀴까지의 감속비 3.3, 타이어 반지름 0.31 m로 두어 시속 100 km에서 링 기어가 약 2,820 rpm이다. 회전 그림은 실제의 1/120 속도로 느리게 돌린다. 해볼 것: "EV 주행"에서 엔진이 멈춘 채 MG1이 거꾸로 헛도는 것을 확인하라. "발진 가속"에서 엔진 회전수를 더 올리면 MG1이 한계 회전수(여기서는 10,000 rpm)를 넘는다. "고속 크루즈"에서는 MG1이 역회전하며 전기 경로 비율이 음수가 된다.</div>
+    </div>
+
+    <h3>토크 관계: 엔진 토크는 항상 같은 비율로 나뉜다</h3>
+    <p>속도는 자유롭지만 토크는 그렇지 않다. 유성 기어는 레버와 같아서, 정상 상태에서는 세 요소의 토크가 잇수로 정해진 비율을 지켜야 한다.</p>
+    <div class="formula">$$T_s = \frac{\rho}{1+\rho}\,T_e, \qquad T_r = \frac{1}{1+\rho}\,T_e$$
+      <div class="where">\(T_e\)는 캐리어에 걸리는 엔진 토크, \(T_s\)는 MG1이 버텨 줘야 하는 반력 토크, \(T_r\)는 링 기어로 전달되는 토크. \(\rho = 0.385\)이면 엔진 토크의 약 28 %가 선 기어로, 72 %가 링 기어로 간다.</div>
+    </div>
+    <p>여기서 중요한 사실이 나온다. MG1이 반력을 주지 않으면 엔진 토크는 링 기어에 한 톨도 전달되지 않는다. 엔진은 가벼운 MG1만 헛돌릴 뿐이다. 엔진의 힘을 바퀴에 전하려면 MG1이 반드시 토크를 걸어야 하고, 돌고 있는 축에 반대 방향 토크를 건다는 것은 곧 발전한다는 뜻이다. 그 전력이 엔진 출력에서 차지하는 비율이 <b>전기 경로 비율</b>이다.</p>
+    <div class="formula">$$\frac{P_{MG1}}{P_e} = \frac{T_s\,\omega_s}{T_e\,\omega_c} = 1 - \frac{\omega_r}{(1+\rho)\,\omega_c}$$
+      <div class="where">\(\omega_r = (1+\rho)\,\omega_c\)일 때 MG1이 정지하여 전기 경로가 0이 된다. 이 점을 기계점<span class="en">(Mechanical Point)</span>이라 한다.</div>
+    </div>
+    <div class="callout tip">
+      <strong>계산 예: 시속 40 km, 엔진 2,000 rpm·100 N·m</strong>
+      <p>링 기어는 약 1,128 rpm이다. 윌리스 식에서 \(\omega_s = (108 \times 2000 - 78 \times 1128)/30 \approx 4{,}267\) rpm. 토크는 MG1에 \(100 \times 30/108 = 27.8\) N·m, 링에 72.2 N·m. 엔진 출력은 \(100 \times 2000 \times 2\pi/60 \approx 20.9\) kW, MG1 발전 출력은 \(27.8 \times 4267 \times 2\pi/60 \approx 12.4\) kW이므로 전기 경로 비율은 59 %다. 식으로도 \(1 - 1128/(1.385 \times 2000) = 0.59\).</p>
+    </div>
+    <p>전기 경로는 발전기와 모터, 인버터 두 대를 거치므로 효율이 대표적으로 80 % 안팎이고, 기계 경로는 기어뿐이라 97 % 수준이다. 따라서 동력 분기식은 기계점 부근에서 가장 효율이 좋다. 기계점보다 차속이 높아지면 MG1이 역회전하면서 모터로 일하고, 그 전기를 MG2가 발전해서 대야 한다. 출력이 전기 경로를 거꾸로 맴도는 이 상태를 <b>동력 순환</b><span class="en">(Power Recirculation)</span>이라 하며, 고속 효율을 떨어뜨리는 원인이다. 그래서 MG2를 링 기어와 다른 축에 두어 감속비를 따로 주거나, 유성 기어를 한 벌 더 써서 기계점을 둘로 늘린 방식도 쓰인다.</p>
+    <div class="callout">
+      <strong>후진 기어는 어디에?</strong>
+      <p>없다. MG2를 거꾸로 돌리면 그만이다. 발진용 클러치나 토크 컨버터도 없다. 차가 서 있어도(링 정지) 엔진이 도는 만큼 MG1이 돌아 주면 되기 때문이다. 시동 모터도 없다. MG1이 캐리어를 돌려 엔진을 건다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 5 -->
+  <section id="modes">
+    <h2>운전 모드와 에너지 흐름</h2>
+    <p>구조가 무엇이든 풀 하이브리드는 주행 상황에 따라 다음 다섯 가지 상태를 오간다. 운전자는 페달만 밟고, 어느 상태로 갈지는 제어기가 매 순간 정한다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>모드</th><th>엔진</th><th>배터리</th><th>언제</th></tr></thead>
+      <tbody>
+        <tr><td>EV 주행</td><td>정지</td><td>방전</td><td>발진, 저속, 낮은 요구 출력, SOC 충분</td></tr>
+        <tr><td>엔진 주행</td><td>가동</td><td>거의 0</td><td>중·고속 정속. 엔진이 효율 좋은 영역에 있을 때</td></tr>
+        <tr><td>가속 보조</td><td>가동</td><td>방전</td><td>급가속, 등판. 엔진 최대 출력에 모터 출력을 더한다</td></tr>
+        <tr><td>주행 중 충전</td><td>가동(부하 올림)</td><td>충전</td><td>요구 출력이 낮거나 SOC가 낮을 때. 운전점 이동</td></tr>
+        <tr><td>회생 제동</td><td>정지 또는 연료 차단</td><td>충전</td><td>감속, 내리막</td></tr>
+      </tbody>
+    </table></div>
+    <p>아래는 동력 분기식 하이브리드의 에너지 흐름도다. 화살표의 굵기는 출력, 움직이는 방향은 에너지가 흐르는 방향이다. 엔진이 켜져 있을 때는 4절의 윌리스 식으로 전기 경로 비율을 실제로 계산해 나눈다.</p>
+
+    <div class="sim" id="sim-flow">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>에너지 흐름도</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-flow"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>상황</span><div class="seg" id="ef-preset"><button data-value="ev">EV</button><button data-value="cruise" class="on">크루즈</button><button data-value="boost">급가속</button><button data-value="charge">충전</button><button data-value="regen">회생</button></div></div>
+          <label class="ctrl"><span>가속 페달 <output id="ef-acc-out"></output></span><input type="range" id="ef-acc" min="0" max="100" value="22" step="1"></label>
+          <label class="ctrl"><span>브레이크 페달 <output id="ef-brk-out"></output></span><input type="range" id="ef-brk" min="0" max="100" value="0" step="1"></label>
+          <label class="ctrl"><span>차속 <output id="ef-v-out"></output></span><input type="range" id="ef-v" min="0" max="160" value="80" step="1"></label>
+          <label class="ctrl"><span>배터리 SOC <output id="ef-soc-out"></output></span><input type="range" id="ef-soc" min="30" max="80" value="55" step="1"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">모드</span><span class="v" id="ef-mode">—</span></div>
+        <div class="stat"><span class="k">엔진</span><span class="v" id="ef-pe">—</span></div>
+        <div class="stat"><span class="k">배터리(+방전)</span><span class="v" id="ef-pb">—</span></div>
+        <div class="stat"><span class="k">바퀴</span><span class="v" id="ef-pw">—</span></div>
+        <div class="stat"><span class="k">전기 경로 비율</span><span class="v" id="ef-fr">—</span></div>
+      </div>
+      <div class="sim-note">선 옆의 숫자는 kW. 흐름의 방향만 보려고 변환 손실은 무시했다. 제어 규칙은 단순하다: 요구 출력이 12 kW 이하이고 SOC가 충분하면 EV, 그 밖에는 엔진을 켜되 8 kW 미만으로는 돌리지 않고, SOC가 55 % 아래면 충전분을 얹는다. 엔진 최대 72 kW, 배터리 최대 30 kW, 회생 최대 35 kW. 해볼 것: "크루즈"에서 차속을 150 km/h까지 올려 MG1과 MG2 사이의 흐름이 뒤집히는 것(동력 순환)을 보라. "회생"에서 브레이크를 더 밟으면 초과분이 마찰열로 빠진다. SOC를 80 %까지 올리면 회생이 어떻게 되는가?</div>
+    </div>
+    <p>병렬형(P2)에서는 같은 다섯 모드를 클러치 K0로 구현한다. K0를 열면 EV 주행과 회생, 닫으면 엔진 주행이고, 모터 토크의 부호에 따라 가속 보조(+)와 주행 중 충전(−)이 갈린다. 엔진을 끄고 켤 때마다 K0를 매끄럽게 붙이는 것이 병렬형 제어의 가장 까다로운 부분이다.</p>
+  </section>
+
+  <!-- =============================================================== 6 -->
+  <section id="regen">
+    <h2>회생 제동과 협조 제어</h2>
+    <p>구동 모터는 토크의 방향만 바꾸면 발전기가 된다. 회전 방향과 반대로 토크를 걸면 바퀴가 모터를 돌리는 셈이 되어 운동 에너지가 전기로 바뀌고, 그 반력이 차를 세운다. 이것이 <span class="term">회생 제동</span><span class="en">(Regenerative Braking)</span>이다. 다만 운동 에너지를 전부 되찾을 수는 없다. 회수량을 막는 한계가 여럿 있다.</p>
+    <ul>
+      <li><b>모터 토크 한계</b>: 저속에서는 모터의 최대 토크가 제동력의 상한이 된다.</li>
+      <li><b>모터·인버터 출력 한계</b>: 제동 출력은 \(P = Fv\)이므로 고속에서는 같은 제동력에도 출력이 크다. 출력 한계 \(P_{max}\)가 있으면 낼 수 있는 제동력은 \(P_{max}/v\)로 줄어든다.</li>
+      <li><b>배터리 수용 전력</b>: 배터리가 받을 수 있는 충전 전력에도 상한이 있다. SOC가 높거나 온도가 낮으면 크게 줄어든다(<a href="battery.html">16장</a>). 하이브리드의 작은 배터리에서는 이것이 가장 먼저 걸린다.</li>
+      <li><b>저속 컷오프</b>: 속도가 아주 낮으면 모터의 역기전력이 작아 발전 효율이 떨어지고 토크 제어가 거칠어진다. 대표적으로 시속 5~10 km 아래에서는 회생을 줄여 마찰 브레이크로 넘긴다.</li>
+      <li><b>구동축</b>: 모터가 달린 축의 바퀴로만 회생할 수 있다. 제동 시 하중이 앞으로 쏠리므로(<a href="tire.html">7장</a>) 전륜 구동은 유리하고 후륜 구동은 불리하다. 접지 한계와 차량 안정성 때문에 한 축에만 큰 제동력을 걸 수도 없다.</li>
+      <li><b>변환 효율</b>: 바퀴→모터→인버터→배터리, 그리고 다시 반대로. 왕복하면 대표적으로 65~75 %가 남는다.</li>
+    </ul>
+    <div class="formula">$$F_{regen}(v) = \min\!\left(F_{T,max},\ \frac{\min(P_{motor},\ P_{batt}/\eta)}{v}\right), \qquad F_{friction} = F_{demand} - F_{regen}$$
+      <div class="where">\(F_{T,max}\)는 모터 최대 토크에 해당하는 바퀴 제동력, \(P_{motor}\)는 모터 출력 한계, \(P_{batt}\)는 배터리 수용 전력, \(\eta\)는 모터·인버터 효율.</div>
+    </div>
+    <p>운전자가 요구한 제동력이 이 한계보다 크면 초과분은 마찰 브레이크가 맡아야 한다. 문제는 한계가 속도와 함께 계속 변한다는 것이다. 정지할 때까지 회생 몫과 마찰 몫이 시시각각 바뀌는데도 운전자가 느끼는 감속도와 페달 감각은 한결같아야 한다. 그래서 하이브리드와 전기차는 페달과 유압이 기계적으로 분리된 <span class="term">협조 회생 제동</span><span class="en">(Cooperative Regenerative Braking)</span> 시스템을 쓴다. 페달 스트로크 센서가 운전자의 의도를 읽고, 제어기가 회생 가능한 토크를 모터에서 받아 온 뒤, 모자라는 만큼만 전동 부스터로 유압을 만든다. 페달의 반발감은 시뮬레이터 스프링이 흉내 낸다. 유압 계통은 <a href="brake.html">8장</a>에서 다뤘다.</p>
+
+    <div class="sim" id="sim-regen">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>회생·마찰 제동 블렌딩</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-rg-map"></canvas><canvas id="cv-rg-time"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>제동 시작 속도 <output id="rg-v0-out"></output></span><input type="range" id="rg-v0" min="30" max="140" value="100" step="5"></label>
+          <label class="ctrl"><span>요구 감속도 <output id="rg-a-out"></output></span><input type="range" id="rg-a" min="0.5" max="8" value="2" step="0.1"></label>
+          <label class="ctrl"><span>모터 출력 한계 <output id="rg-pm-out"></output></span><input type="range" id="rg-pm" min="15" max="150" value="60" step="5"></label>
+          <label class="ctrl"><span>배터리 수용 전력 <output id="rg-pb-out"></output></span><input type="range" id="rg-pb" min="5" max="150" value="35" step="5"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">처음 운동 에너지</span><span class="v" id="rg-ek">—</span></div>
+        <div class="stat"><span class="k">배터리에 회수</span><span class="v" id="rg-er">—</span></div>
+        <div class="stat"><span class="k">회수율</span><span class="v" id="rg-ratio">—</span></div>
+        <div class="stat"><span class="k">마찰 브레이크 열</span><span class="v" id="rg-ef">—</span></div>
+        <div class="stat"><span class="k">주행 저항이 가져간 몫</span><span class="v" id="rg-el">—</span></div>
+        <div class="stat"><span class="k">정지 시간 / 거리</span><span class="v" id="rg-t">—</span></div>
+      </div>
+      <div class="sim-note">차 질량 1,600 kg, 모터 최대 제동력 4.5 kN(약 0.29 g), 충전 경로 효율 85 %, 시속 12 km 아래에서 회생을 줄여 5 km에서 0으로 만든다. 위 그래프는 속도에 따른 회생 한계와 요구 제동력, 아래는 정지할 때까지의 시간 경과다. 초록이 회생, 빨강이 마찰. 해볼 것: 감속도 2 m/s²의 부드러운 제동과 6 m/s²의 급제동에서 회수율을 비교하라. 같은 운동 에너지라도 천천히 세울수록 많이 되찾는다. 배터리 수용 전력을 15 kW로 줄이면(추운 날, 또는 SOC가 높을 때) 어떻게 되는가?</div>
+    </div>
+    <div class="callout tip">
+      <strong>계산 예: 급제동은 회생의 적</strong>
+      <p>1,600 kg 차를 시속 100 km(27.8 m/s)에서 3 m/s²로 세우려면 제동력 4,800 N, 제동 출력은 \(4800 \times 27.8 \approx 133\) kW다. 회생 한계가 50 kW라면 시작 순간에는 요구의 38 %만 회생하고 나머지는 디스크가 열로 바꾼다. 회생만으로 요구를 다 감당하게 되는 것은 \(v = 50{,}000/4800 = 10.4\) m/s, 시속 37 km 아래로 내려온 뒤다. 미리 발을 떼고 약하게 길게 제동하는 운전이 하이브리드 연비에 유리한 이유다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 7 -->
+  <section id="ems">
+    <h2>에너지 관리 전략</h2>
+    <p>하이브리드에는 일반차에 없는 자유도가 하나 있다. 요구 출력을 엔진과 배터리가 어떤 비율로 나눠 맡을 것인가. 이를 매 순간 정하는 것이 <span class="term">에너지 관리 전략</span><span class="en">(Energy Management Strategy, EMS)</span>이다. 제약은 분명하다. 외부 충전이 없는 하이브리드에서 배터리는 에너지원이 아니라 잠시 맡아 두는 완충기일 뿐이므로, 주행이 끝났을 때 SOC가 처음과 같아야 한다. 결국 모든 에너지는 연료에서 온다.</p>
+    <ul>
+      <li><span class="term">충전 유지</span><span class="en">(Charge Sustaining, CS)</span>: SOC를 목표값(대표적으로 50~60 %) 주변의 좁은 창 안에서 오르내리게 한다. 일반 하이브리드의 유일한 모드다.</li>
+      <li><span class="term">충전 소진</span><span class="en">(Charge Depleting, CD)</span>: 외부에서 충전한 전기를 쓰며 SOC가 계속 내려간다. PHEV가 전기 주행을 하는 구간이다. 하한에 닿으면 CS로 넘어간다.</li>
+    </ul>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 720 270" role="img" aria-label="HEV와 PHEV의 SOC 변화">
+        <line x1="70" y1="20" x2="70" y2="225" class="s-axis"/><line x1="70" y1="225" x2="700" y2="225" class="s-axis"/>
+        <text x="62" y="40" class="t-mono" text-anchor="end">100</text><text x="62" y="130" class="t-mono" text-anchor="end">50</text><text x="62" y="225" class="t-mono" text-anchor="end">0</text>
+        <text x="24" y="130" class="t-dim" transform="rotate(-90 24 130)" text-anchor="middle">SOC (%)</text>
+        <text x="385" y="258" class="t-dim" text-anchor="middle">주행 거리 →</text>
+        <rect x="70" y="92" width="630" height="56" fill="var(--accent-2-soft)" stroke="none"/>
+        <polyline points="70,118 110,128 150,112 190,124 230,104 270,120 310,130 350,110 390,122 430,106 470,126 510,114 550,128 590,108 630,120 700,116" fill="none" stroke="var(--accent-2)" stroke-width="2.4"/>
+        <text x="690" y="84" class="t" text-anchor="end" style="fill:var(--accent-2);font-weight:700">HEV: 좁은 창 안에서 충전 유지</text>
+        <polyline points="70,46 130,64 190,86 250,104 310,126 370,146 430,168 470,184 500,178 530,188 560,176 590,186 620,178 650,188 700,180" fill="none" stroke="var(--accent)" stroke-width="2.6"/>
+        <line x1="470" y1="30" x2="470" y2="225" class="s-line" stroke-dasharray="4 4"/>
+        <text x="270" y="60" class="t-acc" text-anchor="middle">PHEV: 충전 소진(CD)</text>
+        <text x="585" y="212" class="t-acc" text-anchor="middle">충전 유지(CS)</text>
+      </svg>
+      <figcaption><b>그림 14-4.</b> SOC의 움직임. 일반 하이브리드는 배터리 수명을 위해 용량의 일부(대표적으로 40~70 %)만 쓴다. PHEV는 넓은 범위를 써서 전기로 달리다가 하한 근처에서 일반 하이브리드처럼 동작한다.</figcaption>
+    </figure>
+
+    <h3>규칙 기반 제어와 ECMS</h3>
+    <p>가장 널리 쓰이는 방식은 <b>규칙 기반</b><span class="en">(Rule-based)</span> 제어다. "요구 출력이 문턱값보다 작고 SOC가 충분하면 엔진을 끈다", "엔진을 켰으면 OOL 위에서 돌린다", "SOC가 목표보다 낮으면 충전 출력을 얹는다" 같은 규칙과 맵으로 이루어진다. 엔진이 너무 자주 켜지고 꺼지지 않도록 문턱값에는 히스테리시스를 둔다. 단순하고 예측 가능하지만, 규칙을 만드는 사람의 경험에 기대고 최적이라는 보장이 없다.</p>
+    <p>최적화 관점의 대표가 <span class="term">등가 연료 소비 최소화 전략</span><span class="en">(Equivalent Consumption Minimization Strategy, ECMS)</span>이다. 생각은 간단하다. 지금 배터리에서 꺼내 쓴 전기는 언젠가 엔진으로 다시 채워야 하므로 공짜가 아니다. 전기에 "연료로 환산한 값"을 매겨 연료와 한 저울에 올리고, 그 합이 최소가 되는 출력 배분을 매 순간 고른다.</p>
+    <div class="formula">$$\dot m_{eq} = \dot m_{f}(P_e) + s\,\frac{P_{batt}}{Q_{LHV}}, \qquad P_e + P_{batt} = P_{demand}$$
+      <div class="where">\(\dot m_f\)는 엔진의 연료 유량, \(P_{batt}\)는 배터리 출력(방전이 +), \(Q_{LHV}\)는 연료의 저위 발열량, \(s\)는 등가 계수. \(s\)가 크면 전기가 비싸져 충전하려 하고, 작으면 전기를 쓰려 한다.</div>
+    </div>
+    <p>등가 계수 \(s\)는 대략 "연료를 전기로 바꾸는 경로 효율의 역수"로 2.5~3.5 근처의 값이며, SOC가 목표에서 벗어나면 되돌아오도록 조정한다. 앞으로의 주행 조건을 모두 안다면 동적 계획법으로 진짜 최적해를 구할 수 있지만 실차에서는 미래를 모른다. 그래서 요즘은 내비게이션의 경로·경사·정체 정보를 받아 내리막 전에 미리 SOC를 비워 두는 식의 예측 제어가 더해진다.</p>
+
+    <p>아래 시뮬레이터는 같은 속도 프로파일을 일반 내연기관차와 규칙 기반 하이브리드가 각각 달렸을 때의 결과다. 두 차의 차체는 같고, 파워트레인만 다르다.</p>
+    <div class="sim" id="sim-cycle">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>주행 사이클: 일반차 대 하이브리드</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-cycle"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>주행 패턴</span><div class="seg" id="dc-type"><button data-value="city" class="on">도심</button><button data-value="sub">교외</button><button data-value="hwy">고속</button></div></div>
+          <label class="ctrl"><span>차 질량 <output id="dc-m-out"></output></span><input type="range" id="dc-m" min="1100" max="2300" value="1500" step="50"></label>
+          <label class="ctrl"><span>배터리 용량 <output id="dc-e-out"></output></span><input type="range" id="dc-e" min="0.4" max="3" value="1.3" step="0.1"></label>
+          <label class="ctrl"><span>회생 출력 한계 <output id="dc-r-out"></output></span><input type="range" id="dc-r" min="0" max="60" value="30" step="2"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">일반차 연비</span><span class="v" id="dc-fc">—</span></div>
+        <div class="stat"><span class="k">하이브리드 연비(SOC 보정)</span><span class="v" id="dc-fh">—</span></div>
+        <div class="stat"><span class="k">연료 절감</span><span class="v" id="dc-save">—</span></div>
+        <div class="stat"><span class="k">제동 에너지 회수율</span><span class="v" id="dc-reg">—</span></div>
+        <div class="stat"><span class="k">엔진 가동 시간</span><span class="v" id="dc-on">—</span></div>
+        <div class="stat"><span class="k">일반차 공회전 연료</span><span class="v" id="dc-idle">—</span></div>
+      </div>
+      <div class="sim-note">위에서부터 속도(음영은 하이브리드의 엔진이 켜진 구간), 배터리 SOC, 누적 연료량. 엔진은 윌런스 선 모델(연료 출력 = (축 출력 + 마찰 출력) / 지시 효율)로 계산하며, 하이브리드 엔진은 OOL 위의 애트킨슨 엔진으로 가정했다. 처음과 끝의 SOC 차이는 연료로 환산해 보정한다. 해볼 것: 도심과 고속에서 절감률이 얼마나 다른가? 회생 한계를 0으로 두면 절감분 중 회생의 몫이 얼마인지 알 수 있다. 배터리를 0.4 kWh로 줄이면 출력 한계 때문에 엔진이 더 자주 켜진다. 질량을 키우면 일반차와 하이브리드 중 어느 쪽 연비가 더 많이 나빠지는가?</div>
+    </div>
+
+    <h3>하이브리드에 맞춘 엔진: 애트킨슨 사이클</h3>
+    <p>모터가 저속 토크와 순간 가속을 책임지므로 하이브리드의 엔진은 최대 출력을 조금 내주고 효율에 집중할 수 있다. 대표적인 방법이 <span class="term">애트킨슨 사이클</span><span class="en">(Atkinson Cycle)</span>이다. <a href="engine.html">3장</a>에서 본 오토 사이클의 열효율은 압축비가 높을수록 좋아지지만, 압축비를 올리면 노킹이 생긴다. 그런데 효율을 정하는 것은 사실 <b>팽창비</b>이고 노킹을 정하는 것은 <b>유효 압축비</b>다. 둘을 따로 놓을 수 있다면 좋을 것이다.</p>
+    <p>현대의 애트킨슨 엔진은 흡기 밸브를 하사점 한참 뒤에 닫아서 이를 구현한다. 피스톤이 올라가는 동안 흡기 밸브가 아직 열려 있으므로 들어왔던 혼합기 일부가 흡기관으로 되밀려 나가고, 실제 압축은 밸브가 닫힌 뒤부터 시작된다. 기하학적 압축비(=팽창비)는 13~14로 높지만 유효 압축비는 9~10 정도에 머문다. 덤으로, 같은 공기량을 넣는 데 스로틀을 더 열어야 하므로 펌핑 손실도 줄어든다.</p>
+
+    <figure class="diagram fig-lg">
+      <svg viewBox="0 0 720 300" role="img" aria-label="오토 사이클과 애트킨슨 사이클의 P-V 선도 비교">
+        <line x1="80" y1="20" x2="80" y2="250" class="s-axis"/><line x1="80" y1="250" x2="640" y2="250" class="s-axis"/>
+        <text x="40" y="130" class="t-dim" transform="rotate(-90 40 130)" text-anchor="middle">압력 P</text>
+        <text x="360" y="288" class="t-dim" text-anchor="middle">체적 V</text>
+        <path d="M400 172 Q480 192 560 202 L560 224 L400 224 Z" class="f-acc-soft" stroke="none"/>
+        <path d="M400 224 Q170 212 120 136" fill="none" stroke="var(--accent-2)" stroke-width="2.4"/>
+        <line x1="120" y1="136" x2="120" y2="40" stroke="var(--bad)" stroke-width="2.4"/>
+        <path d="M120 40 Q180 150 400 172" fill="none" stroke="var(--text)" stroke-width="2.4"/>
+        <line x1="400" y1="172" x2="400" y2="224" stroke="var(--text-dim)" stroke-width="2" stroke-dasharray="5 4"/>
+        <path d="M400 172 Q480 192 560 202" fill="none" stroke="var(--accent)" stroke-width="2.8"/>
+        <line x1="560" y1="202" x2="560" y2="224" stroke="var(--accent)" stroke-width="2.8"/>
+        <line x1="560" y1="224" x2="400" y2="224" stroke="var(--accent)" stroke-width="2.8"/>
+        <line x1="120" y1="250" x2="120" y2="258" class="s-line"/><text x="120" y="274" class="t-mono" text-anchor="middle">TDC</text>
+        <line x1="400" y1="250" x2="400" y2="258" class="s-line"/><text x="400" y="274" class="t-mono" text-anchor="middle">압축 시작</text>
+        <line x1="560" y1="250" x2="560" y2="258" class="s-line"/><text x="560" y="274" class="t-mono" text-anchor="middle">BDC</text>
+        <text x="136" y="92" class="t-dim" style="fill:var(--bad)">연소</text>
+        <text x="200" y="196" class="t-dim" style="fill:var(--accent-2)">압축</text>
+        <text x="250" y="124" class="t-dim">팽창</text>
+        <text x="412" y="128" class="t-dim">오토: 여기서 배기 밸브가 열려</text>
+        <text x="330" y="50" class="t">오토 사이클: 압축 행정 = 팽창 행정</text>
+        <text x="330" y="76" class="t-acc">애트킨슨: 팽창 행정 &gt; 압축 행정</text>
+        <text x="412" y="150" class="t-dim">남은 압력을 버린다</text>
+        <text x="482" y="218" class="t-acc" text-anchor="middle">추가로 얻는 일</text>
+        <line x1="400" y1="236" x2="560" y2="236" class="s-line" stroke-dasharray="3 3"/>
+      </svg>
+      <figcaption><b>그림 14-5.</b> 같은 양의 혼합기를 같은 유효 압축비로 압축해 태웠을 때의 개념 P–V 선도. 오토 사이클은 팽창이 압축 시작 체적에서 끝나 아직 압력이 남은 가스를 배기로 내보낸다. 애트킨슨 사이클은 하사점까지 더 팽창시켜 주황색 면적만큼의 일을 더 얻는다.</figcaption>
+    </figure>
+    <p>대가는 배기량당 출력이다. 실린더를 가득 채우지 않으므로 같은 배기량의 오토 엔진보다 토크가 20~30 % 작다. 일반차라면 답답하겠지만 하이브리드는 모터가 그 틈을 메운다. 여기에 냉각 EGR, 전동 워터펌프(벨트 구동 보기류 제거), 저마찰 설계를 더해 최신 하이브리드 전용 엔진은 최고 열효율 40 %를 넘긴다.</p>
+
+    <h3>하이브리드용 배터리: 작지만 세게</h3>
+    <p>전기차 배터리가 "얼마나 많이 담는가"(에너지)로 설계된다면, 하이브리드 배터리는 "얼마나 빨리 넣고 빼는가"(출력)로 설계된다. 1.3 kWh 배터리가 30 kW를 주고받는다면 C-rate가 20C를 넘는다. 용량 60 kWh 전기차 배터리가 150 kW를 내는 것이 2.5C임을 생각하면 훨씬 가혹한 조건이다. 그래서 하이브리드용 셀은 전극을 얇게 만들어 내부 저항을 낮춘 출력형이고, 에너지 밀도는 그만큼 낮다. 오랫동안 니켈 수소(Ni-MH) 전지가 쓰였고 지금은 출력형 리튬 이온이 주류다.</p>
+    <p>수명도 다르게 관리한다. 하이브리드 배터리는 차의 일생 동안 얕은 충·방전을 수십만 번 반복한다. SOC를 40~70 %의 가운데 구간으로만 쓰면 전극의 팽창·수축과 부반응이 줄어 이 횟수를 견딜 수 있다. 1.3 kWh 가운데 실제로 쓰는 것은 0.4 kWh 남짓인 셈이다. 셀의 화학과 BMS는 <a href="battery.html">16장</a>에서 자세히 다룬다.</p>
+  </section>
+
+  <!-- =============================================================== 8 -->
+  <section id="phev">
+    <h2>플러그인 하이브리드와 연비 계산</h2>
+    <p><span class="term">플러그인 하이브리드</span><span class="en">(Plug-in Hybrid Electric Vehicle, PHEV)</span>는 배터리를 10~20 kWh로 키우고 외부 충전구를 단 하이브리드다. 충전된 상태에서는 전기차처럼 달리고(CD 모드), 배터리가 바닥나면 일반 하이브리드처럼 달린다(CS 모드). 매일의 주행 거리가 전기 주행 가능 거리보다 짧은 사람은 주유소에 갈 일이 거의 없고, 장거리에서도 충전 걱정이 없다는 것이 장점이다. 단점은 두 벌의 파워트레인을 모두 싣는 무게와 비용이다.</p>
+    <p>PHEV의 연비는 숫자 하나로 말하기 어렵다. 전기로 달린 거리와 연료로 달린 거리의 비율이 사람마다 다르기 때문이다. 이를 나타내는 값이 <span class="term">유틸리티 팩터</span><span class="en">(Utility Factor, UF)</span>, 곧 전체 주행 거리 가운데 전기(CD 모드)로 달린 거리의 비율이다. 하루 주행 거리가 \(d_i\)이고 전기 주행 거리가 \(R\)이며 매일 완충한다면, 그날 전기로 달리는 거리는 \(\min(d_i, R)\)이다.</p>
+    <div class="formula">$$UF(R) = \frac{\sum_i \min(d_i,\,R)}{\sum_i d_i}, \qquad FC = (1-UF)\,FC_{CS}, \qquad EC = UF \cdot EC_{CD}$$
+      <div class="where">\(FC_{CS}\)는 CS 모드의 연료 소비율(L/100 km), \(EC_{CD}\)는 CD 모드의 전력 소비율(kWh/100 km). \(FC\)와 \(EC\)는 전체 거리로 평균한 값이다.</div>
+    </div>
+
+    <div class="sim" id="sim-uf">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>PHEV 유틸리티 팩터</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-uf-dist"></canvas><canvas id="cv-uf-curve"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>전기 주행 거리 R <output id="uf-r-out"></output></span><input type="range" id="uf-r" min="10" max="150" value="50" step="5"></label>
+          <label class="ctrl"><span>평균 일일 주행 거리 <output id="uf-mean-out"></output></span><input type="range" id="uf-mean" min="15" max="100" value="40" step="1"></label>
+          <label class="ctrl"><span>충전하는 날의 비율 <output id="uf-chg-out"></output></span><input type="range" id="uf-chg" min="0" max="100" value="100" step="5"></label>
+          <label class="ctrl"><span>CS 모드 연비 <output id="uf-cs-out"></output></span><input type="range" id="uf-cs" min="10" max="25" value="17" step="0.5"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">유틸리티 팩터</span><span class="v" id="uf-uf">—</span></div>
+        <div class="stat"><span class="k">연료 소비</span><span class="v" id="uf-fc">—</span></div>
+        <div class="stat"><span class="k">전력 소비</span><span class="v" id="uf-ec">—</span></div>
+        <div class="stat"><span class="k">연료만 본 연비</span><span class="v" id="uf-kml">—</span></div>
+        <div class="stat"><span class="k">WtW CO₂ (PHEV)</span><span class="v" id="uf-co2">—</span></div>
+        <div class="stat"><span class="k">WtW CO₂ (충전 안 할 때)</span><span class="v" id="uf-co2h">—</span></div>
+      </div>
+      <div class="sim-note">위: 일일 주행 거리의 분포(로그 정규 분포 가정). R보다 짧은 날은 전부 전기로, 긴 날은 R까지만 전기로 달린다. 아래: R에 따른 UF 곡선. 전력 소비는 CD 모드 18 kWh/100 km(충전 손실 포함), CO₂는 휘발유 2.8 kg/L, 전력 0.45 kg/kWh의 대표값으로 계산했다. 해볼 것: R을 50 km에서 100 km로 두 배 늘려도 UF는 두 배가 되지 않는다. 가끔 있는 장거리 주행이 전체 거리에서 큰 몫을 차지하기 때문이다. 충전하는 날의 비율을 30 %로 낮추면 "연료만 본 연비"가 어떻게 되는가?</div>
+    </div>
+    <div class="callout tip">
+      <strong>계산 예: UF 0.6인 PHEV</strong>
+      <p>CS 모드 연비가 18 km/L(5.56 L/100 km), CD 모드 전력 소비가 18 kWh/100 km인 차의 UF가 0.6이라면, 평균 연료 소비는 \(0.4 \times 5.56 = 2.2\) L/100 km, 전력 소비는 \(0.6 \times 18 = 10.8\) kWh/100 km다. 연료만 보면 45 km/L로 보이지만 전기 10.8 kWh가 따로 들어갔음을 잊으면 안 된다.</p>
+    </div>
+    <div class="callout warn">
+      <strong>인증 연비와 실제의 차이</strong>
+      <p>인증 시험은 대규모 주행 통계에서 만든 표준 UF 곡선과 "매일 완충"을 가정한다. 실제 사용자가 충전을 덜 하면 UF는 그만큼 떨어지고, 무거운 배터리를 싣고 달리는 일반 하이브리드가 된다. PHEV의 환경 성능은 차보다 사용자의 충전 습관이 결정한다.</p>
+    </div>
+
+    <h3>Well-to-Wheel: 어디서부터 셀 것인가</h3>
+    <p>연료와 전기를 한 잣대로 비교하려면 차 안에서 일어나는 일만 봐서는 부족하다. 에너지의 일생은 두 구간으로 나눈다.</p>
+    <ul>
+      <li><b>Well-to-Tank(WtT)</b>: 유정에서 연료 탱크까지. 원유 채굴·정제·수송, 또는 발전·송배전·충전.</li>
+      <li><b>Tank-to-Wheel(TtW)</b>: 탱크(배터리)에서 바퀴까지. 차의 효율이 결정한다.</li>
+    </ul>
+    <p>둘을 합친 것이 <span class="term">Well-to-Wheel</span><span class="en">(WtW)</span>이다. 휘발유 1 L를 태우면 약 2.3 kg의 CO₂가 배기관으로 나오고(TtW), 그 1 L를 만들어 주유소까지 가져오는 데 대략 20 %가 더 든다. 전기는 차에서는 배출이 0이지만 발전 단계의 배출이 있으며, 그 크기는 전원 구성에 따라 kWh당 수십 g(수력·원자력·재생에너지 중심)에서 800 g 이상(석탄 중심)까지 차이가 난다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>차종(대표값)</th><th>소비율</th><th>WtW CO₂(대략)</th></tr></thead>
+      <tbody>
+        <tr><td>가솔린차 12 km/L</td><td>8.3 L/100 km</td><td>약 230 g/km</td></tr>
+        <tr><td>하이브리드 20 km/L</td><td>5.0 L/100 km</td><td>약 140 g/km</td></tr>
+        <tr><td>PHEV, UF 0.6</td><td>2.2 L + 10.8 kWh/100 km</td><td>약 110 g/km (전력 0.45 kg/kWh)</td></tr>
+        <tr><td>전기차</td><td>17 kWh/100 km</td><td>약 75 g/km (전력 0.45 kg/kWh)</td></tr>
+      </tbody>
+    </table></div>
+    <p>이 표의 숫자는 전력의 탄소 집약도 가정 하나에 크게 흔들리고, 배터리 제조 단계의 배출까지 넣는 전 과정 평가(LCA)로 가면 또 달라진다. 중요한 것은 숫자 자체보다 "어디서부터 어디까지 셌는가"를 항상 확인하는 습관이다. 모터와 인버터의 원리는 <a href="motor.html">15장</a>, 배터리와 충전은 <a href="battery.html">16장</a>에서 이어진다.</p>
+  </section>
+
+  <!-- =============================================================== summary -->
+  <section class="keypoints" id="summary">
+    <h2>핵심 정리</h2>
+    <ol>
+      <li>일반 내연기관차는 저부하 운전, 공회전, 제동에서 연료를 낭비한다. 하이브리드는 회생 제동, 엔진 운전점 이동, 아이들 스톱·EV 주행, 엔진 다운사이징으로 이를 줄인다.</li>
+      <li>전동화 정도는 마일드(48 V) → 풀 → 플러그인 → 주행거리 연장형 순으로 커지고, 구조는 직렬·병렬(P0~P4)·직병렬로 나뉜다. 전기 경로는 기계 경로보다 손실이 크다.</li>
+      <li>동력 분기식은 유성 기어의 캐리어에 엔진, 선 기어에 MG1, 링 기어에 MG2와 바퀴를 연결한다. 속도는 윌리스 식 \(Z_s\omega_s + Z_r\omega_r = (Z_s+Z_r)\omega_c\)를 따르므로 MG1 속도로 엔진 회전수를 자유롭게 정할 수 있다(e-CVT).</li>
+      <li>엔진 토크는 항상 \(\rho : 1\)로 선 기어와 링 기어에 나뉜다. MG1의 반력이 없으면 엔진 토크는 바퀴에 전달되지 않는다. MG1이 정지하는 기계점에서 전기 경로가 0이 되어 효율이 가장 좋다.</li>
+      <li>회생 제동력은 모터 토크·출력, 배터리 수용 전력, 저속 컷오프, 구동축 배분으로 제한된다. 모자라는 제동력은 협조 제어로 마찰 브레이크가 메운다. 약하고 길게 제동할수록 회수율이 높다.</li>
+      <li>일반 하이브리드는 SOC를 좁은 창에 유지(CS)하며, 모든 에너지는 결국 연료에서 온다. ECMS는 전기에 등가 연료 값을 매겨 엔진과 배터리의 출력 배분을 정한다.</li>
+      <li>하이브리드 엔진은 팽창비를 유효 압축비보다 크게 한 애트킨슨 사이클로 효율을 높이고, 배터리는 용량은 작아도 높은 출력을 내는 출력형을 쓴다.</li>
+      <li>PHEV의 실효 연비는 유틸리티 팩터(전기로 달린 거리의 비율)가 좌우한다. 연료와 전기의 환경 영향은 Well-to-Wheel로 같은 경계에서 비교해야 한다.</li>
+    </ol>
+  </section>
+
+  <section class="quiz-sec" id="quiz">
+    <h2>확인 퀴즈</h2>
+    <div class="quiz">
+      <div class="quiz-q"><p>하이브리드의 연비 개선 효과가 고속도로 정속 주행보다 도심 주행에서 훨씬 큰 주된 이유는?</p><div class="opts">
+        <button class="opt">도심에서는 공기 저항이 커서 모터가 이를 대신 이겨 주기 때문</button>
+        <button class="opt" data-correct>도심 주행은 제동, 정차, 저부하 구간이 많아 회생·아이들 스톱·운전점 이동의 여지가 크기 때문</button>
+        <button class="opt">도심에서는 배터리가 외부 전원으로 충전되기 때문</button>
+        <button class="opt">모터의 최고 회전수가 낮아 고속에서는 쓸 수 없기 때문</button>
+      </div><div class="quiz-exp">하이브리드가 되찾는 것은 제동 손실, 공회전, 저부하 엔진 손실이다. 고속 정속 주행에서는 제동이 거의 없고 엔진이 이미 비교적 효율 좋은 부하에서 돌기 때문에 줄일 낭비가 적다.</div></div>
+
+      <div class="quiz-q"><p>\(Z_s = 30\), \(Z_r = 78\)인 동력 분기 장치에서 엔진(캐리어)이 1,500 rpm, 링 기어가 정지(차가 서 있음)해 있다. MG1(선 기어)의 회전수는?</p><div class="opts">
+        <button class="opt">약 577 rpm</button>
+        <button class="opt">1,500 rpm</button>
+        <button class="opt">약 3,900 rpm</button>
+        <button class="opt" data-correct>5,400 rpm</button>
+      </div><div class="quiz-exp">윌리스 식에서 \(\omega_s = (Z_s+Z_r)\,\omega_c / Z_s = 108 \times 1500/30 = 5{,}400\) rpm. 차가 서 있을 때 엔진을 돌리면 MG1이 엔진의 3.6배로 빨리 돈다. 저속에서 엔진 회전수를 무작정 올릴 수 없는 이유다.</div></div>
+
+      <div class="quiz-q"><p>동력 분기식에서 주행 중 MG1의 토크를 0으로 만들면(인버터를 끄면) 어떻게 되는가?</p><div class="opts">
+        <button class="opt">엔진 토크가 100 % 링 기어로 전달되어 효율이 최고가 된다</button>
+        <button class="opt" data-correct>엔진 토크가 링 기어로 전달되지 않고, 엔진은 MG1만 헛돌리며 회전수가 치솟는다</button>
+        <button class="opt">MG2가 자동으로 발전기가 되어 엔진 토크를 받아 준다</button>
+        <button class="opt">유성 기어가 잠겨 세 요소가 같은 속도로 돈다</button>
+      </div><div class="quiz-exp">유성 기어의 토크 비는 \(T_s : T_r = \rho : 1\)로 고정이다. 선 기어 쪽 반력이 0이면 링 기어 쪽 토크도 0이다. 엔진의 힘을 바퀴에 전하려면 MG1이 반드시 반력 토크를 내야 한다.</div></div>
+
+      <div class="quiz-q"><p>시속 100 km에서 감속도 4 m/s²로 제동을 시작했다. 회생 제동으로 회수되는 비율이 낮은 가장 직접적인 이유는?</p><div class="opts">
+        <button class="opt">고속에서는 모터가 발전을 할 수 없기 때문</button>
+        <button class="opt">고속에서는 마찰 브레이크의 마찰 계수가 더 높기 때문</button>
+        <button class="opt" data-correct>제동 출력(제동력 × 속도)이 모터 출력과 배터리 수용 전력의 한계를 크게 넘기 때문</button>
+        <button class="opt">운동 에너지가 속도에 비례하기 때문</button>
+      </div><div class="quiz-exp">1,600 kg 차라면 제동 출력이 약 180 kW에 이른다. 수십 kW인 회생 한계를 넘는 부분은 마찰 브레이크가 맡아 열로 버린다. 같은 속도에서 더 약하게 제동하면 제동 출력이 한계 안으로 들어와 회수율이 올라간다.</div></div>
+
+      <div class="quiz-q"><p>애트킨슨 사이클 엔진이 흡기 밸브를 늦게 닫아 얻는 것은?</p><div class="opts">
+        <button class="opt">더 많은 공기를 넣어 배기량당 출력을 높인다</button>
+        <button class="opt" data-correct>유효 압축비는 노킹 한계 안에 두면서 팽창비를 크게 하여 열효율을 높인다</button>
+        <button class="opt">연소 온도를 높여 삼원 촉매를 빨리 데운다</button>
+        <button class="opt">압축비와 팽창비를 모두 낮춰 마찰 손실을 줄인다</button>
+      </div><div class="quiz-exp">늦게 닫힌 흡기 밸브 때문에 실제 압축은 행정의 일부에서만 일어나고, 팽창은 행정 전체에서 일어난다. 팽창비가 크므로 연소 가스의 에너지를 더 많이 일로 바꾼다. 대신 실린더를 다 채우지 못해 토크는 줄어든다.</div></div>
+
+      <div class="quiz-q"><p>전기 주행 거리 50 km인 PHEV를 탄다. 평일 5일은 하루 30 km, 토요일 하루는 200 km를 달리고 매일 밤 완충한다. 유틸리티 팩터는?</p><div class="opts">
+        <button class="opt">약 0.25</button>
+        <button class="opt" data-correct>약 0.57</button>
+        <button class="opt">약 0.83</button>
+        <button class="opt">1.0</button>
+      </div><div class="quiz-exp">전기로 달린 거리는 \(5 \times 30 + \min(200, 50) = 200\) km, 전체 거리는 \(150 + 200 = 350\) km이므로 \(UF = 200/350 \approx 0.57\). 엿새 중 닷새를 전부 전기로 달렸어도, 하루의 장거리가 전체 거리에서 차지하는 몫이 크다.</div></div>
+    </div>
+  </section>
+</main>
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const FONT = getComputedStyle(document.body).getPropertyValue("--font") || "sans-serif";
+  const HV = "#f08a00";
+  const TAU = Math.PI * 2;
+  const RPM = Math.PI / 30;
+  const clamp = CB.clamp;
+
+  function rgb(c) {
+    c = String(c).trim();
+    if (c[0] === "#") {
+      if (c.length === 4) c = "#" + c[1] + c[1] + c[2] + c[2] + c[3] + c[3];
+      const n = parseInt(c.slice(1, 7), 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    }
+    const m = c.match(/[\d.]+/g);
+    return m ? m.slice(0, 3).map(Number) : [128, 128, 128];
+  }
+  const alpha = (c, a) => { const [r, g, b] = rgb(c); return `rgba(${r},${g},${b},${a})`; };
+  const mix = (c1, c2, t) => { const a = rgb(c1), b = rgb(c2); return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(",")})`; };
+  function txt(ctx, s, x, y, color, align, px, bold) {
+    ctx.font = (bold ? "600 " : "") + (px || 12) + "px " + FONT;
+    ctx.fillStyle = color; ctx.textAlign = align || "left"; ctx.textBaseline = "middle";
+    ctx.fillText(s, x, y);
+  }
+  function rbox(ctx, x, y, w, h, r, fill, stroke, lw) {
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 1.5; ctx.stroke(); }
+  }
+  function seg(ctx, x1, y1, x2, y2) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+  const pct = (x, d) => (x * 100).toFixed(d || 0) + " %";
+  const num = (x) => Math.round(x).toLocaleString("en-US");
+
+  /* ------------------------------------------------------------ 공용 모델 */
+  const ZS = 30, ZR = 78, ZP = 24, RHO = ZS / ZR;
+  const KRING = 28.24;                       // 링 기어 rpm / (km/h)
+  const LHV = 8.9;                           // 휘발유 kWh/L
+
+  // 2.0 L 자연흡기 엔진 간이 모델: 전부하 토크와 열효율
+  function tmax(n) { return 185 * (1 - Math.pow((n - 4000) / 5200, 2)); }
+  function effEng(n, T) {
+    const tm = tmax(n);
+    if (T <= 0 || T > tm * 1.0001) return 0;
+    const load = T / tm;
+    const tf = 13 + 0.0032 * n + 11 * (1 - load);          // 마찰 + 펌핑 손실 토크
+    const s = Math.max(0, (load - 0.85) / 0.15);            // 전부하 농후화
+    const ei = 0.43 * (1 - 0.1 * Math.pow((n - 2400) / 2600, 2)) * (1 - 0.08 * s * s);
+    return (ei * T) / (T + tf);
+  }
+  function best(P) {
+    let b = { eta: 0, n: 0, T: 0 };
+    for (let n = 1000; n <= 5500; n += 25) {
+      const T = (P * 1000) / (n * RPM), e = effEng(n, T);
+      if (e > b.eta) b = { eta: e, n, T };
+    }
+    return b;
+  }
+  const OOL = [];
+  let ETA_PEAK = 0;
+  for (let P = 2; P <= 98; P += 1) { const b = best(P); if (b.eta > 0) { OOL.push([b.n, b.T]); ETA_PEAK = Math.max(ETA_PEAK, b.eta); } }
+  const bsfc = (eta) => 3600 / (eta * 43.5);
+  function roadP(kmh, m) {
+    const v = CB.ms(kmh);
+    return ((m * CB.G * 0.01 + 0.5 * CB.RHO * 0.65 * v * v) * v) / 1000;
+  }
+
+  /* ============================================================ 1. BSFC 맵 */
+  (function () {
+    let cv = null;
+    const upd = () => { stats(); if (cv) cv.redraw(); };
+    const gP = CB.range("bs-p", (v) => v + " kW", upd);
+    const gN = CB.range("bs-n", (v) => num(v) + " rpm", upd);
+    const gD = CB.range("bs-dp", (v) => "+" + v + " kW", upd);
+
+    function state() {
+      const P = gP(), n = gN(), dP = gD();
+      const Tc = (P * 1000) / (n * RPM), ec = effEng(n, Tc);
+      const h = best(P), h2 = best(P + dP);
+      return { P, n, dP, Tc, ec, h, h2 };
+    }
+    function stats() {
+      const s = state();
+      if (s.ec > 0) {
+        CB.stat("bs-c", num(s.n) + " rpm · " + s.Tc.toFixed(0) + " N·m");
+        CB.stat("bs-ce", pct(s.ec, 1) + " / " + bsfc(s.ec).toFixed(0) + " g/kWh");
+      } else {
+        CB.stat("bs-c", "전부하 초과");
+        CB.stat("bs-ce", "저단 변속 필요");
+      }
+      if (s.h2.eta > 0) {
+        CB.stat("bs-h", num(s.h2.n) + " rpm · " + s.h2.T.toFixed(0) + " N·m");
+        CB.stat("bs-he", pct(s.h2.eta, 1) + " / " + bsfc(s.h2.eta).toFixed(0) + " g/kWh");
+      } else { CB.stat("bs-h", "출력 초과"); CB.stat("bs-he", "—"); }
+      CB.stat("bs-save", s.ec > 0 && s.h.eta > 0 ? pct(1 - s.ec / s.h.eta, 0) : "—");
+      if (s.dP > 0 && s.h2.eta > 0 && s.h.eta > 0) {
+        const df = (s.P + s.dP) / s.h2.eta - s.P / s.h.eta;
+        CB.stat("bs-marg", pct(s.dP / df, 1));
+      } else CB.stat("bs-marg", s.dP > 0 ? "—" : "추가 출력 0");
+    }
+    cv = CB.canvas($("cv-bsfc"), (ctx, w, h) => {
+      const P = CB.palette(), s = state();
+      const box = { x: 52, y: 14, w: w - 52 - 14, h: h - 14 - 46 };
+      const N0 = 1000, N1 = 5500, T1 = 210;
+      const X = (n) => box.x + ((n - N0) / (N1 - N0)) * box.w, Y = (T) => box.y + box.h - (T / T1) * box.h;
+      const nx = 45, ny = 30, cw = box.w / nx, ch = box.h / ny;
+      for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
+        const n = N0 + ((i + 0.5) / nx) * (N1 - N0), T = ((j + 0.5) / ny) * T1;
+        const e = effEng(n, T);
+        if (e <= 0) continue;
+        const t = clamp((e - 0.12) / 0.26, 0, 1);
+        ctx.fillStyle = alpha(t < 0.5 ? mix(P.bad, P.warn, t * 2) : mix(P.warn, P.ok, (t - 0.5) * 2), 0.6);
+        ctx.fillRect(box.x + i * cw, box.y + box.h - (j + 1) * ch, cw + 0.6, ch + 0.6);
+      }
+      const full = [], iso = [], iso2 = [];
+      for (let n = N0; n <= N1; n += 50) {
+        full.push([n, tmax(n)]);
+        iso.push([n, (s.P * 1000) / (n * RPM)]);
+        iso2.push([n, ((s.P + s.dP) * 1000) / (n * RPM)]);
+      }
+      const series = [
+        { data: full, color: P.text, width: 2.5 },
+        { data: OOL, color: P.accent, width: 3 },
+        { data: iso, color: P.text, width: 1.5, dash: [5, 4] },
+      ];
+      if (s.dP > 0) series.push({ data: iso2, color: P.accent2, width: 1.5, dash: [5, 4] });
+      CB.chart(ctx, box, { x: [N0, N1], y: [0, T1], xLabel: "엔진 회전수 (rpm)", yLabel: "토크 (N·m)", series });
+      // 색 범례
+      const gx = box.x + 10, gy = box.y + 8, gw = Math.min(90, box.w * 0.3);
+      for (let i = 0; i < 30; i++) {
+        const t = i / 29;
+        ctx.fillStyle = t < 0.5 ? mix(P.bad, P.warn, t * 2) : mix(P.warn, P.ok, (t - 0.5) * 2);
+        ctx.fillRect(gx + (i / 30) * gw, gy, gw / 30 + 0.5, 8);
+      }
+      txt(ctx, "효율 12 %", gx, gy + 18, P.dim, "left", 10.5);
+      txt(ctx, "38 %", gx + gw, gy + 18, P.dim, "right", 10.5);
+      txt(ctx, "OOL", X(OOL[OOL.length - 1][0]) - 6, Y(OOL[OOL.length - 1][1]) + 14, P.accent, "right", 12, true);
+      // 운전점
+      const dot = (n, T, fill, stroke, label, dy) => {
+        const x = X(n), y = Y(T);
+        ctx.beginPath(); ctx.arc(x, y, 7, 0, TAU); ctx.fillStyle = fill; ctx.fill();
+        ctx.strokeStyle = stroke; ctx.lineWidth = 2.5; ctx.stroke();
+        const left = x > box.x + box.w * 0.7;
+        txt(ctx, label, x + (left ? -12 : 12), y + dy, P.text, left ? "right" : "left", 12, true);
+      };
+      if (s.h.eta > 0 && s.dP > 0) {
+        ctx.strokeStyle = P.text; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(X(s.h.n), Y(s.h.T), 5, 0, TAU); ctx.stroke();
+      }
+      if (s.h2.eta > 0) dot(s.h2.n, s.h2.T, P.bg, P.accent, "하이브리드", -14);
+      if (s.ec > 0) dot(s.n, s.Tc, P.text, P.bg, "일반차", 14);
+      else dot(s.n, tmax(s.n), P.bad, P.bg, "불가", 14);
+    }, { aspect: 0.72, minHeight: 280, maxHeight: 430 });
+    stats();
+  })();
+
+  /* ============================================================ 2. 구조 비교 */
+  (function () {
+    let cv = null, cv2 = null;
+    const ARCH = {
+      series: {
+        name: "직렬", nodes: [["엔진", 0.12, 0], ["발전기", 0.36, 0], ["모터", 0.66, 0], ["바퀴", 0.9, 0], ["배터리", 0.51, 1]],
+        links: [["m", 0.12, 0, 0.36, 0], ["e", 0.36, 0, 0.66, 0], ["e", 0.51, 1, 0.51, 0], ["m", 0.66, 0, 0.9, 0]],
+        size: { eng: 70, mot: 110, gen: 70, bat: 1.5 },
+        desc: "<b>직렬형.</b> 엔진과 바퀴 사이에 기계적 연결이 없다. 엔진을 언제나 최적점에서 돌릴 수 있고 변속기가 필요 없지만, 엔진 출력 전부가 발전기와 모터를 거치며 약 20 %를 잃는다. 구동 모터는 차의 최대 출력을, 발전기는 엔진 출력 전부를 감당해야 해서 전기 부품이 크다.",
+      },
+      parallel: {
+        name: "병렬", nodes: [["엔진", 0.12, 0], ["클러치", 0.3, 0], ["모터", 0.48, 0], ["변속기", 0.68, 0], ["바퀴", 0.9, 0], ["배터리", 0.48, 1]],
+        links: [["m", 0.12, 0, 0.9, 0], ["e", 0.48, 1, 0.48, 0]],
+        size: { eng: 110, mot: 35, gen: 0, bat: 1.3 },
+        desc: "<b>병렬형(P2).</b> 엔진의 힘이 기어로 바퀴에 직접 간다. 모터 하나가 구동과 발전을 겸하므로 전기 부품이 작고 고속 효율이 좋다. 엔진 회전수가 차속에 묶이므로 다단 변속기가 필요하고, 엔진을 켜고 끌 때 클러치를 매끄럽게 잇는 제어가 어렵다.",
+      },
+      split: {
+        name: "직병렬", nodes: [["엔진", 0.12, 0], ["유성 기어", 0.36, 0], ["MG2", 0.64, 0], ["바퀴", 0.9, 0], ["MG1", 0.36, 1], ["배터리", 0.64, 1]],
+        links: [["m", 0.12, 0, 0.9, 0], ["m", 0.36, 0, 0.36, 1], ["e", 0.36, 1, 0.64, 1], ["e", 0.64, 1, 0.64, 0]],
+        size: { eng: 75, mot: 60, gen: 40, bat: 1.3 },
+        desc: "<b>직병렬형(동력 분기).</b> 유성 기어가 엔진 출력을 기계 경로와 전기 경로로 나눈다. 변속기와 클러치 없이 엔진 회전수를 자유롭게 정할 수 있고, 출력의 대부분은 손실이 작은 기계 경로로 간다. 모터가 둘 필요하고 고속에서는 동력 순환이 생긴다.",
+      },
+    };
+    const EPATH = 0.78;                       // 발전기→인버터→모터 경로 효율
+    function contin(type, kmh) {
+      const P = roadP(kmh, 1500);
+      if (type === "series") return best(P / EPATH).eta * EPATH;
+      if (type === "parallel") {
+        let e = 0;
+        [19, 25, 34, 48, 75, 120].forEach((r) => {
+          const n = r * kmh;
+          if (n < 1000 || n > 5500) return;
+          e = Math.max(e, effEng(n, ((P / 0.95) * 1000) / (n * RPM)) * 0.95);
+        });
+        return e;
+      }
+      let et = 0.92, e = 0;
+      for (let k = 0; k < 5; k++) {
+        const Pe = P / et, b = best(Pe), nr = KRING * kmh;
+        const n = clamp(Math.max(b.n, nr / ((1 + RHO) * 1.25)), 1000, 5500);
+        const f = 1 - nr / ((1 + RHO) * n);
+        et = f >= 0 ? (1 - f) * 0.97 + f * EPATH : 0.97 + 0.25 * f;
+        e = effEng(n, (Pe * 1000) / (n * RPM));
+      }
+      return e * et;
+    }
+    const BUF = { series: EPATH * 0.94, parallel: 0.95 * 0.88, split: 0.9 * 0.94 };
+    const total = (type, kmh) => Math.max(contin(type, kmh), ETA_PEAK * BUF[type]);
+    const TYPES = ["series", "parallel", "split"];
+    const curves = {}, curvesC = {};
+    TYPES.forEach((t) => {
+      curves[t] = []; curvesC[t] = [];
+      for (let v = 20; v <= 160; v += 4) { curves[t].push([v, total(t, v) * 100]); curvesC[t].push([v, contin(t, v) * 100]); }
+    });
+
+    const upd = () => {
+      const v = gV();
+      CB.stat("arch-p", roadP(v, 1500).toFixed(1) + " kW");
+      CB.stat("arch-e1", pct(total("series", v), 1));
+      CB.stat("arch-e2", pct(total("parallel", v), 1));
+      CB.stat("arch-e3", pct(total("split", v), 1));
+      $("arch-desc").innerHTML = ARCH[gT()].desc;
+      if (cv) cv.redraw();
+      if (cv2) cv2.redraw();
+    };
+    const gT = CB.seg("arch-type", upd);
+    const gV = CB.range("arch-v", (v) => v + " km/h", upd);
+
+    cv = CB.canvas($("cv-arch"), (ctx, w, h) => {
+      const P = CB.palette(), A = ARCH[gT()];
+      const hd = h * 0.56, y0 = hd * 0.3, y1 = hd * 0.8;
+      const bw = clamp(w * 0.17, 54, 96), bh = 30, fs = w < 420 ? 10.5 : 12.5;
+      const yy = (r) => (r ? y1 : y0);
+      A.links.forEach(([k, xa, ra, xb, rb]) => {
+        if (k === "m") { ctx.strokeStyle = P.dim; ctx.lineWidth = 5; ctx.setLineDash([]); }
+        else { ctx.strokeStyle = HV; ctx.lineWidth = 3; ctx.setLineDash([7, 5]); }
+        seg(ctx, xa * w, yy(ra), xb * w, yy(rb));
+      });
+      ctx.setLineDash([]);
+      A.nodes.forEach(([name, x, r]) => {
+        const hot = name === "엔진", el = /모터|MG|발전기|배터리/.test(name);
+        rbox(ctx, x * w - bw / 2, yy(r) - bh / 2, bw, bh, 7, P.surface, hot ? P.accent : el ? HV : P.border, hot || el ? 2 : 1.5);
+        txt(ctx, name, x * w, yy(r) + 0.5, P.text, "center", fs, true);
+      });
+      // 부품 크기 막대
+      const rows = [["엔진", A.size.eng, 120, "kW", P.accent], ["구동 모터", A.size.mot, 120, "kW", HV], ["발전기", A.size.gen, 120, "kW", HV], ["배터리", A.size.bat, 3, "kWh", P.accent2]];
+      const bx = w < 420 ? 66 : 84, bwid = w - bx - 74, by = hd + 8, rh = (h - by - 8) / rows.length;
+      rows.forEach(([name, val, mx, unit, col], i) => {
+        const y = by + rh * (i + 0.5);
+        txt(ctx, name, bx - 8, y, P.dim, "right", 11.5);
+        rbox(ctx, bx, y - rh * 0.3, bwid, rh * 0.6, 3, P.surface);
+        if (val > 0) rbox(ctx, bx, y - rh * 0.3, (bwid * val) / mx, rh * 0.6, 3, col);
+        txt(ctx, val > 0 ? val + " " + unit : "없음", bx + bwid + 8, y, P.text, "left", 11.5, true);
+      });
+    }, { aspect: 0.62, minHeight: 270, maxHeight: 360 });
+
+    cv2 = CB.canvas($("cv-arch-eff"), (ctx, w, h) => {
+      const P = CB.palette(), sel = gT(), v = gV();
+      const col = { series: P.warn, parallel: P.accent2, split: P.accent };
+      const box = { x: 52, y: 26, w: w - 52 - 14, h: h - 26 - 46 };
+      const series = TYPES.map((t) => ({ data: curves[t], color: col[t], width: t === sel ? 3.2 : 1.6 }));
+      series.push({ data: curvesC[sel], color: col[sel], width: 1.3, dash: [3, 4] });
+      CB.chart(ctx, box, {
+        x: [20, 160], y: [0, 40], xLabel: "정속 주행 속도 (km/h)", yLabel: "연료→바퀴 효율 (%)", series,
+        vlines: [{ x: v, color: P.dim }],
+        points: [{ x: v, y: total(sel, v) * 100, color: col[sel], r: 5 }],
+      });
+      let lx = box.x + 4;
+      TYPES.forEach((t) => {
+        ctx.fillStyle = col[t]; ctx.fillRect(lx, 11, 14, 3);
+        txt(ctx, ARCH[t].name, lx + 19, 13, t === sel ? P.text : P.dim, "left", 11.5, t === sel);
+        lx += 30 + ARCH[t].name.length * 12;
+      });
+    }, { aspect: 0.5, minHeight: 220, maxHeight: 280 });
+    upd();
+  })();
+
+  /* ============================================================ 3. 동력 분기 유성 기어 */
+  (function () {
+    let cvG = null, cvL = null, S = null, geo = null;
+    const ang = { s: 0, c: 0, r: 0, p: 0 };
+    const YMIN = -11000, YMAX = 12000, LIM = 10000;
+    function calc() {
+      const ne = gE(), v = gV(), te = ne > 0 ? gT() : 0;
+      const nr = KRING * v, ns = ((ZS + ZR) * ne - ZR * nr) / ZS;
+      const ts = (te * ZS) / (ZS + ZR), tr = (te * ZR) / (ZS + ZR);
+      const pe = (te * ne * RPM) / 1000, p1 = (ts * ns * RPM) / 1000;
+      return { ne, v, te, nr, ns, ts, tr, pe, p1 };
+    }
+    function upd() {
+      S = calc();
+      const over = Math.abs(S.ns) > LIM;
+      CB.stat("psd-ns", (S.ns >= 0 ? "+" : "−") + num(Math.abs(S.ns)) + " rpm" + (over ? " (한계 초과)" : ""));
+      CB.stat("psd-nr", num(S.nr) + " rpm");
+      CB.stat("psd-pe", S.pe.toFixed(1) + " kW");
+      CB.stat("psd-ts", S.ts.toFixed(1) + " N·m");
+      CB.stat("psd-tr", S.tr.toFixed(1) + " N·m");
+      let st;
+      if (S.ne <= 0) st = Math.abs(S.ns) < 30 ? "정지" : "무부하 공전(역회전)";
+      else if (S.te <= 0) st = "무부하 공전";
+      else if (Math.abs(S.ns) < 30) st = "정지 (기계점)";
+      else st = S.ns > 0 ? "발전 " + S.p1.toFixed(1) + " kW" : "구동 " + (-S.p1).toFixed(1) + " kW (동력 순환)";
+      CB.stat("psd-st", st);
+      CB.stat("psd-fr", S.pe > 0.05 ? pct(S.p1 / S.pe, 0) : "—");
+      if (cvL) cvL.redraw();
+    }
+    const gE = CB.range("psd-eng", (v) => (v > 0 ? num(v) + " rpm" : "정지"), upd);
+    const gV = CB.range("psd-v", (v) => v.toFixed(1) + " km/h", upd);
+    const gT = CB.range("psd-tq", (v) => v + " N·m", upd);
+    const preset = (id, e, v, t) => $(id).addEventListener("click", () => { gE.set(e); gV.set(v); gT.set(t); });
+    preset("psd-p-ev", 0, 40, 0);
+    preset("psd-p-launch", 2500, 8, 130);
+    preset("psd-p-mech", 2000, 98, 100);
+    preset("psd-p-cruise", 1800, 110, 90);
+    S = calc();
+
+    function teeth(ctx, x, y, r, n, a, color, tl) {
+      ctx.strokeStyle = color; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke();
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) {
+        const th = a + (i * TAU) / n, c = Math.cos(th), s = Math.sin(th);
+        ctx.moveTo(x + c * (r - tl / 2), y + s * (r - tl / 2)); ctx.lineTo(x + c * (r + tl / 2), y + s * (r + tl / 2));
+      }
+      ctx.stroke();
+    }
+    cvG = CB.canvas($("cv-psd-gear"), (ctx, w, h) => {
+      const P = CB.palette();
+      const R = Math.min(w, h) * 0.4, cx = w / 2, cy = h / 2;
+      const rs = (R * ZS) / ZR, rp = (R * ZP) / ZR, rc = rs + rp, tl = Math.max(3, R * 0.055);
+      // 링
+      ctx.strokeStyle = alpha(P.accent2, 0.22); ctx.lineWidth = tl * 2;
+      ctx.beginPath(); ctx.arc(cx, cy, R + tl * 1.5, 0, TAU); ctx.stroke();
+      teeth(ctx, cx, cy, R, ZR, ang.r, P.accent2, tl);
+      ctx.fillStyle = P.accent2;
+      ctx.beginPath(); ctx.arc(cx + Math.cos(ang.r) * (R + tl * 1.5), cy + Math.sin(ang.r) * (R + tl * 1.5), tl * 0.8, 0, TAU); ctx.fill();
+      // 캐리어
+      ctx.strokeStyle = alpha(P.accent, 0.3); ctx.lineWidth = rp * 0.55;
+      ctx.beginPath(); ctx.arc(cx, cy, rc, 0, TAU); ctx.stroke();
+      for (let k = 0; k < 4; k++) {
+        const a = ang.c + (k * TAU) / 4, px = cx + Math.cos(a) * rc, py = cy + Math.sin(a) * rc;
+        ctx.fillStyle = P.bg; ctx.beginPath(); ctx.arc(px, py, rp, 0, TAU); ctx.fill();
+        teeth(ctx, px, py, rp, ZP, ang.p, P.dim, tl);
+        ctx.strokeStyle = P.dim; ctx.lineWidth = 2;
+        seg(ctx, px, py, px + Math.cos(ang.p) * rp * 0.75, py + Math.sin(ang.p) * rp * 0.75);
+        ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(px, py, k === 0 ? tl * 1.2 : tl * 0.8, 0, TAU); ctx.fill();
+      }
+      // 선
+      ctx.fillStyle = alpha(P.ok, 0.2); ctx.beginPath(); ctx.arc(cx, cy, rs, 0, TAU); ctx.fill();
+      teeth(ctx, cx, cy, rs, ZS, ang.s, P.ok, tl);
+      ctx.strokeStyle = P.ok; ctx.lineWidth = 3;
+      seg(ctx, cx, cy, cx + Math.cos(ang.s) * rs * 0.8, cy + Math.sin(ang.s) * rs * 0.8);
+      ctx.fillStyle = P.ok; ctx.beginPath(); ctx.arc(cx, cy, tl * 0.9, 0, TAU); ctx.fill();
+      if (w >= 480 && S) {
+        const sg = (x) => (x >= 0 ? "+" : "−") + num(Math.abs(x)) + " rpm";
+        txt(ctx, "MG1  " + sg(S.ns), 12, 18, P.ok, "left", 12, true);
+        txt(ctx, "엔진  " + sg(S.ne), 12, 38, P.accent, "left", 12, true);
+        txt(ctx, "링  " + sg(S.nr), 12, 58, P.accent2, "left", 12, true);
+      }
+    }, { aspect: 0.7, minHeight: 220, maxHeight: 300 });
+
+    cvL = CB.canvas($("cv-psd-lever"), (ctx, w, h) => {
+      const P = CB.palette();
+      const L = 50, Rm = w < 420 ? 52 : 80, T = 30, B = 16;
+      const xS = L + 22, xR = w - Rm, xC = xS + (xR - xS) / (1 + RHO);
+      const Y = (r) => T + ((YMAX - r) / (YMAX - YMIN)) * (h - T - B);
+      geo = { xC, xR, T, B, h };
+      for (let r = -10000; r <= 10000; r += 5000) {
+        ctx.strokeStyle = r === 0 ? P.axis : P.grid; ctx.lineWidth = r === 0 ? 1.5 : 1;
+        seg(ctx, L, Y(r), w - 8, Y(r));
+        txt(ctx, num(r), L - 6, Y(r), P.dim, "right", 10.5);
+      }
+      const axes = [[xS, "S · MG1", P.ok, "left", xS - 16], [xC, "C · 엔진", P.accent, "center", xC], [xR, "R · 링", P.accent2, "center", xR]];
+      axes.forEach(([x, name, col, al, tx]) => {
+        ctx.strokeStyle = alpha(col, 0.55); ctx.lineWidth = 2;
+        seg(ctx, x, T, x, h - B);
+        txt(ctx, name, tx, 14, col, al, 12, true);
+      });
+      // MG1 한계
+      ctx.strokeStyle = P.bad; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+      seg(ctx, xS - 14, Y(LIM), xS + 30, Y(LIM)); seg(ctx, xS - 14, Y(-LIM), xS + 30, Y(-LIM));
+      ctx.setLineDash([]);
+      txt(ctx, "MG1 한계", xS + 34, Y(LIM), P.bad, "left", 10.5);
+      // 레버
+      const over = Math.abs(S.ns) > LIM;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, T - 6, w, h - T - B + 12); ctx.clip();
+      ctx.strokeStyle = over ? P.bad : P.text; ctx.lineWidth = 3;
+      seg(ctx, xS, Y(S.ns), xR, Y(S.nr));
+      const k = (h * 0.2) / 140;
+      if (S.te > 0) {
+        CB.arrow(ctx, xC - 12, Y(S.ne), xC - 12, Y(S.ne) - S.te * k, P.accent, 3);
+        CB.arrow(ctx, xS - 12, Y(S.ns), xS - 12, Y(S.ns) + S.ts * k, P.ok, 3);
+        CB.arrow(ctx, xR - 12, Y(S.nr), xR - 12, Y(S.nr) + S.tr * k, P.accent2, 3);
+      }
+      [[xS, S.ns, P.ok], [xC, S.ne, P.accent], [xR, S.nr, P.accent2]].forEach(([x, r, col], i) => {
+        ctx.beginPath(); ctx.arc(x, Y(r), i ? 8 : 6, 0, TAU); ctx.fillStyle = col; ctx.fill();
+        ctx.strokeStyle = P.bg; ctx.lineWidth = 2; ctx.stroke();
+      });
+      ctx.restore();
+      const yl = (r) => clamp(Y(r), T + 6, h - B - 6);
+      txt(ctx, num(S.ns), xS + 12, yl(S.ns) - 12, P.ok, "left", 11.5, true);
+      txt(ctx, num(S.ne), xC + 12, yl(S.ne) - 12, P.accent, "left", 11.5, true);
+      txt(ctx, num(S.nr), xR + 12, yl(S.nr) - (S.nr > S.ne ? 12 : -12), P.accent2, "left", 11.5, true);
+      geo.inv = (y) => YMAX - ((y - T) / (h - T - B)) * (YMAX - YMIN);
+    }, { aspect: 0.6, minHeight: 240, maxHeight: 300 });
+
+    let grab = null;
+    CB.drag($("cv-psd-lever"), {
+      down(p) {
+        if (!geo) return false;
+        const dc = Math.abs(p.x - geo.xC), dr = Math.abs(p.x - geo.xR);
+        if (Math.min(dc, dr) > 45) return false;
+        grab = dc < dr ? "c" : "r";
+        this.move(p);
+      },
+      move(p) {
+        const r = geo.inv(p.y);
+        if (grab === "c") gE.set(clamp(Math.round(r / 100) * 100, 0, 4500));
+        else gV.set(clamp(Math.round((r / KRING) * 2) / 2, 0, 180));
+      },
+    });
+    CB.loop($("cv-psd-gear"), (dt) => {
+      const k = (RPM / 120) * dt;
+      const np = S.ne - ((S.ns - S.ne) * ZS) / ZP;
+      ang.s += S.ns * k; ang.c += S.ne * k; ang.r += S.nr * k; ang.p += np * k;
+      cvG.redraw();
+    });
+    upd();
+  })();
+
+  /* ============================================================ 4. 에너지 흐름도 */
+  (function () {
+    let cv = null, F = null, tt = 0;
+    function calc() {
+      const acc = gA() / 100, brk = gB() / 100, kmh = gV(), v = CB.ms(kmh), soc = gS();
+      const zero = { pe: 0, pb: 0, fric: 0, f: 0, pm1: 0, pm2: 0, pmech: 0, pw: 0, on: false, soc };
+      if (brk > 0) {
+        if (v < 0.1) return Object.assign(zero, { mode: "정차 (엔진 정지)" });
+        const pbrk = (brk * 1500 * 6 * v) / 1000;
+        let lim = 35 * clamp((kmh - 3) / 5, 0, 1);
+        if (soc > 75) lim *= Math.max(0, (80 - soc) / 5);
+        const rg = Math.min(pbrk, lim);
+        return Object.assign(zero, { pb: -rg, pm2: -rg, pw: -pbrk, fric: pbrk - rg, mode: rg < 0.2 ? "마찰 제동" : pbrk - rg > 0.5 ? "회생 + 마찰 제동" : "회생 제동" });
+      }
+      const preq = Math.min(acc * 90, (acc * 6000 * v) / 1000);
+      const on = preq > 12 || (kmh > 80 && preq > 0.3) || soc < 42;
+      if (!on) return Object.assign(zero, { pb: preq, pm2: preq, pw: preq, mode: preq > 0.3 ? "EV 주행" : v < 0.1 ? "정차 (엔진 정지)" : "타력 주행 (엔진 정지)" });
+      const pchg = clamp(55 - soc, 0, 12);
+      const pe = clamp(preq + pchg, 8, 72), pb = clamp(preq - pe, -30, 30);
+      const nr = KRING * kmh, n = Math.max(1000 + 48 * pe, nr / ((1 + RHO) * 1.25));
+      const f = clamp(1 - nr / ((1 + RHO) * n), -1, 1);
+      const pm1 = pe * f;
+      return { pe, pb, fric: 0, f, pm1, pm2: pm1 + pb, pmech: pe * (1 - f), pw: pe + pb, on: true, soc, n,
+        mode: pb > 1.5 ? "가속 보조" : pb < -1.5 ? (v < 0.1 ? "정차 중 충전" : "주행 중 충전") : "엔진 주행" };
+    }
+    function upd() {
+      F = calc();
+      CB.stat("ef-mode", F.mode);
+      CB.stat("ef-pe", F.on ? F.pe.toFixed(1) + " kW · " + num(F.n) + " rpm" : "정지");
+      CB.stat("ef-pb", (F.pb > 0 ? "+" : "") + F.pb.toFixed(1) + " kW");
+      CB.stat("ef-pw", F.pw.toFixed(1) + " kW");
+      CB.stat("ef-fr", F.on ? pct(F.f, 0) : "—");
+    }
+    const gA = CB.range("ef-acc", (v) => v + " %", upd);
+    const gB = CB.range("ef-brk", (v) => v + " %", upd);
+    const gV = CB.range("ef-v", (v) => v + " km/h", upd);
+    const gS = CB.range("ef-soc", (v) => v + " %", upd);
+    const PRE = { ev: [12, 0, 30, 60], cruise: [22, 0, 80, 55], boost: [100, 0, 60, 60], charge: [8, 0, 40, 35], regen: [0, 25, 70, 55] };
+    CB.seg("ef-preset", (k) => { const p = PRE[k]; gA.set(p[0]); gB.set(p[1]); gV.set(p[2]); gS.set(p[3]); });
+    upd();
+
+    function flow(ctx, P, x1, y1, x2, y2, kw, color) {
+      const mag = Math.abs(kw);
+      if (mag < 0.2) {
+        ctx.strokeStyle = P.border; ctx.lineWidth = 2; ctx.setLineDash([3, 4]);
+        seg(ctx, x1, y1, x2, y2); ctx.setLineDash([]);
+        return;
+      }
+      if (kw < 0) { let t = x1; x1 = x2; x2 = t; t = y1; y1 = y2; y2 = t; }
+      const lw = 2.5 + Math.min(9, mag / 6);
+      ctx.strokeStyle = alpha(color, 0.3); ctx.lineWidth = lw; ctx.lineCap = "butt";
+      seg(ctx, x1, y1, x2, y2);
+      const L = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1) / L, uy = (y2 - y1) / L;
+      const gap = 22, cs = lw * 0.5 + 3;
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineJoin = "round";
+      ctx.beginPath();
+      for (let s = (tt * 40) % gap; s < L; s += gap) {
+        const px = x1 + ux * s, py = y1 + uy * s;
+        ctx.moveTo(px - ux * cs - uy * cs, py - uy * cs + ux * cs);
+        ctx.lineTo(px, py);
+        ctx.lineTo(px - ux * cs + uy * cs, py - uy * cs - ux * cs);
+      }
+      ctx.stroke();
+    }
+    cv = CB.canvas($("cv-flow"), (ctx, w, h) => {
+      if (!F) return;
+      const P = CB.palette();
+      const bw = clamp(w * 0.16, 54, 96), bh = 34, fs = w < 420 ? 10.5 : 12.5;
+      const yT = h * 0.24, yM = h * 0.62, yB = h * 0.89;
+      const xE = w * 0.13, xG = w * 0.4, xK = w * 0.7, xW = w * 0.88, xJ = w * 0.55;
+      const lab = (v, x, y, col) => { if (Math.abs(v) >= 0.2) txt(ctx, Math.abs(v).toFixed(1), x, y, col, "center", 11, true); };
+      const mech = P.accent2;
+      flow(ctx, P, xE, yT, xG, yT, F.pe, P.accent);
+      flow(ctx, P, xG, yT, xK, yT, F.pmech, mech);
+      flow(ctx, P, xK, yT, xW, yT, F.pmech + F.pm2, mech);
+      flow(ctx, P, xG, yT, xG, yM, F.pm1, mech);
+      flow(ctx, P, xG, yM, xJ, yM, F.pm1, HV);
+      flow(ctx, P, xJ, yB, xJ, yM, F.pb, HV);
+      flow(ctx, P, xJ, yM, xK, yM, F.pm2, HV);
+      flow(ctx, P, xK, yM, xK, yT, F.pm2, mech);
+      lab(F.pe, (xE + xG) / 2, yT - 14, P.accent);
+      lab(F.pmech, (xG + xK) / 2, yT - 14, mech);
+      lab(F.pmech + F.pm2, (xK + bw * 0.2 + xW - bw / 2) / 2, yT - 14, mech);
+      lab(F.pm1, xG + 20, (yT + yM) / 2, mech);
+      lab(F.pm1, (xG + bw / 2 + xJ) / 2, yM + 14, HV);
+      lab(F.pb, xJ + 20, (yM + yB) / 2 - 4, HV);
+      lab(F.pm2, (xJ + xK - bw / 2) / 2, yM - 14, HV);
+      lab(F.pm2, xK + 20, (yT + yM) / 2, mech);
+      if (F.fric > 0.2) {
+        CB.arrow(ctx, xW, yT + bh / 2 + 4, xW, yT + bh / 2 + 16 + Math.min(40, F.fric / 3), P.bad, 3);
+        txt(ctx, "마찰열 " + F.fric.toFixed(1), xW, yT + bh / 2 + 30 + Math.min(40, F.fric / 3), P.bad, "center", 11, true);
+      }
+      const node = (name, x, y, stroke, fill) => {
+        rbox(ctx, x - bw / 2, y - bh / 2, bw, bh, 8, fill || P.surface, stroke, 2);
+        txt(ctx, name, x, y + 0.5, P.text, "center", fs, true);
+      };
+      node("엔진", xE, yT, F.on ? P.accent : P.border, F.on ? mix(P.surface, P.accent, 0.25) : null);
+      node("유성 기어", xG, yT, P.border);
+      node("바퀴", xW, yT, P.border);
+      node("MG1", xG, yM, HV);
+      node("MG2", xK, yM, HV);
+      // 합류점
+      ctx.fillStyle = P.dim; ctx.beginPath(); ctx.arc(xK, yT, 4, 0, TAU); ctx.fill();
+      // 배터리
+      rbox(ctx, xJ - bw / 2, yB - 13, bw, 26, 6, P.surface, HV, 2);
+      rbox(ctx, xJ - bw / 2 + 3, yB - 10, ((bw - 6) * F.soc) / 100, 20, 4, alpha(P.ok, 0.45));
+      txt(ctx, "배터리 " + F.soc + "%", xJ, yB + 0.5, P.text, "center", fs - 0.5, true);
+      if (!F.on) txt(ctx, "엔진 정지", xE, yT + bh / 2 + 12, P.dim, "center", 10.5);
+    }, { aspect: 0.62, minHeight: 270, maxHeight: 400 });
+    CB.loop($("cv-flow"), (dt, t) => { tt = t; cv.redraw(); });
+  })();
+
+  /* ============================================================ 5. 회생 제동 블렌딩 */
+  (function () {
+    let cv1 = null, cv2 = null, R = null;
+    const M = 1600, FMAX = 4500, ETA = 0.85, VMAX = 150, FTOP = 14;
+    const road = (v) => M * CB.G * 0.01 + 0.5 * CB.RHO * 0.65 * v * v;
+    function limit(v, pm, pb) {
+      const kmh = v * 3.6;
+      return Math.min(FMAX, (Math.min(pm, pb / ETA) * 1000) / Math.max(v, 0.5)) * clamp((kmh - 5) / 7, 0, 1);
+    }
+    function calc() {
+      const v0 = CB.ms(gV()), a = gA(), pm = gM(), pb = gB();
+      const dt = 0.02, tv = [], lim = [], dem = [], reg = [];
+      let v = v0, t = 0, er = 0, ef = 0, el = 0, dist = 0;
+      while (v > 0) {
+        const fb = Math.max(0, M * a - road(v)), fr = Math.min(fb, limit(v, pm, pb));
+        tv.push([t, v * 3.6]); dem.push(fb); reg.push(fr);
+        er += fr * v * dt; ef += (fb - fr) * v * dt; el += Math.min(M * a, road(v)) * v * dt;
+        dist += v * dt; v -= a * dt; t += dt;
+      }
+      for (let k = 1; k <= VMAX; k++) lim.push([k, limit(k / 3.6, pm, pb) / 1000]);
+      return { v0, a, pm, pb, tv, dem, reg, lim, T: t, dist, ek: 0.5 * M * v0 * v0, er: er * ETA, ef, el };
+    }
+    function upd() {
+      R = calc();
+      CB.stat("rg-ek", (R.ek / 1000).toFixed(0) + " kJ (" + (R.ek / 3600).toFixed(0) + " Wh)");
+      CB.stat("rg-er", (R.er / 1000).toFixed(0) + " kJ");
+      CB.stat("rg-ratio", pct(R.er / R.ek, 0));
+      CB.stat("rg-ef", (R.ef / 1000).toFixed(0) + " kJ");
+      CB.stat("rg-el", (R.el / 1000).toFixed(0) + " kJ");
+      CB.stat("rg-t", R.T.toFixed(1) + " s / " + R.dist.toFixed(0) + " m");
+      if (cv1) cv1.redraw();
+      if (cv2) cv2.redraw();
+    }
+    const gV = CB.range("rg-v0", (v) => v + " km/h", upd);
+    const gA = CB.range("rg-a", (v) => v.toFixed(1) + " m/s² (" + (v / CB.G).toFixed(2) + " g)", upd);
+    const gM = CB.range("rg-pm", (v) => v + " kW", upd);
+    const gB = CB.range("rg-pb", (v) => v + " kW", upd);
+    R = calc();
+
+    function areas(ctx, P, c, xs, lo, hi) {
+      const poly = (a, b, col) => {
+        ctx.beginPath();
+        xs.forEach((x, i) => (i ? ctx.lineTo(c.X(x), c.Y(b[i])) : ctx.moveTo(c.X(x), c.Y(b[i]))));
+        for (let i = xs.length - 1; i >= 0; i--) ctx.lineTo(c.X(xs[i]), c.Y(a ? a[i] : 0));
+        ctx.closePath(); ctx.fillStyle = col; ctx.fill();
+      };
+      poly(null, lo, alpha(P.ok, 0.45));
+      poly(lo, hi, alpha(P.bad, 0.45));
+    }
+    cv1 = CB.canvas($("cv-rg-map"), (ctx, w, h) => {
+      const P = CB.palette();
+      const box = { x: 52, y: 22, w: w - 52 - 14, h: h - 22 - 46 };
+      const xs = [], lo = [], hi = [];
+      for (let i = R.tv.length - 1; i >= 0; i -= 5) { xs.push(R.tv[i][1]); lo.push(R.reg[i] / 1000); hi.push(R.dem[i] / 1000); }
+      const opt = { x: [0, VMAX], y: [0, FTOP], xLabel: "차속 (km/h)", yLabel: "제동력 (kN)" };
+      const c = CB.chart(ctx, box, Object.assign({ series: [] }, opt));
+      ctx.save(); ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); ctx.clip();
+      areas(ctx, P, c, xs, lo, hi);
+      ctx.restore();
+      CB.chart(ctx, box, Object.assign({
+        series: [{ data: R.lim, color: P.ok, width: 2.5 }, { data: xs.map((x, i) => [x, hi[i]]), color: P.text, width: 2 }],
+        vlines: [{ x: R.v0 * 3.6, color: P.dim }],
+      }, opt));
+      txt(ctx, "회생 한계", box.x + 6, 11, P.ok, "left", 11.5, true);
+      txt(ctx, "요구 제동력", box.x + 70, 11, P.text, "left", 11.5, true);
+      txt(ctx, "← 감속", c.X(R.v0 * 3.6) - 6, box.y + 10, P.dim, "right", 11);
+    }, { aspect: 0.52, minHeight: 220, maxHeight: 280 });
+    cv2 = CB.canvas($("cv-rg-time"), (ctx, w, h) => {
+      const P = CB.palette();
+      const box = { x: 52, y: 22, w: w - 52 - 14, h: h - 22 - 46 };
+      const xs = [], lo = [], hi = [], sp = [];
+      const step = Math.max(1, Math.floor(R.tv.length / 240));
+      for (let i = 0; i < R.tv.length; i += step) { xs.push(R.tv[i][0]); lo.push(R.reg[i] / 1000); hi.push(R.dem[i] / 1000); sp.push([R.tv[i][0], (R.tv[i][1] / VMAX) * FTOP]); }
+      const opt = { x: [0, R.T], y: [0, FTOP], xLabel: "제동 시작 후 시간 (s)", yLabel: "제동력 (kN)" };
+      const c = CB.chart(ctx, box, Object.assign({ series: [] }, opt));
+      ctx.save(); ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); ctx.clip();
+      areas(ctx, P, c, xs, lo, hi);
+      ctx.restore();
+      CB.chart(ctx, box, Object.assign({ series: [{ data: sp, color: P.accent2, width: 2, dash: [5, 4] }] }, opt));
+      ctx.fillStyle = alpha(P.ok, 0.6); ctx.fillRect(box.x + 6, 6, 12, 10);
+      txt(ctx, "회생", box.x + 22, 11, P.text, "left", 11.5);
+      ctx.fillStyle = alpha(P.bad, 0.6); ctx.fillRect(box.x + 56, 6, 12, 10);
+      txt(ctx, "마찰", box.x + 72, 11, P.text, "left", 11.5);
+      txt(ctx, "속도(점선, 눈금 없음)", box.x + box.w, 11, P.accent2, "right", 11.5);
+    }, { aspect: 0.52, minHeight: 220, maxHeight: 280 });
+    upd();
+  })();
+
+  /* ============================================================ 6. 주행 사이클 */
+  (function () {
+    let cv = null, D = null;
+    // [목표 속도 km/h, 가·감속도 m/s², 유지 시간 s]
+    const CYC = {
+      city: [[30, 1.0, 15], [0, 1.0, 20], [50, 1.2, 25], [0, 1.2, 25], [20, 0.8, 10], [0, 1.0, 15], [60, 1.2, 30], [0, 1.5, 30], [40, 1.0, 20], [0, 1.2, 20], [50, 1.0, 25], [0, 1.2, 25], [30, 1.0, 12], [0, 1.0, 15]],
+      sub: [[70, 1.2, 60], [0, 1.2, 10], [90, 1.0, 90], [50, 0.8, 40], [80, 0.8, 60], [0, 1.3, 15], [60, 1.0, 50], [0, 1.2, 10]],
+      hwy: [[100, 1.0, 120], [80, 0.5, 60], [110, 0.6, 150], [90, 0.5, 60], [100, 0.5, 90], [0, 1.0, 5]],
+    };
+    const DT = 0.5;
+    const profiles = {};
+    Object.keys(CYC).forEach((k) => {
+      const v = [0], a = [0];
+      let cur = 0;
+      const push = (nv) => { a.push((nv - cur) / DT); cur = nv; v.push(nv); };
+      push(0); push(0); push(0); push(0);
+      CYC[k].forEach(([tg, acc, hold]) => {
+        const target = CB.ms(tg);
+        while (Math.abs(target - cur) > 1e-6) push(cur + clamp(target - cur, -acc * DT, acc * DT));
+        for (let t = 0; t < hold; t += DT) push(cur);
+      });
+      profiles[k] = { v, a };
+    });
+    function simulate(type, m, Eb, regLim) {
+      const pr = profiles[type], n = pr.v.length;
+      const pbMax = Math.min(45, 25 * Eb), pEv = Math.min(pbMax * 0.9, 10);
+      let soc = 0.55, on = false, was = false, fc = 0, fh = 0, dist = 0, eBrake = 0, eReg = 0, onT = 0, idle = 0;
+      const out = { t: [], v: [], soc: [], fc: [], fh: [], on: [] };
+      for (let i = 0; i < n; i++) {
+        const v = pr.v[i], a = pr.a[i];
+        const F = m * a * 1.05 + (v > 0.1 ? m * CB.G * 0.01 : 0) + 0.5 * CB.RHO * 0.65 * v * v;
+        const Pw = (F * v) / 1000;
+        // 일반차: 윌런스 선
+        let fuelC;
+        if (Pw > 0) fuelC = ((Pw / 0.92 + 0.5) * 1.05 + 3.5) / 0.4;
+        else if (v > 4 && Pw < 0) fuelC = 0;
+        else { fuelC = 2.5 / 0.4; if (v < 0.1) idle += fuelC * DT; }
+        // 하이브리드: 규칙 기반
+        let fuelH = 0, pbat = 0;
+        if (Pw < 0) {
+          let lim = Math.min(regLim, pbMax / 0.8) * clamp((v * 3.6 - 5) / 7, 0, 1);
+          if (soc >= 0.72) lim = 0;
+          const rg = Math.min(-Pw * 0.75, lim);            // 구동축 몫만 회생
+          pbat = -rg * 0.8 + 0.4; on = false;
+          eBrake += -Pw * DT; eReg += rg * 0.8 * DT;
+        } else {
+          const pel = Pw / 0.85 + 0.4;
+          if (pel > pEv || soc < 0.42) on = true;
+          else if (pel < 0.6 * pEv && soc > 0.48) on = false;
+          if (on) {
+            let pchg = clamp((0.58 - soc) * 60, 0, 12), pe = Pw / 0.88 + 0.4 + pchg;
+            if (pe < 9) { pchg += 9 - pe; pe = 9; }
+            if (pchg * 0.85 > pbMax) { pe -= pchg - pbMax / 0.85; pchg = pbMax / 0.85; }
+            if (pe > 70) { pbat = pe - 70; pe = 70; } else pbat = -pchg * 0.85;
+            fuelH = (pe * 1.05 + 2.2) / 0.41 + (was ? 0 : 20 / DT);   // 시동 1회당 연료 약 20 kJ
+          } else pbat = pel;
+        }
+        was = on;
+        soc = clamp(soc - (pbat * DT) / 3600 / Eb, 0.2, 0.85);
+        fc += fuelC * DT; fh += fuelH * DT; dist += v * DT;
+        if (on) onT += DT;
+        if (i % 2 === 0) {
+          out.t.push(i * DT); out.v.push(v * 3.6); out.soc.push(soc * 100); out.on.push(on);
+          out.fc.push((fc / 3600 / LHV) * 1000); out.fh.push((fh / 3600 / LHV) * 1000);
+        }
+      }
+      const dE = (soc - 0.55) * Eb;                         // kWh, 남은 만큼 연료로 환산
+      const fhL = fh / 3600 / LHV - dE / (0.37 * 0.85) / LHV, fcL = fc / 3600 / LHV;
+      return Object.assign(out, { T: n * DT, km: dist / 1000, fcL, fhL, reg: eBrake > 0 ? eReg / eBrake : 0, onFrac: onT / (n * DT), idleL: idle / 3600 / LHV });
+    }
+    function upd() {
+      D = simulate(gT(), gM(), gE(), gR());
+      CB.stat("dc-fc", (D.km / D.fcL).toFixed(1) + " km/L");
+      CB.stat("dc-fh", (D.km / D.fhL).toFixed(1) + " km/L");
+      CB.stat("dc-save", pct(1 - D.fhL / D.fcL, 0));
+      CB.stat("dc-reg", pct(D.reg, 0));
+      CB.stat("dc-on", pct(D.onFrac, 0));
+      CB.stat("dc-idle", (D.idleL * 1000).toFixed(0) + " mL (" + pct(D.idleL / D.fcL, 0) + ")");
+      if (cv) cv.redraw();
+    }
+    const gT = CB.seg("dc-type", upd);
+    const gM = CB.range("dc-m", (v) => num(v) + " kg", upd);
+    const gE = CB.range("dc-e", (v) => v.toFixed(1) + " kWh", upd);
+    const gR = CB.range("dc-r", (v) => v + " kW", upd);
+    D = simulate(gT(), gM(), gE(), gR());
+
+    cv = CB.canvas($("cv-cycle"), (ctx, w, h) => {
+      const P = CB.palette();
+      const L = 52, Rr = 14, top = 20, bot = 46, gap = 30;
+      const ph = (h - top - bot - gap * 2) / 3;
+      const bx = (i) => ({ x: L, y: top + i * (ph + gap), w: w - L - Rr, h: ph });
+      const z = (arr) => D.t.map((t, i) => [t, arr[i]]);
+      const bands = [];
+      let s0 = null;
+      D.on.forEach((o, i) => {
+        if (o && s0 === null) s0 = D.t[i];
+        if ((!o || i === D.on.length - 1) && s0 !== null) { bands.push({ x0: s0, x1: D.t[i], color: alpha(P.accent, 0.18) }); s0 = null; }
+      });
+      const vmax = Math.max(60, Math.ceil(Math.max.apply(null, D.v) / 20) * 20);
+      const fmax = Math.max(D.fc[D.fc.length - 1], D.fh[D.fh.length - 1]) * 1.1;
+      CB.chart(ctx, bx(0), { x: [0, D.T], y: [0, vmax], yLabel: "km/h", yTicks: [0, vmax / 2, vmax], bands, series: [{ data: z(D.v), color: P.text, width: 1.8 }] });
+      CB.chart(ctx, bx(1), { x: [0, D.T], y: [30, 80], yLabel: "SOC %", yTicks: [30, 55, 80], series: [{ data: z(D.soc), color: P.ok, width: 2 }], hlines: [{ y: 55, color: P.faint }] });
+      CB.chart(ctx, bx(2), { x: [0, D.T], y: [0, fmax], xLabel: "시간 (s)", yLabel: "연료 mL", series: [{ data: z(D.fc), color: P.accent2, width: 2.2 }, { data: z(D.fh), color: P.accent, width: 2.2 }] });
+      txt(ctx, "속도", L + 4, 10, P.text, "left", 11.5, true);
+      ctx.fillStyle = alpha(P.accent, 0.3); ctx.fillRect(L + 36, 5, 12, 10);
+      txt(ctx, "엔진 가동(HEV)", L + 52, 10, P.dim, "left", 11.5);
+      const b2 = bx(2);
+      txt(ctx, "일반차", b2.x + 6, b2.y - 10, P.accent2, "left", 11.5, true);
+      txt(ctx, "하이브리드", b2.x + 50, b2.y - 10, P.accent, "left", 11.5, true);
+    }, { aspect: 0.85, minHeight: 380, maxHeight: 500 });
+    upd();
+  })();
+
+  /* ============================================================ 7. PHEV 유틸리티 팩터 */
+  (function () {
+    let cv1 = null, cv2 = null, U = null;
+    const SG = 0.9, EC = 18;
+    function dist(mean) {
+      const mu = Math.log(mean) - (SG * SG) / 2, arr = [];
+      for (let d = 0.5; d <= 800; d += 0.5) arr.push([d, Math.exp(-Math.pow(Math.log(d) - mu, 2) / (2 * SG * SG)) / (d * SG * Math.sqrt(TAU))]);
+      return arr;
+    }
+    function ufOf(R, arr) {
+      let nu = 0, de = 0;
+      arr.forEach(([d, p]) => { nu += p * Math.min(d, R); de += p * d; });
+      return nu / de;
+    }
+    function calc() {
+      const R = gR(), mean = gM(), c = gC() / 100, cs = gS();
+      const arr = dist(mean), uf = ufOf(R, arr) * c, curve = [];
+      for (let r = 0; r <= 150; r += 5) curve.push([r, ufOf(r, arr) * c * 100]);
+      let within = 0, tot = 0;
+      arr.forEach(([d, p]) => { tot += p; if (d <= R) within += p; });
+      const fc = ((1 - uf) * 100) / cs, ec = uf * EC;
+      return { R, mean, c, cs, arr, uf, curve, within: within / tot, fc, ec };
+    }
+    function upd() {
+      U = calc();
+      CB.stat("uf-uf", U.uf.toFixed(2));
+      CB.stat("uf-fc", U.fc.toFixed(1) + " L/100 km");
+      CB.stat("uf-ec", U.ec.toFixed(1) + " kWh/100 km");
+      CB.stat("uf-kml", U.fc > 0.05 ? (100 / U.fc).toFixed(0) + " km/L" : "연료 거의 0");
+      CB.stat("uf-co2", (U.fc * 28 + U.ec * 4.5).toFixed(0) + " g/km");
+      CB.stat("uf-co2h", ((100 / U.cs) * 28).toFixed(0) + " g/km");
+      if (cv1) cv1.redraw();
+      if (cv2) cv2.redraw();
+    }
+    const gR = CB.range("uf-r", (v) => v + " km", upd);
+    const gM = CB.range("uf-mean", (v) => v + " km", upd);
+    const gC = CB.range("uf-chg", (v) => v + " %", upd);
+    const gS = CB.range("uf-cs", (v) => v.toFixed(1) + " km/L", upd);
+    U = calc();
+
+    cv1 = CB.canvas($("cv-uf-dist"), (ctx, w, h) => {
+      const P = CB.palette();
+      const box = { x: 52, y: 22, w: w - 52 - 14, h: h - 22 - 46 };
+      const data = U.arr.filter(([d]) => d <= 200).map(([d, p]) => [d, p * 100]);
+      const ymax = Math.max.apply(null, data.map((q) => q[1])) * 1.15;
+      const opt = { x: [0, 200], y: [0, ymax], xLabel: "하루 주행 거리 (km)", yLabel: "빈도 (%/km)" };
+      const c = CB.chart(ctx, box, Object.assign({ series: [] }, opt));
+      const fill = (a, b, col) => {
+        const pts = data.filter(([d]) => d >= a && d <= b);
+        if (pts.length < 2) return;
+        ctx.beginPath(); ctx.moveTo(c.X(pts[0][0]), c.Y(0));
+        pts.forEach(([d, p]) => ctx.lineTo(c.X(d), c.Y(p)));
+        ctx.lineTo(c.X(pts[pts.length - 1][0]), c.Y(0)); ctx.closePath();
+        ctx.fillStyle = col; ctx.fill();
+      };
+      fill(0, U.R, alpha(P.ok, 0.4));
+      fill(U.R, 200, alpha(P.accent, 0.3));
+      CB.chart(ctx, box, Object.assign({ series: [{ data, color: P.text, width: 2 }], vlines: [{ x: U.R, color: P.ok, label: "R = " + U.R + " km" }] }, opt));
+      txt(ctx, "R 이내인 날 " + pct(U.within, 0), box.x + box.w, 11, P.ok, "right", 11.5, true);
+    }, { aspect: 0.5, minHeight: 210, maxHeight: 270 });
+    cv2 = CB.canvas($("cv-uf-curve"), (ctx, w, h) => {
+      const P = CB.palette();
+      const box = { x: 52, y: 22, w: w - 52 - 14, h: h - 22 - 46 };
+      CB.chart(ctx, box, {
+        x: [0, 150], y: [0, 100], xLabel: "전기 주행 거리 R (km)", yLabel: "UF (%)",
+        series: [{ data: U.curve, color: P.accent, width: 2.6 }],
+        vlines: [{ x: U.R, color: P.dim }], hlines: [{ y: U.uf * 100, color: P.dim }],
+        points: [{ x: U.R, y: U.uf * 100, color: P.accent, r: 5.5 }],
+      });
+      txt(ctx, "전기로 달리는 거리의 비율 " + pct(U.uf, 0), box.x + 4, 11, P.accent, "left", 11.5, true);
+    }, { aspect: 0.5, minHeight: 210, maxHeight: 270 });
+    upd();
+  })();
+})();
+</script>
+</body>
+</html>

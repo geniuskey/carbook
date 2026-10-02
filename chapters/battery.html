@@ -1,0 +1,1099 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>배터리와 충전 · CarBook</title>
+<meta name="description" content="리튬 이온 셀의 원리와 등가 회로, 팩 구성과 BMS, 열 관리와 열화, 급속 충전 곡선, 전비와 주행 거리를 여덟 개의 시뮬레이터로 직접 만져 보며 익힌다.">
+<link rel="canonical" href="https://carbook.euiyun.com/chapters/battery.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="CarBook">
+<meta property="og:title" content="배터리와 충전 · CarBook">
+<meta property="og:description" content="리튬 이온 셀의 원리와 등가 회로, 팩 구성과 BMS, 열 관리와 열화, 급속 충전 곡선, 전비와 주행 거리를 여덟 개의 시뮬레이터로 직접 만져 보며 익힌다.">
+<meta property="og:url" content="https://carbook.euiyun.com/chapters/battery.html">
+<meta property="og:image" content="https://carbook.euiyun.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TechArticle","headline":"배터리와 충전","name":"배터리와 충전 · CarBook","url":"https://carbook.euiyun.com/chapters/battery.html","mainEntityOfPage":"https://carbook.euiyun.com/chapters/battery.html","inLanguage":"ko","isAccessibleForFree":true,"learningResourceType":"interactive textbook chapter","position":16,"image":"https://carbook.euiyun.com/og.png","dateModified":"2026-10-02","isPartOf":{"@type":"Book","@id":"https://carbook.euiyun.com/#book","name":"CarBook — 인터랙티브 자동차 교과서","url":"https://carbook.euiyun.com/"},"publisher":{"@type":"Organization","name":"CarBook","url":"https://carbook.euiyun.com/"},"description":"리튬 이온 셀의 원리와 등가 회로, 팩 구성과 BMS, 열 관리와 열화, 급속 충전 곡선, 전비와 주행 거리를 여덟 개의 시뮬레이터로 직접 만져 보며 익힌다."},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"CarBook","item":"https://carbook.euiyun.com/"},{"@type":"ListItem","position":2,"name":"16 배터리와 충전","item":"https://carbook.euiyun.com/chapters/battery.html"}]}]}</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="../css/style.css">
+<script src="../js/common.js"></script>
+<style>
+  .bt-gap { height: 1px; background: var(--border); }
+  #cv-bal { touch-action: none; cursor: ns-resize; }
+</style>
+</head>
+<body data-chapter="battery">
+<main class="chapter">
+  <header class="chapter-hero">
+    <div class="eyebrow">Chapter 16</div>
+    <h1>배터리와 충전</h1>
+    <p class="lead">전기차에서 가장 무겁고 가장 비싼 부품은 배터리다. 대표적인 팩은 400~500 kg에 수천 개의 셀을 담고 있으며, 주행 거리와 충전 시간, 가속 성능, 겨울철 불편함, 차의 수명까지 대부분 여기서 정해진다. 이 장은 셀 하나 안에서 리튬 이온이 움직이는 모습에서 출발해, 셀을 수백 개 묶은 팩, 그것을 지키는 BMS, 열과 수명, 충전 곡선, 그리고 계기판의 주행 가능 거리가 어떻게 계산되는지까지 차례로 올라간다.</p>
+    <ul class="objectives">
+      <li>리튬 이온 셀에서 이온과 전자가 각각 어느 길로 움직이는지, 셀 전압이 왜 3~4 V인지 설명한다.</li>
+      <li>용량(Ah), 에너지(Wh), C-rate, 에너지 밀도를 구분하고 NCM과 LFP의 차이를 비교한다.</li>
+      <li>OCV와 내부 저항으로 이루어진 등가 회로로 전압 강하와 발열을 계산한다.</li>
+      <li>직렬·병렬 구성으로 팩 전압과 용량을 설계하고 400 V와 800 V 구조의 차이를 이해한다.</li>
+      <li>BMS의 SOC 추정과 셀 밸런싱이 왜 필요한지 설명한다.</li>
+      <li>급속 충전 곡선이 SOC와 온도에 따라 꺾이는 이유와 10→80 % 시간을 계산한다.</li>
+      <li>속도·기온·공조에 따른 전비와 주행 거리 변화를 추정한다.</li>
+    </ul>
+  </header>
+
+  <!-- =============================================================== 1 -->
+  <section id="cell">
+    <h2>리튬 이온 셀: 이온은 안으로, 전자는 밖으로</h2>
+    <p>배터리 셀은 네 가지 재료로 되어 있다. 리튬을 품을 수 있는 두 전극인 <b>음극</b><span class="en">(anode)</span>과 <b>양극</b><span class="en">(cathode)</span>, 두 전극 사이에서 리튬 이온만 지나다니게 하는 액체 <b>전해질</b><span class="en">(electrolyte)</span>, 두 전극이 직접 닿지 않게 막는 다공성 <b>분리막</b><span class="en">(separator)</span>이다. 음극은 흑연 가루를 구리 박에, 양극은 리튬 금속 산화물 가루를 알루미늄 박에 얇게 발라 만든다.</p>
+    <p>핵심은 길이 둘로 나뉘어 있다는 점이다. 전해질은 이온은 통과시키지만 전자는 통과시키지 않는다. 그래서 리튬 원자가 음극에서 나올 때 이온 \(\mathrm{Li^+}\)과 전자 \(e^-\)로 갈라지면, 이온은 셀 내부의 전해질을 건너고 전자는 셀 바깥의 도선으로 돌아가야만 양극에서 다시 만날 수 있다. 바깥으로 돌아가는 그 전자의 흐름이 우리가 쓰는 전류다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 330" role="img" aria-label="리튬 이온 셀의 단면 구조">
+        <defs><marker id="bt-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker>
+        <marker id="bt-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent-2)"/></marker></defs>
+        <rect x="70" y="110" width="26" height="170" fill="#c8763a"/>
+        <rect x="96" y="110" width="210" height="170" class="f-surface"/>
+        <g class="s-line" stroke-width="5"><line x1="106" y1="135" x2="296" y2="135"/><line x1="106" y1="170" x2="296" y2="170"/><line x1="106" y1="205" x2="296" y2="205"/><line x1="106" y1="240" x2="296" y2="240"/><line x1="106" y1="268" x2="296" y2="268"/></g>
+        <g fill="var(--ok)"><circle cx="130" cy="152" r="7"/><circle cx="175" cy="152" r="7"/><circle cx="225" cy="152" r="7"/><circle cx="150" cy="188" r="7"/><circle cx="205" cy="188" r="7"/><circle cx="262" cy="188" r="7"/><circle cx="130" cy="223" r="7"/><circle cx="240" cy="223" r="7"/><circle cx="180" cy="254" r="7"/></g>
+        <rect x="306" y="110" width="150" height="170" class="f-acc2-soft"/>
+        <line x1="381" y1="104" x2="381" y2="286" class="s-axis" stroke-width="6" stroke-dasharray="6 5"/>
+        <rect x="456" y="110" width="210" height="170" class="f-surface"/>
+        <g class="f-acc-soft" stroke="var(--accent)" stroke-width="1.5"><rect x="472" y="126" width="34" height="34"/><rect x="522" y="126" width="34" height="34"/><rect x="572" y="126" width="34" height="34"/><rect x="622" y="126" width="34" height="34"/><rect x="472" y="180" width="34" height="34"/><rect x="522" y="180" width="34" height="34"/><rect x="572" y="180" width="34" height="34"/><rect x="622" y="180" width="34" height="34"/><rect x="472" y="234" width="34" height="34"/><rect x="522" y="234" width="34" height="34"/><rect x="572" y="234" width="34" height="34"/><rect x="622" y="234" width="34" height="34"/></g>
+        <g fill="var(--ok)"><circle cx="489" cy="143" r="7"/><circle cx="589" cy="143" r="7"/><circle cx="539" cy="197" r="7"/><circle cx="639" cy="251" r="7"/></g>
+        <rect x="666" y="110" width="26" height="170" fill="#aab2c0"/>
+        <path d="M83 110 V40 H330" fill="none" stroke="var(--accent-2)" stroke-width="2.5"/>
+        <path d="M430 40 H679 V110" fill="none" stroke="var(--accent-2)" stroke-width="2.5" marker-end="url(#bt-ah2)"/>
+        <rect x="330" y="22" width="100" height="36" rx="8" class="f-elev" stroke="var(--border)"/>
+        <text x="380" y="45" class="t" text-anchor="middle">부하 (모터)</text>
+        <text x="205" y="32" class="t-mono" text-anchor="middle">e⁻ →</text>
+        <text x="555" y="32" class="t-mono" text-anchor="middle">e⁻ →</text>
+        <line x1="320" y1="195" x2="442" y2="195" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#bt-ah)"/>
+        <text x="381" y="182" class="t-acc" text-anchor="middle">Li⁺</text>
+        <text x="83" y="100" class="t" text-anchor="middle" font-weight="700">−</text>
+        <text x="679" y="100" class="t" text-anchor="middle" font-weight="700">+</text>
+        <text x="201" y="302" class="t" text-anchor="middle">음극: 흑연 층 사이의 리튬</text>
+        <text x="381" y="302" class="t-dim" text-anchor="middle">전해질 · 분리막</text>
+        <text x="561" y="302" class="t" text-anchor="middle">양극: 금속 산화물 격자</text>
+        <text x="60" y="322" class="t-dim">구리 집전체</text>
+        <text x="700" y="322" class="t-dim" text-anchor="end">알루미늄 집전체</text>
+      </svg>
+      <figcaption><b>그림 16-1.</b> 방전 중인 리튬 이온 셀. 리튬 이온(초록)은 전해질과 분리막을 건너 양극으로 가고, 전자는 외부 회로를 돌아 양극에서 이온과 다시 만난다. 충전할 때는 두 흐름이 모두 반대가 된다.</figcaption>
+    </figure>
+
+    <p>리튬은 전극 재료와 화학 결합을 새로 만드는 것이 아니라, 결정 구조의 빈자리에 끼어 들어갔다 나온다. 이를 <b>인터칼레이션</b><span class="en">(intercalation, 층간 삽입)</span>이라 한다. 흑연은 탄소 층 사이에, 양극 산화물은 격자의 빈자리에 리튬을 받는다. 전극의 뼈대가 거의 변하지 않으므로 수천 번 되풀이할 수 있다. 방전 때의 반응은 다음과 같다.</p>
+    <div class="formula">$$\text{anode: } \mathrm{LiC_6 \rightarrow C_6 + Li^+ + e^-} \qquad \text{cathode: } \mathrm{Li_{1-x}MO_2} + x\,\mathrm{Li^+} + x\,e^- \rightarrow \mathrm{LiMO_2}$$<div class="where">여기서 M은 니켈·코발트·망간 같은 전이 금속이다. 충전은 두 반응을 거꾸로 돌리는 것이다.</div></div>
+
+    <h3>셀 전압은 어디서 오는가</h3>
+    <p>리튬은 흑연 속에 있을 때보다 양극 산화물 속에 있을 때 에너지가 훨씬 낮다. 높은 곳의 물이 아래로 흐르려는 것과 같아서, 리튬은 음극에서 양극으로 가려고 한다. 그 에너지 차이를 전자 하나당으로 나눈 값이 셀 전압이다. 리튬 금속을 기준으로 흑연은 약 0.1 V, NCM 계열 양극은 약 3.8 V, LFP 양극은 약 3.4 V에 있으므로 셀 전압은 각각 약 3.7 V와 약 3.3 V가 된다. 전압은 재료가 정하는 값이지 셀의 크기와는 무관하다. 셀을 키우면 전압이 아니라 용량이 커진다.</p>
+    <p>전류가 흐르지 않을 때의 단자 전압을 <b>개방 회로 전압</b><span class="en">(Open Circuit Voltage, OCV)</span>이라 한다. 리튬이 음극에 많이 남아 있을수록, 곧 <b>충전 상태</b><span class="en">(State of Charge, SOC)</span>가 높을수록 OCV가 높다. OCV와 SOC의 관계 곡선은 셀의 지문과 같아서 뒤에서 여러 번 다시 쓴다.</p>
+
+    <div class="sim" id="sim-cell">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>셀 내부 들여다보기</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-cell"></canvas><div class="bt-gap"></div><canvas id="cv-cellv"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>동작</span><div class="seg" id="ce-mode"><button data-value="dis" class="on">방전</button><button data-value="idle">정지</button><button data-value="chg">충전</button></div></div>
+          <label class="ctrl"><span>전류 <output id="ce-c-out"></output></span><input type="range" id="ce-c" min="0" max="3" step="0.1" value="1"></label>
+          <div class="ctrl"><span>양극재</span><div class="seg" id="ce-chem"><button data-value="ncm" class="on">NCM</button><button data-value="lfp">LFP</button></div></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">SOC</span><span class="v" id="ce-soc">—</span></div>
+        <div class="stat"><span class="k">OCV</span><span class="v" id="ce-ocv">—</span></div>
+        <div class="stat"><span class="k">단자 전압</span><span class="v" id="ce-v">—</span></div>
+        <div class="stat"><span class="k">전류</span><span class="v" id="ce-i">—</span></div>
+        <div class="stat"><span class="k">상태</span><span class="v" id="ce-st">—</span></div>
+      </div>
+      <div class="sim-note">모델: 60 Ah 셀, 내부 저항 1.5 mΩ. 초록 점이 리튬 이온, 파란 점이 외부 회로를 도는 전자다. 아래 그래프의 곡선이 OCV, 흰 테 점이 OCV, 주황 점이 실제 단자 전압이며 두 점의 간격이 \(I \cdot R\) 강하다. 시간은 240배 빠르게 돌린다. 해볼 것: 전류를 3 C로 올려 방전하면 단자 전압이 얼마나 내려앉는가. 충전하다 보면 단자 전압이 상한(NCM 4.2 V)에 닿고 그 뒤로는 전류가 스스로 줄어든다. 이것이 뒤에 나올 CC–CV 충전이다. LFP로 바꾸면 곡선의 가운데가 거의 평평하다. 실제 셀에서는 SOC 0 %에서도 양극이 리튬으로 가득 차지 않고 100 %에서도 완전히 비지 않는다. 그림은 움직이는 리튬만 그린 것이다.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 2 -->
+  <section id="chem">
+    <h2>양극재, 셀 형태, 그리고 숫자 읽는 법</h2>
+    <p>음극은 거의 모든 차량용 셀이 흑연(일부는 실리콘을 조금 섞는다)을 쓰므로, 셀의 성격은 주로 양극재가 정한다. 현재 전기차의 주류는 두 갈래다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>항목</th><th>NCM / NCA (삼원계)</th><th>LFP (리튬 인산철)</th></tr></thead>
+      <tbody>
+        <tr><td>양극 조성</td><td>니켈·코발트·망간(또는 알루미늄) 층상 산화물</td><td>\(\mathrm{LiFePO_4}\) 올리빈 구조</td></tr>
+        <tr><td>공칭 전압</td><td>약 3.6~3.7 V (2.8~4.2 V)</td><td>약 3.2 V (2.5~3.65 V)</td></tr>
+        <tr><td>셀 에너지 밀도</td><td>대표적으로 약 220~280 Wh/kg</td><td>대표적으로 약 150~190 Wh/kg</td></tr>
+        <tr><td>사이클 수명</td><td>대표적으로 1,000~2,000회</td><td>대표적으로 3,000회 이상</td></tr>
+        <tr><td>열 안정성</td><td>고온에서 산소를 내놓기 쉬워 상대적으로 불리</td><td>P–O 결합이 강해 산소 방출이 어렵다</td></tr>
+        <tr><td>원가</td><td>니켈·코발트 때문에 높다</td><td>철과 인산이라 낮다</td></tr>
+        <tr><td>약점</td><td>가격, 열 안정성</td><td>에너지 밀도, 저온 성능, 평평한 OCV로 SOC 추정이 어렵다</td></tr>
+      </tbody>
+    </table></div>
+    <p>니켈 비율을 높이면(NCM 811 등) 에너지 밀도가 올라가지만 열 안정성과 수명이 나빠진다. 그래서 장거리·고성능 차는 삼원계를, 보급형과 상용차는 LFP를 쓰는 경향이 있다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 250" role="img" aria-label="원통형, 파우치, 각형 셀">
+        <g>
+          <rect x="80" y="50" width="70" height="140" rx="10" class="f-surface" stroke="var(--border)" stroke-width="1.5"/>
+          <ellipse cx="115" cy="50" rx="35" ry="10" class="f-elev" stroke="var(--border)" stroke-width="1.5"/>
+          <rect x="103" y="36" width="24" height="10" rx="3" class="f-acc"/>
+          <path d="M92 70 q23 12 46 0 M92 95 q23 12 46 0 M92 120 q23 12 46 0 M92 145 q23 12 46 0 M92 170 q23 12 46 0" class="s-line" fill="none"/>
+          <text x="115" y="215" class="t" text-anchor="middle" font-weight="700">원통형</text>
+          <text x="115" y="234" class="t-dim" text-anchor="middle">말아 넣은 젤리롤, 금속 캔</text>
+        </g>
+        <g>
+          <rect x="300" y="60" width="170" height="120" rx="6" class="f-acc2-soft" stroke="var(--accent-2)" stroke-width="1.5"/>
+          <rect x="312" y="72" width="146" height="96" rx="4" class="f-surface"/>
+          <rect x="330" y="40" width="34" height="22" class="f-acc"/><rect x="406" y="40" width="34" height="22" fill="#aab2c0"/>
+          <g class="s-line"><line x1="322" y1="90" x2="448" y2="90"/><line x1="322" y1="105" x2="448" y2="105"/><line x1="322" y1="120" x2="448" y2="120"/><line x1="322" y1="135" x2="448" y2="135"/><line x1="322" y1="150" x2="448" y2="150"/></g>
+          <text x="385" y="215" class="t" text-anchor="middle" font-weight="700">파우치</text>
+          <text x="385" y="234" class="t-dim" text-anchor="middle">쌓은 전극, 알루미늄 필름</text>
+        </g>
+        <g>
+          <path d="M590 70 h120 v110 h-120 z" class="f-surface" stroke="var(--border)" stroke-width="1.5"/>
+          <path d="M590 70 l22 -18 h120 l-22 18 z" class="f-elev" stroke="var(--border)" stroke-width="1.5"/>
+          <path d="M710 70 l22 -18 v110 l-22 18 z" class="f-surface-2" fill="var(--surface-2)" stroke="var(--border)" stroke-width="1.5"/>
+          <rect x="616" y="50" width="20" height="9" class="f-acc"/><rect x="684" y="50" width="20" height="9" fill="#aab2c0"/>
+          <circle cx="661" cy="60" r="5" class="f-elev" stroke="var(--text-dim)"/>
+          <text x="661" y="215" class="t" text-anchor="middle" font-weight="700">각형</text>
+          <text x="661" y="234" class="t-dim" text-anchor="middle">알루미늄 캔, 안전 벤트</text>
+        </g>
+      </svg>
+      <figcaption><b>그림 16-2.</b> 셀의 세 가지 형태. 원통형은 생산성이 높고 기계적으로 튼튼하지만 작아서 수천 개가 필요하다. 파우치는 가볍고 형상 자유도가 높으나 외부에서 눌러 주는 구조가 필요하다. 각형은 크고 단단해 팩에 쌓기 쉽다.</figcaption>
+    </figure>
+
+    <h3>용량, 에너지, C-rate</h3>
+    <p>셀의 <b>용량</b>은 꺼낼 수 있는 전하량이고 단위는 Ah다. <b>에너지</b>는 용량에 전압을 곱한 값으로 Wh다. 차의 주행 거리를 정하는 것은 에너지다.</p>
+    <div class="formula">$$E\,[\mathrm{Wh}] = Q\,[\mathrm{Ah}] \times V_{nom}\,[\mathrm{V}], \qquad C\text{-rate} = \frac{I\,[\mathrm{A}]}{Q\,[\mathrm{Ah}]}$$<div class="where">여기서 \(V_{nom}\)은 공칭 전압(방전 중 평균 전압)이다. 1 C는 용량을 1시간에 다 쓰는 전류, 2 C는 30분에 다 쓰는 전류다.</div></div>
+    <p>C-rate를 쓰면 크기가 다른 셀을 같은 잣대로 비교할 수 있다. 5 Ah 원통형 셀의 10 A와 100 Ah 각형 셀의 200 A는 둘 다 2 C로, 셀이 받는 부담이 비슷하다. <b>에너지 밀도</b>는 질량당(Wh/kg, 비에너지)과 부피당(Wh/L)으로 나누어 말한다. 셀 수준의 값과 케이스·냉각·배선을 포함한 팩 수준의 값은 다르며, 팩은 대표적으로 셀의 60~75 % 수준이다.</p>
+    <div class="callout tip">
+      <strong>계산 예: 셀 하나와 팩 하나</strong>
+      <p>60 Ah, 공칭 3.65 V인 NCM 셀의 에너지는 \(60 \times 3.65 = 219\) Wh다. 비에너지가 250 Wh/kg이면 셀 질량은 약 0.88 kg이다. 이 셀로 77 kWh를 만들려면 \(77{,}000 / 219 \approx 352\)개가 필요하고 셀만 약 308 kg이다. 팩에서 셀이 차지하는 질량 비율을 68 %로 보면 팩 질량은 약 450 kg, 팩 비에너지는 약 170 Wh/kg이 된다. 이 팩에서 150 kW를 꺼내는 것은 \(150/77 \approx 1.9\) C에 해당한다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 3 -->
+  <section id="ecm">
+    <h2>등가 회로: 전압 강하와 발열</h2>
+    <p>셀 내부의 전기화학을 전부 풀지 않아도, 단자에서 보이는 거동은 간단한 회로로 잘 흉내 낼 수 있다. SOC에 따라 변하는 전압원 OCV, 전류가 흐르는 순간 바로 전압을 떨어뜨리는 직렬 저항 \(R_0\), 그리고 수 초에서 수십 초에 걸쳐 천천히 나타나는 전압 변화를 담당하는 저항–축전기 쌍 \(R_1 \parallel C_1\)이다. BMS 안에서 실시간으로 도는 모델도 대부분 이 형태다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 240" role="img" aria-label="배터리 셀의 등가 회로">
+        <g class="s-line" stroke-width="2" fill="none">
+          <path d="M90 190 V140 M90 110 V60 H190"/>
+          <path d="M190 60 l8 -12 l14 24 l14 -24 l14 24 l14 -24 l14 24 l8 -12 H330"/>
+          <path d="M330 60 V30 H380 M380 30 l7 -11 l12 22 l12 -22 l12 22 l12 -22 l12 22 l7 -11 H500 V60"/>
+          <path d="M330 60 V92 H408 M422 92 H500 V60"/>
+          <path d="M408 76 V108 M422 76 V108" stroke-width="3"/>
+          <path d="M500 60 H640 M90 190 H640"/>
+        </g>
+        <circle cx="90" cy="125" r="17" class="f-acc-soft" stroke="var(--accent)" stroke-width="2"/>
+        <text x="90" y="121" class="t-mono" text-anchor="middle">+</text><text x="90" y="136" class="t-mono" text-anchor="middle">−</text>
+        <text x="118" y="130" class="t-acc">OCV(SOC)</text>
+        <text x="233" y="100" class="t" text-anchor="middle">R₀</text>
+        <text x="233" y="118" class="t-dim" text-anchor="middle">순간 강하</text>
+        <text x="415" y="14" class="t" text-anchor="middle">R₁</text>
+        <text x="415" y="128" class="t" text-anchor="middle">C₁</text>
+        <text x="415" y="146" class="t-dim" text-anchor="middle">느린 완화 (τ = R₁C₁)</text>
+        <circle cx="640" cy="60" r="5" class="f-acc"/><circle cx="640" cy="190" r="5" class="f-acc"/>
+        <text x="656" y="65" class="t">+</text><text x="656" y="195" class="t">−</text>
+        <text x="690" y="130" class="t-acc" text-anchor="middle">단자 전압 V</text>
+        <line x1="545" y1="48" x2="605" y2="48" stroke="var(--accent-2)" stroke-width="2" marker-end="url(#bt-ah2)"/>
+        <text x="575" y="38" class="t-mono" text-anchor="middle">I (방전)</text>
+      </svg>
+      <figcaption><b>그림 16-3.</b> 1차 RC 등가 회로. \(R_0\)는 집전체·전해질의 옴 저항, \(R_1 C_1\)은 전극 표면 반응과 이온 확산이 따라오는 데 걸리는 시간을 나타낸다.</figcaption>
+    </figure>
+
+    <div class="formula">$$V = \mathrm{OCV}(\mathrm{SOC}) - I R_0 - V_1, \qquad \frac{dV_1}{dt} = \frac{I R_1 - V_1}{R_1 C_1}, \qquad P_{heat} \approx I^2 (R_0 + R_1)$$<div class="where">여기서 \(I\)는 방전을 양으로 잡은 전류, \(V_1\)은 RC 쌍에 걸리는 전압이다. 충전 때는 \(I\)가 음수라 단자 전압이 OCV보다 높아진다.</div></div>
+    <p>두 가지 결과가 여기서 나온다. 첫째, 전류를 많이 뽑을수록 단자 전압이 내려가므로 같은 SOC라도 하한 전압에 더 빨리 닿는다. 둘째, 손실은 전류의 제곱에 비례하는 열로 나온다. 내부 저항은 온도가 내려가면 급격히 커진다. 전해질이 끈적해져 이온이 느려지기 때문이며, 영하 20 °C에서는 상온의 몇 배가 된다. 겨울에 출력이 제한되고 주행 거리가 줄어드는 근본 원인이다.</p>
+    <div class="callout tip">
+      <strong>계산 예: 200 A 가속</strong>
+      <p>내부 저항 합이 2 mΩ인 60 Ah 셀에서 200 A(약 3.3 C)를 뽑으면 전압 강하는 \(200 \times 0.002 = 0.4\) V다. OCV가 3.7 V였다면 단자 전압은 3.3 V로 내려간다. 발열은 \(200^2 \times 0.002 = 80\) W이고, 이런 셀이 192개 직렬이면 팩 전체에서 약 15 kW가 열로 나온다. 같은 조건에서 저항이 4배인 추운 날이라면 강하가 1.6 V가 되어 하한 2.8 V 아래로 떨어지므로, BMS는 전류를 그만큼 허용하지 않는다.</p>
+    </div>
+
+    <div class="sim" id="sim-ecm">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>전류 펄스와 전압 응답</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-ecm"></canvas><div class="bt-gap"></div><canvas id="cv-ecmd"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>부하 전류 <output id="ec-i-out"></output></span><input type="range" id="ec-i" min="0" max="300" step="5" value="120"></label>
+          <label class="ctrl"><span>R₀ (25 °C) <output id="ec-r-out"></output></span><input type="range" id="ec-r" min="0.5" max="3" step="0.1" value="1.2"></label>
+          <label class="ctrl"><span>셀 온도 <output id="ec-t-out"></output></span><input type="range" id="ec-t" min="-20" max="40" step="1" value="25"></label>
+          <label class="ctrl"><span>시작 SOC <output id="ec-soc-out"></output></span><input type="range" id="ec-soc" min="10" max="100" step="1" value="70"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">순간 강하 I·R₀</span><span class="v" id="ec-d0">—</span></div>
+        <div class="stat"><span class="k">펄스 끝 총 강하</span><span class="v" id="ec-d1">—</span></div>
+        <div class="stat"><span class="k">최저 전압</span><span class="v" id="ec-vmin">—</span></div>
+        <div class="stat"><span class="k">발열</span><span class="v" id="ec-heat">—</span></div>
+        <div class="stat"><span class="k">가용 용량</span><span class="v" id="ec-use">—</span></div>
+      </div>
+      <div class="sim-note">모델: 60 Ah NCM 셀, \(R_1 = 0.8 R_0\), τ = 12 s, 저항은 온도가 20 °C 내려갈 때마다 약 2배. 위 그래프는 10초에서 50초까지 전류를 흘렸을 때의 단자 전압(주황)과 OCV(파랑 점선)다. 전류가 걸리는 순간 수직으로 떨어지는 부분이 \(I R_0\), 그 뒤 천천히 더 내려가는 부분이 RC 완화, 전류를 끊은 뒤 서서히 돌아오는 부분이 회복이다. 아래 그래프는 같은 전류로 100 %에서 하한 2.8 V까지 계속 방전했을 때의 전압 곡선으로, 점선이 25 °C, 실선이 현재 온도다. 해볼 것: 온도를 −20 °C로 내리면 곡선 전체가 아래로 내려앉아 하한에 일찍 닿는다. 남은 리튬이 사라진 것이 아니라 그 전류로는 꺼낼 수 없게 된 것이다. 전류를 줄이면 가용 용량이 되돌아오는지 확인하자. 방전 중 셀이 스스로 데워지는 효과는 넣지 않았다.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 4 -->
+  <section id="pack">
+    <h2>셀에서 팩으로</h2>
+    <p>셀 하나는 4 V 안팎이라 모터를 돌리기에는 전압이 너무 낮다. 셀을 <b>직렬</b>로 이으면 전압이 더해지고, <b>병렬</b>로 이으면 용량이 더해진다. 표기는 "96s2p"처럼 쓴다. 병렬로 묶은 2개가 한 단을 이루고 그런 단 96개가 직렬이라는 뜻이다.</p>
+    <div class="formula">$$V_{pack} = N_s V_{cell}, \qquad Q_{pack} = N_p Q_{cell}, \qquad E_{pack} = N_s N_p\, Q_{cell} V_{cell}$$</div>
+    <p>전통적으로는 셀 십여 개를 <b>모듈</b>로 묶고 모듈 여러 개를 <b>팩</b> 케이스에 넣었다. 모듈은 조립과 정비에 편하지만 케이스와 엔드 플레이트가 무게와 부피를 차지한다. 그래서 모듈을 없애고 셀을 팩에 바로 채우는 <b>셀 투 팩</b><span class="en">(Cell-to-Pack, CTP)</span>, 나아가 팩 윗면이 곧 차 바닥이 되는 셀 투 바디 구조가 늘고 있다. 팩에는 셀 외에 버스바, 냉각판, BMS, 메인 릴레이(컨택터), 퓨즈, 전류 센서, 수동 차단 플러그가 들어 있다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 240" role="img" aria-label="셀, 모듈, 팩의 단계">
+        <rect x="40" y="70" width="34" height="90" rx="4" class="f-acc-soft" stroke="var(--accent)" stroke-width="1.5"/>
+        <rect x="48" y="60" width="8" height="10" class="f-acc"/><rect x="60" y="60" width="8" height="10" fill="#aab2c0"/>
+        <text x="57" y="186" class="t" text-anchor="middle" font-weight="700">셀</text>
+        <text x="57" y="204" class="t-mono" text-anchor="middle">3.65 V</text>
+        <line x1="92" y1="115" x2="138" y2="115" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#bt-ah)"/>
+        <g class="f-acc-soft" stroke="var(--accent)" stroke-width="1.2">
+          <rect x="160" y="70" width="18" height="90"/><rect x="180" y="70" width="18" height="90"/><rect x="200" y="70" width="18" height="90"/><rect x="220" y="70" width="18" height="90"/><rect x="240" y="70" width="18" height="90"/><rect x="260" y="70" width="18" height="90"/><rect x="280" y="70" width="18" height="90"/><rect x="300" y="70" width="18" height="90"/>
+        </g>
+        <rect x="152" y="62" width="174" height="106" rx="6" fill="none" class="s-line" stroke-width="2"/>
+        <text x="239" y="186" class="t" text-anchor="middle" font-weight="700">모듈 (예: 12s)</text>
+        <text x="239" y="204" class="t-mono" text-anchor="middle">약 44 V</text>
+        <line x1="342" y1="115" x2="388" y2="115" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#bt-ah)"/>
+        <rect x="410" y="40" width="320" height="140" rx="12" class="f-surface" stroke="var(--border)" stroke-width="2"/>
+        <g class="f-acc-soft" stroke="var(--accent)" stroke-width="1.2">
+          <rect x="424" y="54" width="62" height="52" rx="3"/><rect x="492" y="54" width="62" height="52" rx="3"/><rect x="560" y="54" width="62" height="52" rx="3"/><rect x="628" y="54" width="62" height="52" rx="3"/>
+          <rect x="424" y="114" width="62" height="52" rx="3"/><rect x="492" y="114" width="62" height="52" rx="3"/><rect x="560" y="114" width="62" height="52" rx="3"/><rect x="628" y="114" width="62" height="52" rx="3"/>
+        </g>
+        <rect x="696" y="54" width="24" height="112" rx="3" class="f-acc2-soft" stroke="var(--accent-2)" stroke-width="1.2"/>
+        <text x="708" y="114" class="t-mono" text-anchor="middle" transform="rotate(-90 708 114)">BMS·릴레이</text>
+        <path d="M424 110 H690" stroke="#f08a1c" stroke-width="3" fill="none" stroke-dasharray="2 0"/>
+        <text x="570" y="200" class="t" text-anchor="middle" font-weight="700">팩 (모듈 8개 = 96s)</text>
+        <text x="570" y="218" class="t-mono" text-anchor="middle">공칭 약 350 V, 충전 상한 약 403 V</text>
+      </svg>
+      <figcaption><b>그림 16-4.</b> 셀 → 모듈 → 팩. 주황 선은 고전압 버스바다. 고전압 배선은 차 안 어디서나 주황색으로 표시한다.</figcaption>
+    </figure>
+
+    <h3>400 V와 800 V</h3>
+    <p>"400 V 시스템"은 NCM 셀 약 96개 직렬(공칭 약 350 V), "800 V 시스템"은 그 두 배인 약 190~200개 직렬을 말한다. 같은 에너지의 팩이라면 800 V 쪽은 병렬 수가 절반이므로 팩 용량(Ah)은 절반이고 에너지는 같다. 차이는 전류에서 난다. 같은 전력을 보내는 데 전류가 절반이면 되므로 도선의 발열 \(I^2 R\)은 4분의 1이 된다.</p>
+    <div class="formula">$$I = \frac{P}{V}, \qquad P_{loss} = I^2 R_{cable} = \frac{P^2 R_{cable}}{V^2}$$</div>
+    <p>급속 충전에서 이 차이가 결정적이다. 충전 케이블과 커넥터가 견딜 수 있는 전류는 대표적으로 약 500 A까지이므로, 350 V 팩은 그 전류로 약 175 kW까지밖에 못 받지만 700 V 팩은 약 350 kW를 받을 수 있다. 대신 800 V용 인버터와 부품은 더 높은 내압의 반도체(SiC, <a href="motor.html">15장</a>)가 필요하다.</p>
+
+    <div class="sim" id="sim-pack">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>팩 설계기</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-pack"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>프리셋</span><div class="seg" id="pk-preset"><button data-value="a400" class="on">400 V</button><button data-value="a800">800 V</button><button data-value="cyl">원통형</button><button data-value="lfp">LFP</button></div></div>
+          <div class="ctrl"><span>양극재</span><div class="seg" id="pk-chem"><button data-value="ncm" class="on">NCM 3.65 V</button><button data-value="lfp">LFP 3.2 V</button></div></div>
+          <label class="ctrl"><span>셀 용량 <output id="pk-cap-out"></output></span><input type="range" id="pk-cap" min="3" max="200" step="1" value="110"></label>
+          <label class="ctrl"><span>직렬 수 <output id="pk-s-out"></output></span><input type="range" id="pk-s" min="60" max="220" step="1" value="96"></label>
+          <label class="ctrl"><span>병렬 수 <output id="pk-p-out"></output></span><input type="range" id="pk-p" min="1" max="50" step="1" value="2"></label>
+          <label class="ctrl"><span>보낼 전력 <output id="pk-pw-out"></output></span><input type="range" id="pk-pw" min="50" max="350" step="10" value="250"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">팩 전압 (공칭)</span><span class="v" id="pk-v">—</span></div>
+        <div class="stat"><span class="k">팩 용량</span><span class="v" id="pk-ah">—</span></div>
+        <div class="stat"><span class="k">에너지</span><span class="v" id="pk-e">—</span></div>
+        <div class="stat"><span class="k">셀 수 / 팩 질량</span><span class="v" id="pk-m">—</span></div>
+        <div class="stat"><span class="k">최대 출력 (3 C)</span><span class="v" id="pk-pm">—</span></div>
+        <div class="stat"><span class="k">전류 / 배선 손실</span><span class="v" id="pk-i">—</span></div>
+      </div>
+      <div class="sim-note">위 그림에서 가로로 늘어선 칸이 직렬 단, 세로로 쌓인 칸이 한 단 안의 병렬 셀이다. 아래 곡선은 선택한 전력을 보낼 때 팩 전압에 따른 전류이고 점이 현재 설계다. 가정: 셀 비에너지 NCM 260 Wh/kg, LFP 175 Wh/kg, 팩 질량 중 셀 비율 68 %, 배선·커넥터 저항 3 mΩ. 해볼 것: 400 V와 800 V 프리셋은 에너지가 같다. 전력을 350 kW로 올리고 둘을 번갈아 눌러 전류와 손실을 비교하자. 원통형 프리셋은 5 Ah 셀이 몇 개 필요한가. LFP 프리셋에서 같은 전압을 만들려면 직렬 수가 왜 더 많은가.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 5 -->
+  <section id="bms">
+    <h2>BMS: 셀을 지키는 두뇌</h2>
+    <p><b>배터리 관리 시스템</b><span class="en">(Battery Management System, BMS)</span>은 모든 셀의 전압, 여러 지점의 온도, 팩 전류를 쉬지 않고 재면서 다섯 가지 일을 한다.</p>
+    <ul>
+      <li><b>감시와 보호.</b> 어느 셀이든 과충전(상한 전압 초과), 과방전, 과전류, 과열 상태가 되면 출력을 줄이고, 심하면 메인 릴레이를 열어 팩을 분리한다. 고전압과 차체 사이의 절연 저항도 감시한다.</li>
+      <li><b>SOC 추정.</b> 남은 양은 직접 잴 수 없다. 전류와 전압으로부터 추정해야 한다.</li>
+      <li><b>SOH 추정.</b> <b>건강 상태</b><span class="en">(State of Health)</span>는 새 것 대비 현재 용량의 비율이다. 내부 저항의 증가도 함께 본다.</li>
+      <li><b>출력 한계 계산.</b> 지금 온도와 SOC에서 몇 kW까지 방전·충전(회생 포함)해도 되는지를 계산해 인버터와 충전기에 알려 준다(<a href="electrical.html">13장</a>의 CAN 통신).</li>
+      <li><b>셀 밸런싱과 열 관리 요청.</b></li>
+    </ul>
+
+    <h3>SOC 추정: 전류 적산과 OCV 보정</h3>
+    <p>가장 직접적인 방법은 흘러 나간 전류를 시간에 대해 더하는 <b>전류 적산</b><span class="en">(coulomb counting)</span>이다.</p>
+    <div class="formula">$$\mathrm{SOC}(t) = \mathrm{SOC}(t_0) - \frac{1}{Q}\int_{t_0}^{t} I\,dt$$</div>
+    <p>문제는 오차가 쌓인다는 것이다. 전류 센서에 1 A의 치우침만 있어도 100 Ah 팩에서 한 시간에 1 %씩 어긋난다. 처음 SOC를 잘못 알고 있었다면 그 오차도 그대로 남는다. 반대로 OCV 곡선에서 전압을 읽어 SOC를 거꾸로 찾는 방법은 누적 오차가 없지만, 전류가 흐르는 동안에는 단자 전압이 OCV가 아니고 잡음도 크다. 실제 BMS는 둘을 섞는다. 전류 적산으로 예측하고, 모델이 예상한 전압과 실제 측정 전압의 차이로 조금씩 고친다. 칼만 필터(<a href="perception.html">19장</a>)가 이 구조의 대표다.</p>
+
+    <div class="sim" id="sim-soc">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>SOC 추정: 적산만 할 때와 전압으로 고칠 때</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-soc"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>전류 센서 바이어스 <output id="se-bias-out"></output></span><input type="range" id="se-bias" min="-5" max="5" step="0.5" value="2.5"></label>
+          <label class="ctrl"><span>초기 SOC 오차 <output id="se-e0-out"></output></span><input type="range" id="se-e0" min="-20" max="20" step="1" value="10"></label>
+          <label class="ctrl"><span>OCV 보정 강도 <output id="se-g-out"></output></span><input type="range" id="se-g" min="0" max="10" step="0.5" value="3"></label>
+          <div class="ctrl"><span>양극재</span><div class="seg" id="se-chem"><button data-value="ncm" class="on">NCM</button><button data-value="lfp">LFP</button></div></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">실제 최종 SOC</span><span class="v" id="se-true">—</span></div>
+        <div class="stat"><span class="k">적산만: 최종 오차</span><span class="v" id="se-cc">—</span></div>
+        <div class="stat"><span class="k">보정 포함: 최종 오차</span><span class="v" id="se-ob">—</span></div>
+        <div class="stat"><span class="k">보정 포함: 후반 평균 오차</span><span class="v" id="se-rms">—</span></div>
+      </div>
+      <div class="sim-note">100 Ah 셀을 2시간 30분 동안 가속과 회생이 섞인 전류로 방전한다. 회색 굵은 선이 실제 SOC, 파랑 점선이 전류 적산만 한 추정, 주황이 전압 오차로 보정한 추정이다. 전압 측정에는 약 8 mV의 잡음을 넣었다. 해볼 것: 보정 강도를 0으로 두면 주황과 파랑이 겹친다. 강도를 올리면 초기 오차가 얼마나 빨리 사라지는가. LFP로 바꾸면 같은 강도에서도 수렴이 훨씬 느리고 바이어스에 의한 잔류 오차가 크다. OCV 곡선이 평평해서 전압이 SOC에 대해 알려 주는 것이 적기 때문이다. LFP 차에 가끔 100 %까지 충전하라고 안내하는 이유가 여기에 있다. 곡선 끝의 가파른 구간에서 SOC를 다시 맞추려는 것이다.</div>
+    </div>
+
+    <h3>셀 밸런싱</h3>
+    <p>직렬로 이은 셀에는 같은 전류가 흐른다. 그런데 셀마다 용량과 자기 방전이 조금씩 달라 시간이 지나면 SOC가 벌어진다. 충전은 <b>가장 높은 셀</b>이 상한 전압에 닿는 순간 멈춰야 하고, 방전은 <b>가장 낮은 셀</b>이 하한에 닿는 순간 멈춰야 한다. 그러면 나머지 셀은 가득 차지도, 다 비워지지도 못한다. 팩의 쓸 수 있는 용량은 가장 약한 고리가 정한다.</p>
+    <p><b>패시브 밸런싱</b>은 높은 셀에 작은 저항을 연결해 남는 전하를 열로 버려서 낮은 셀과 맞춘다. 전류가 대표적으로 수십~수백 mA로 작아 느리지만 회로가 단순해 거의 모든 양산차가 쓴다. <b>액티브 밸런싱</b>은 높은 셀의 전하를 낮은 셀로 옮겨 손실이 적지만 복잡하고 비싸다.</p>
+
+    <div class="sim" id="sim-bal">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>직렬 8셀 밸런싱</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-bal"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>동작</span><div class="seg" id="bl-mode"><button data-value="chg">충전</button><button data-value="idle" class="on">정지</button><button data-value="dis">방전</button></div></div>
+          <label class="ctrl"><span>초기 편차 <output id="bl-sp-out"></output></span><input type="range" id="bl-sp" min="2" max="24" step="1" value="12"></label>
+          <label class="check"><input type="checkbox" id="bl-on"> 패시브 밸런싱</label>
+          <div class="ctrl-row"><button class="btn primary" id="bl-shuffle">다시 섞기</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">최고 셀</span><span class="v" id="bl-max">—</span></div>
+        <div class="stat"><span class="k">최저 셀</span><span class="v" id="bl-min">—</span></div>
+        <div class="stat"><span class="k">편차</span><span class="v" id="bl-d">—</span></div>
+        <div class="stat"><span class="k">팩 가용 용량</span><span class="v" id="bl-use">—</span></div>
+        <div class="stat"><span class="k">상태</span><span class="v" id="bl-st">—</span></div>
+      </div>
+      <div class="sim-note">막대 하나가 셀 하나의 SOC다. 막대를 위아래로 끌어 직접 바꿀 수 있다. 팩 가용 용량은 가장 높은 셀이 100 %가 될 때까지 충전한 뒤 가장 낮은 셀이 0 %가 될 때까지 방전할 수 있는 양으로, \(1 - (\mathrm{SOC}_{max} - \mathrm{SOC}_{min})\)이다. 해볼 것: 밸런싱을 끈 채 충전하면 한 셀만 가득 찬 상태에서 멈춘다. 그 상태에서 방전하면 다른 한 셀이 먼저 바닥난다. 밸런싱을 켜고 충전하면 높은 셀 위에 빨간 표시(방전 저항의 열)가 생기며 충전이 멈췄다 이어지기를 되풀이하다가 전부 100 %에 모인다. 실제 밸런싱 전류는 매우 작아 이 과정에 몇 시간이 걸린다. 여기서는 빠르게 돌렸다.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 6 -->
+  <section id="thermal">
+    <h2>열 관리, 안전, 열화</h2>
+    <p>리튬 이온 셀이 좋아하는 온도는 사람과 비슷하다. 대표적으로 15~35 °C에서 출력과 수명이 모두 좋다. 팩 바닥이나 셀 사이에는 냉각수가 흐르는 냉각판이 있고, 열 관리 시스템이 이 온도 창을 유지한다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 200" role="img" aria-label="배터리 온도 구간별 특성">
+        <rect x="40" y="60" width="150" height="50" fill="#5b8cff" opacity="0.35"/>
+        <rect x="190" y="60" width="130" height="50" fill="#5b8cff" opacity="0.15"/>
+        <rect x="320" y="60" width="180" height="50" fill="var(--ok)" opacity="0.35"/>
+        <rect x="500" y="60" width="110" height="50" fill="var(--warn)" opacity="0.35"/>
+        <rect x="610" y="60" width="110" height="50" fill="var(--bad)" opacity="0.4"/>
+        <line x1="40" y1="110" x2="720" y2="110" class="s-axis" stroke-width="1.5"/>
+        <g class="t-mono" text-anchor="middle"><text x="40" y="130">−30</text><text x="190" y="130">0</text><text x="320" y="130">15</text><text x="500" y="130">35</text><text x="610" y="130">50</text><text x="720" y="130">60 °C</text></g>
+        <g class="t" text-anchor="middle"><text x="115" y="90">충전 제한</text><text x="255" y="90">출력 저하</text><text x="410" y="90" font-weight="700">적정 구간</text><text x="555" y="90">열화 가속</text><text x="665" y="90">출력 차단</text></g>
+        <g class="t-dim" text-anchor="middle"><text x="115" y="48">리튬 플레이팅 위험</text><text x="255" y="48">내부 저항 증가</text><text x="410" y="48">출력·수명 최적</text><text x="555" y="48">SEI 성장 빨라짐</text><text x="665" y="48">안전 한계</text></g>
+        <text x="380" y="170" class="t-acc" text-anchor="middle">히터·히트 펌프로 데우고 ← → 칠러·라디에이터로 식힌다</text>
+      </svg>
+      <figcaption><b>그림 16-5.</b> 셀 온도 구간별 특성. 경계 온도는 셀 화학과 제조사 설정에 따라 다르며 대표적인 값이다.</figcaption>
+    </figure>
+
+    <p><b>저온</b>에서는 내부 저항이 커져 출력이 줄고, 무엇보다 충전이 위험해진다. 흑연 속으로 리튬이 들어가는 속도가 느려진 상태에서 전류를 밀어 넣으면 리튬 이온이 흑연에 들어가지 못하고 음극 표면에 금속 리튬으로 쌓인다. 이것이 <b>리튬 플레이팅</b><span class="en">(lithium plating)</span>이다. 석출된 리튬은 다시 쓰이지 못해 용량이 영구히 줄고, 바늘 모양으로 자라면 분리막을 뚫어 내부 단락을 일으킬 수 있다. 그래서 BMS는 추울 때 충전 전류와 회생 제동을 엄격히 제한한다. 급속 충전소로 가는 동안 배터리를 미리 데우는 <b>프리컨디셔닝</b>이 충전 시간을 크게 줄이는 이유다.</p>
+    <p><b>히트 펌프</b>는 에어컨 냉매 회로를 거꾸로 돌려 바깥 공기와 모터·인버터의 폐열에서 열을 끌어온다. 전기 1 kW로 대표적으로 2~3 kW의 열을 옮기므로, 전기를 그대로 열로 바꾸는 PTC 히터보다 겨울철 주행 거리 손실이 작다.</p>
+
+    <h3>열폭주</h3>
+    <p>셀이 어떤 이유로든(내부 단락, 과충전, 충돌에 의한 변형, 외부 화재) 일정 온도를 넘으면 발열 반응이 연쇄적으로 일어난다. 대표적으로 80~120 °C에서 음극 표면의 SEI 막이 분해되기 시작하고, 130~160 °C 부근에서 분리막이 녹아 내부 단락이 커지며, 200 °C 안팎부터 양극이 산소를 내놓아 전해질이 셀 안에서 탄다. 스스로 산소를 공급하므로 외부에서 끄기 어렵다. 이것이 <b>열폭주</b><span class="en">(thermal runaway)</span>다. 팩 설계의 목표는 셀 하나가 열폭주하더라도 옆 셀로 번지는 것을 막거나 충분히 늦추는 것이다. 셀 사이의 단열 패드, 가스를 정해진 방향으로 빼는 벤트 통로, 충돌 시 고전압을 끊는 파이로 퓨즈, 팩을 둘러싼 차체 구조(<a href="body.html">11장</a>)가 그 수단이다.</p>
+
+    <h3>열화: 달력과 사이클</h3>
+    <p>배터리는 쓰지 않아도 늙고, 쓰면 더 늙는다. 앞의 것을 <b>캘린더 열화</b>, 뒤의 것을 <b>사이클 열화</b>라 한다. 주된 원인은 음극 표면의 <b>SEI</b><span class="en">(Solid Electrolyte Interphase)</span>다. 첫 충전 때 전해질이 분해되어 생기는 얇은 보호막인데, 이후에도 조금씩 두꺼워지면서 리튬을 소모한다. 막이 두꺼울수록 성장이 느려지므로 캘린더 열화는 대략 시간의 제곱근에 비례한다. 온도가 높을수록, 높은 SOC로 오래 둘수록 빠르다. 사이클 열화는 충·방전 때 전극 입자가 팽창·수축하며 갈라지는 것, 급속 충전에서의 플레이팅 등이 더해진다.</p>
+
+    <div class="sim" id="sim-deg">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>용량 유지율: 사용 습관의 영향</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-deg"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>연간 주행 거리 <output id="dg-km-out"></output></span><input type="range" id="dg-km" min="5" max="40" step="1" value="15"></label>
+          <div class="ctrl"><span>SOC 사용 범위</span><div class="seg" id="dg-rng"><button data-value="a">20–80 %</button><button data-value="b" class="on">10–90 %</button><button data-value="c">0–100 %</button></div></div>
+          <label class="ctrl"><span>평균 셀 온도 <output id="dg-t-out"></output></span><input type="range" id="dg-t" min="0" max="45" step="1" value="20"></label>
+          <label class="ctrl"><span>급속 충전 비율 <output id="dg-fc-out"></output></span><input type="range" id="dg-fc" min="0" max="100" step="5" value="20"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">10년 뒤 유지율</span><span class="v" id="dg-10">—</span></div>
+        <div class="stat"><span class="k">80 % 도달</span><span class="v" id="dg-80">—</span></div>
+        <div class="stat"><span class="k">연간 등가 사이클</span><span class="v" id="dg-efc">—</span></div>
+        <div class="stat"><span class="k">10년 손실 중 캘린더 몫</span><span class="v" id="dg-cal">—</span></div>
+      </div>
+      <div class="sim-note">경험적 모델이다. 캘린더 손실은 \(\sqrt{t}\)에 비례하고 온도가 12 °C 오를 때마다 2배, 사이클 손실은 등가 완전 사이클 수에 비례하며 SOC 범위·급속 충전 비율·온도로 가중했다. 주황 실선이 전체, 파랑 점선이 캘린더 열화만 있을 때다. 팩 75 kWh, 전비 170 Wh/km 기준. 0–100 %는 가득 채운 채 오래 세워 두는 경우를 포함한다. 해볼 것: 주행 거리를 두 배로 늘리는 것과 평균 온도를 15 °C 올리는 것 중 어느 쪽이 더 해로운가. 일반적인 승용차에서는 사이클보다 달력이 더 큰 몫을 차지하는 경우가 많다. 실제 수명은 셀 화학과 제조사마다 크게 다르므로 곡선의 모양만 읽자. 제조사 보증은 대표적으로 8년 또는 16만 km에 용량 70 % 수준이다.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 7 -->
+  <section id="charge">
+    <h2>충전</h2>
+    <p>배터리는 직류로만 충전할 수 있다. 전력망은 교류이므로 어딘가에서 교류를 직류로 바꿔야 하고, 그 변환기가 어디에 있느냐로 충전 방식이 나뉜다.</p>
+    <ul>
+      <li><b>AC 완속 충전.</b> 변환기가 차 안에 있다. <b>온보드 차저</b><span class="en">(On-Board Charger, OBC)</span>가 교류를 받아 직류로 바꾼다. 차에 싣는 장치라 크기와 무게에 제약이 있어 출력은 대표적으로 7~11 kW, 크게는 22 kW다. 77 kWh 팩을 7 kW로 채우면 약 11시간이 걸린다.</li>
+      <li><b>DC 급속 충전.</b> 변환기가 충전소에 있다. 커다란 정류 장치가 만든 직류를 OBC를 건너뛰고 팩에 직접 넣는다. 출력은 50 kW에서 350 kW 이상까지 있다. 이때 충전기는 BMS가 통신으로 요청하는 전압과 전류를 그대로 공급하는 전원 역할을 한다.</li>
+    </ul>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 250" role="img" aria-label="AC 완속과 DC 급속 충전 경로">
+        <text x="20" y="62" class="t" font-weight="700">AC 완속</text>
+        <rect x="100" y="36" width="90" height="44" rx="8" class="f-surface" stroke="var(--border)"/><text x="145" y="63" class="t" text-anchor="middle">전력망 AC</text>
+        <rect x="240" y="36" width="100" height="44" rx="8" class="f-surface" stroke="var(--border)"/><text x="290" y="63" class="t" text-anchor="middle">충전기(EVSE)</text>
+        <rect x="400" y="20" width="340" height="76" rx="12" fill="none" class="s-line" stroke-dasharray="5 4"/>
+        <text x="730" y="14" class="t-dim" text-anchor="end">차량</text>
+        <rect x="420" y="36" width="120" height="44" rx="8" class="f-acc-soft" stroke="var(--accent)"/><text x="480" y="56" class="t" text-anchor="middle">OBC</text><text x="480" y="72" class="t-mono" text-anchor="middle">AC→DC 7~11 kW</text>
+        <rect x="610" y="36" width="110" height="44" rx="8" class="f-acc2-soft" stroke="var(--accent-2)"/><text x="665" y="63" class="t" text-anchor="middle">배터리</text>
+        <g stroke="var(--accent-2)" stroke-width="2.5" marker-end="url(#bt-ah2)"><line x1="192" y1="58" x2="236" y2="58"/><line x1="342" y1="58" x2="416" y2="58"/></g>
+        <line x1="542" y1="58" x2="606" y2="58" stroke="#f08a1c" stroke-width="3.5" marker-end="url(#bt-ah)"/>
+        <text x="380" y="50" class="t-mono" text-anchor="middle">AC</text><text x="574" y="50" class="t-mono" text-anchor="middle">DC</text>
+
+        <text x="20" y="182" class="t" font-weight="700">DC 급속</text>
+        <rect x="100" y="156" width="90" height="44" rx="8" class="f-surface" stroke="var(--border)"/><text x="145" y="183" class="t" text-anchor="middle">전력망 AC</text>
+        <rect x="240" y="146" width="130" height="64" rx="8" class="f-acc-soft" stroke="var(--accent)"/><text x="305" y="172" class="t" text-anchor="middle">급속 충전기</text><text x="305" y="190" class="t-mono" text-anchor="middle">AC→DC 50~350 kW</text>
+        <rect x="400" y="130" width="340" height="96" rx="12" fill="none" class="s-line" stroke-dasharray="5 4"/>
+        <rect x="420" y="146" width="120" height="30" rx="8" class="f-surface" stroke="var(--border)"/><text x="480" y="166" class="t-dim" text-anchor="middle">OBC (우회)</text>
+        <rect x="610" y="156" width="110" height="44" rx="8" class="f-acc2-soft" stroke="var(--accent-2)"/><text x="665" y="183" class="t" text-anchor="middle">배터리</text>
+        <line x1="192" y1="178" x2="236" y2="178" stroke="var(--accent-2)" stroke-width="2.5" marker-end="url(#bt-ah2)"/>
+        <path d="M372 196 H606" stroke="#f08a1c" stroke-width="4.5" fill="none" marker-end="url(#bt-ah)"/>
+        <text x="490" y="214" class="t-mono" text-anchor="middle">DC 최대 약 500 A</text>
+        <path d="M665 202 V236 H305 V212" fill="none" class="s-line" stroke-dasharray="3 3"/>
+        <text x="485" y="246" class="t-dim" text-anchor="middle">BMS ↔ 충전기 통신: 요청 전압·전류</text>
+      </svg>
+      <figcaption><b>그림 16-6.</b> 완속은 차 안의 OBC가, 급속은 충전소가 교류를 직류로 바꾼다. 급속 충전에서 전류의 크기를 정하는 쪽은 충전기가 아니라 차의 BMS다.</figcaption>
+    </figure>
+
+    <h3>CC–CV와 꺾이는 충전 곡선</h3>
+    <p>셀 충전의 기본 순서는 <b>정전류–정전압</b><span class="en">(Constant Current – Constant Voltage, CC–CV)</span>이다. 처음에는 일정한 전류로 밀어 넣는다. 충전 중 단자 전압은 \(\mathrm{OCV} + I R\)이므로 SOC가 올라가면 언젠가 상한 전압에 닿는다. 그 뒤로는 전압을 상한에 묶어 두고, OCV가 올라오는 만큼 전류를 줄여 간다. 첫 번째 시뮬레이터에서 본 그대로다.</p>
+    <p>급속 충전은 여기에 제약이 더 붙는다. 실제 충전 전력은 다음 셋 중 가장 작은 값이다.</p>
+    <div class="formula">$$P(\mathrm{SOC}) = \min\!\big(\,P_{charger},\;\; I_{max,cable} \cdot V_{pack}(\mathrm{SOC}),\;\; I_{batt}(\mathrm{SOC}, T) \cdot V_{pack}(\mathrm{SOC})\,\big)$$<div class="where">여기서 \(P_{charger}\)는 충전기 정격, \(I_{max,cable}\)은 케이블·커넥터의 전류 한계, \(I_{batt}\)는 BMS가 허용하는 전류다.</div></div>
+    <p>\(I_{batt}\)가 SOC에 따라 줄어드는 이유는 음극이다. SOC가 높을수록 흑연에 빈자리가 적어 리튬이 들어가기 어렵고, 음극 전위가 리튬 금속 전위에 가까워져 플레이팅이 일어나기 쉽다. 그래서 낮은 SOC에서는 큰 전류를 받다가 SOC가 오를수록 계단식 또는 완만하게 전류를 줄인다. 80 % 이후는 특히 느리다. 급속 충전 성능을 "10→80 % 몇 분"으로 말하고, 장거리 주행 때 80 %에서 끊고 출발하는 편이 빠른 이유다.</p>
+    <div class="callout tip">
+      <strong>계산 예: 10→80 % 18분</strong>
+      <p>77 kWh 팩을 10 %에서 80 %까지 채우면 \(77 \times 0.7 \approx 54\) kWh가 들어간다. 18분(0.3 h)에 마쳤다면 평균 전력은 \(54 / 0.3 = 180\) kW다. 최고 전력이 240 kW라도 평균은 그보다 훨씬 낮다. 평균 C-rate는 \(180/77 \approx 2.3\) C다. 전비 170 Wh/km로 환산하면 1분에 약 18 km의 주행 거리를 얻는 셈이다.</p>
+    </div>
+
+    <div class="sim" id="sim-chg">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>급속 충전 곡선</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-chg"></canvas><div class="bt-gap"></div><canvas id="cv-chgt"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>충전기 최대 출력 <output id="ch-p-out"></output></span><input type="range" id="ch-p" min="50" max="350" step="10" value="350"></label>
+          <div class="ctrl"><span>팩 전압 구조</span><div class="seg" id="ch-arch"><button data-value="400">400 V</button><button data-value="800" class="on">800 V</button></div></div>
+          <label class="ctrl"><span>배터리 온도 <output id="ch-t-out"></output></span><input type="range" id="ch-t" min="-10" max="45" step="1" value="25"></label>
+          <label class="ctrl"><span>시작 SOC <output id="ch-s0-out"></output></span><input type="range" id="ch-s0" min="0" max="80" step="1" value="10"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">최고 전력</span><span class="v" id="ch-pk">—</span></div>
+        <div class="stat"><span class="k">80 %까지</span><span class="v" id="ch-t80">—</span></div>
+        <div class="stat"><span class="k">평균 전력 (→80 %)</span><span class="v" id="ch-avg">—</span></div>
+        <div class="stat"><span class="k">80→100 %</span><span class="v" id="ch-t100">—</span></div>
+        <div class="stat"><span class="k">시작 시점의 제한 요인</span><span class="v" id="ch-lim">—</span></div>
+      </div>
+      <div class="sim-note">모델: 77 kWh NCM 팩(400 V는 96s·220 Ah, 800 V는 192s·110 Ah), 케이블 전류 한계 500 A. 위 그래프에서 주황 굵은 선이 실제 충전 전력이고, 가는 점선 셋이 각각 충전기 정격(회색), 케이블 전류 한계(파랑), 배터리 허용 전류(초록)다. 실제 곡선은 항상 셋 중 가장 낮은 선을 따라간다. 아래는 시간에 따른 SOC다. 해볼 것: 350 kW 충전기에서 400 V와 800 V를 바꿔 보면 어느 한계에 걸리는지가 달라진다. 충전기를 100 kW로 낮추면 두 구조의 차이가 사라진다. 온도를 0 °C로 내리면 충전기가 아무리 커도 소용없다. 시작 SOC를 60 %로 올리면 최고 전력이 왜 낮아지는가. 배터리 허용 전류 곡선은 대표적인 형태를 본뜬 것이고 실제 차는 제조사마다 다르다.</div>
+    </div>
+
+    <h3>커넥터 규격</h3>
+    <p>충전 커넥터는 지역마다 다르다. AC는 북미·한국·일본의 Type 1(J1772)과 유럽의 Type 2가 있고, DC는 AC 단자 아래에 굵은 직류 핀 두 개를 덧붙인 CCS(Combo 1, Combo 2), 일본의 CHAdeMO, 중국의 GB/T, 그리고 AC와 DC를 같은 핀으로 쓰는 소형 커넥터인 NACS(SAE J3400)가 있다. 한국의 공용 급속 충전은 CCS Combo 1이 표준이다. 규격이 달라도 원리는 같다. 통신 핀으로 차와 충전기가 서로를 확인하고, 절연을 점검한 다음에야 고전압이 연결된다.</p>
+  </section>
+
+  <!-- =============================================================== 8 -->
+  <section id="range">
+    <h2>주행 거리와 전비, 그리고 그 너머</h2>
+    <p>주행 거리는 쓸 수 있는 에너지를 단위 거리당 소비 에너지로 나눈 값이다. 소비 에너지를 <b>전비</b>라 하며 Wh/km 또는 그 역수인 km/kWh로 쓴다. 바퀴에서 필요한 힘은 <a href="dynamics.html">2장</a>에서 본 주행 저항이고, 여기에 구동계 효율과 주행과 무관한 전기 부하를 더한다.</p>
+    <div class="formula">$$e\,[\mathrm{Wh/km}] = \frac{1}{3.6}\cdot\frac{C_{rr}\, m g + \tfrac12 \rho C_d A v^2}{\eta_{dt}} + \frac{P_{aux} + P_{hvac}}{v}, \qquad \text{Range} = \frac{E_{usable}}{e}$$<div class="where">여기서 힘은 N, \(v\)는 둘째 항에서 km/h, \(P\)는 W다. 1 N의 힘으로 1 km를 가면 1 kJ, 곧 1/3.6 Wh다. \(\eta_{dt}\)는 배터리에서 바퀴까지의 효율이다.</div></div>
+    <p>식에서 두 가지를 읽을 수 있다. 공기 저항 항은 속도의 제곱에 비례하므로 고속에서 전비가 급격히 나빠진다. 반대로 공조 항은 속도로 나누어지므로 느리게 달릴수록 km당 부담이 커진다. 내연기관차는 엔진 폐열로 난방을 공짜로 하지만 전기차는 그럴 열이 없다. 겨울에 주행 거리가 20~30 % 줄어드는 것은 난방 전력, 차가운 배터리의 가용 용량 감소, 밀도가 높아진 공기, 단단해진 타이어의 구름 저항이 겹친 결과다. 정속이 아닌 실제 주행에서는 가감속 에너지가 더 들고 회생 제동(<a href="hybrid.html">14장</a>)이 그 일부를 되찾는다.</p>
+
+    <div class="sim" id="sim-range">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>주행 거리 계산기</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-rng"></canvas><div class="bt-gap"></div><canvas id="cv-rngb"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>가용 에너지 <output id="rg-e-out"></output></span><input type="range" id="rg-e" min="40" max="110" step="1" value="77"></label>
+          <label class="ctrl"><span>차속 <output id="rg-v-out"></output></span><input type="range" id="rg-v" min="30" max="160" step="5" value="100"></label>
+          <label class="ctrl"><span>외기온 <output id="rg-t-out"></output></span><input type="range" id="rg-t" min="-20" max="40" step="1" value="20"></label>
+          <div class="ctrl"><span>공조</span><div class="seg" id="rg-hv"><button data-value="off" class="on">끔</button><button data-value="hp">히트 펌프</button><button data-value="ptc">PTC 히터</button></div></div>
+          <label class="ctrl"><span>차량 질량 <output id="rg-m-out"></output></span><input type="range" id="rg-m" min="1400" max="2600" step="50" value="2000"></label>
+          <label class="ctrl"><span>Cd <output id="rg-cd-out"></output></span><input type="range" id="rg-cd" min="0.2" max="0.36" step="0.01" value="0.26"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">전비</span><span class="v" id="rg-e1">—</span></div>
+        <div class="stat"><span class="k">전비 (역수)</span><span class="v" id="rg-e2">—</span></div>
+        <div class="stat"><span class="k">주행 가능 거리</span><span class="v" id="rg-r">—</span></div>
+        <div class="stat"><span class="k">배터리 소비 전력</span><span class="v" id="rg-p">—</span></div>
+        <div class="stat"><span class="k">저온 가용 용량</span><span class="v" id="rg-f">—</span></div>
+      </div>
+      <div class="sim-note">정속 주행 모델: 전면 면적 2.4 m², 구름 저항 계수 0.009(추우면 증가), 배터리→바퀴 효율 0.88, 기본 전장 부하 0.3 kW. 난방 열 요구량은 실내외 온도차 1 °C당 약 0.14 kW, 히트 펌프 성적 계수는 영상에서 2~3, 혹한에서 1에 가까워진다. 위 그래프의 주황이 현재 조건, 회색 점선이 20 °C·공조 끔 기준이며, 아래 막대는 현재 속도에서 1 km를 가는 데 쓰는 에너지를 항목별로 나눈 것이다. 여름(22 °C 초과)에는 히트 펌프·PTC 어느 쪽을 골라도 에어컨이 돈다. 해볼 것: 시속 100 km에서 130 km로 올리면 주행 거리가 몇 % 줄어드는가. −10 °C에서 PTC와 히트 펌프의 차이는 시속 50 km와 110 km 중 어디에서 더 큰가. 질량 300 kg과 Cd 0.04 중 고속 주행 거리에 더 영향을 주는 것은 무엇인가.</div>
+    </div>
+
+    <h3>거꾸로 흐르는 전기: V2L과 V2G</h3>
+    <p>수십 kWh의 배터리는 일반 가정이 며칠 쓰는 전기에 해당한다. <b>V2L</b><span class="en">(Vehicle-to-Load)</span>은 차의 직류를 교류로 바꿔 전기 제품에 공급하는 기능으로, 양방향으로 동작하는 OBC가 필요하고 출력은 대표적으로 2~3.6 kW다. <b>V2G</b><span class="en">(Vehicle-to-Grid)</span>는 한 걸음 더 나아가 전력망에 전기를 되판다. 전력이 남는 시간에 충전하고 모자란 시간에 내보내면 수많은 전기차가 거대한 저장 장치가 된다. 기술보다 요금 제도, 계통 연계 규격, 추가 사이클에 따른 열화 보상이 과제다.</p>
+
+    <h3>전고체 배터리와 재활용</h3>
+    <p><b>전고체 배터리</b>는 불에 타는 액체 전해질을 고체 전해질로 바꾼 것이다. 열 안정성이 좋아지고, 흑연 대신 리튬 금속 음극을 쓸 수 있게 되면 에너지 밀도를 크게 높일 가능성이 있다. 다만 고체끼리 맞닿은 계면에서 이온이 잘 넘어가게 하는 일, 충·방전 때 부피 변화에도 접촉을 유지하는 일, 리튬 덴드라이트 억제, 대량 생산 비용이 아직 풀어야 할 문제다. 일부 제조사가 2020년대 후반 양산을 목표로 내걸고 있으나, 당분간은 기존 액체 전해질 셀의 개량(실리콘 음극, 고전압 양극, 나트륨 이온 셀 등)이 함께 이어질 것으로 보는 편이 현실적이다.</p>
+    <p>수명이 다한 팩에는 리튬, 니켈, 코발트, 구리, 알루미늄이 그대로 들어 있다. 용량이 70~80 % 남은 팩은 출력 요구가 낮은 고정형 에너지 저장 장치로 <b>재사용</b>할 수 있다. 그다음은 <b>재활용</b>이다. 팩을 방전·해체하고 셀을 파쇄해 전극 가루인 블랙 매스를 얻은 뒤, 산에 녹여 금속을 분리하는 습식 제련이나 고온에서 녹이는 건식 제련으로 금속을 회수한다. 니켈과 코발트는 대표적으로 90 % 이상 회수할 수 있다. 재활용은 원료 채굴에 따른 환경 부담과 공급 위험을 줄이는 길이며, 여러 나라가 새 배터리에 재활용 원료를 일정 비율 쓰도록 규제를 도입하고 있다.</p>
+  </section>
+
+  <section class="keypoints" id="summary">
+    <h2>핵심 정리</h2>
+    <ol>
+      <li>리튬 이온 셀에서 이온은 전해질을, 전자는 외부 회로를 지난다. 방전 때 리튬은 음극(흑연)에서 양극(금속 산화물)으로 가고 충전 때 되돌아온다. 셀 전압은 두 전극 재료의 전위차로 정해진다.</li>
+      <li>에너지(Wh) = 용량(Ah) × 전압(V). C-rate는 전류를 용량으로 나눈 값이다. NCM은 에너지 밀도가, LFP는 수명·안전·가격이 강점이다.</li>
+      <li>단자 전압은 \(\mathrm{OCV} - I R_0 - V_1\)이고 발열은 \(I^2 R\)이다. 내부 저항은 저온에서 급증해 출력과 가용 용량을 줄인다.</li>
+      <li>직렬은 전압을, 병렬은 용량을 더한다. 800 V 구조는 같은 전력에서 전류가 절반이라 배선 손실이 4분의 1이고 급속 충전에 유리하다.</li>
+      <li>BMS는 전류 적산에 전압 기반 보정을 섞어 SOC를 추정하고, 가장 높은 셀과 가장 낮은 셀이 정하는 팩의 한계를 밸런싱으로 넓힌다.</li>
+      <li>적정 온도는 대표적으로 15~35 °C다. 저온 충전은 리튬 플레이팅을, 고온은 열화를 부른다. 열폭주는 발열 반응의 연쇄이며 팩은 전파를 막도록 설계한다.</li>
+      <li>급속 충전 전력은 충전기 정격, 케이블 전류 한계, 배터리 허용 전류 중 가장 작은 값이다. 배터리 허용 전류는 SOC가 오를수록, 온도가 낮을수록 줄어든다.</li>
+      <li>전비는 주행 저항과 공조 부하의 합이다. 공기 저항은 속도의 제곱으로, 공조 부담은 속도에 반비례해 km당 소비를 키운다.</li>
+    </ol>
+  </section>
+
+  <section class="quiz-sec" id="quiz">
+    <h2>확인 퀴즈</h2>
+    <div class="quiz">
+      <div class="quiz-q"><p>방전 중인 리튬 이온 셀에서 전자는 어떤 경로로 움직이는가?</p><div class="opts">
+        <button class="opt">전해질을 통해 음극에서 양극으로</button>
+        <button class="opt" data-correct>외부 회로를 통해 음극에서 양극으로</button>
+        <button class="opt">외부 회로를 통해 양극에서 음극으로</button>
+        <button class="opt">분리막을 통해 양극에서 음극으로</button>
+      </div><div class="quiz-exp">전해질과 분리막은 이온만 통과시킨다. 방전 때 음극에서 리튬이 이온과 전자로 갈라지고, 전자는 외부 회로(부하)를 지나 양극으로 간다. 전류의 방향은 전자와 반대로 정의하므로 외부 회로에서 전류는 양극(+)에서 음극(−)으로 흐른다.</div></div>
+
+      <div class="quiz-q"><p>100 Ah, 공칭 3.2 V인 LFP 셀을 110개 직렬로 이었다. 팩의 공칭 전압과 에너지는?</p><div class="opts">
+        <button class="opt">352 V, 11 kWh</button>
+        <button class="opt" data-correct>352 V, 약 35 kWh</button>
+        <button class="opt">3.2 V, 약 35 kWh</button>
+        <button class="opt">352 V, 약 3,870 kWh</button>
+      </div><div class="quiz-exp">직렬은 전압만 더한다. \(110 \times 3.2 = 352\) V, 용량은 그대로 100 Ah이므로 에너지는 \(352 \times 100 = 35{,}200\) Wh, 약 35 kWh다.</div></div>
+
+      <div class="quiz-q"><p>내부 저항이 1.5 mΩ인 셀에서 방전 전류를 100 A에서 200 A로 올렸다. 전압 강하와 발열은 각각 어떻게 되는가?</p><div class="opts">
+        <button class="opt">둘 다 2배</button>
+        <button class="opt">둘 다 4배</button>
+        <button class="opt" data-correct>전압 강하 2배, 발열 4배</button>
+        <button class="opt">전압 강하 4배, 발열 2배</button>
+      </div><div class="quiz-exp">강하는 \(I R\)로 전류에 비례해 0.15 V에서 0.30 V가 된다. 발열은 \(I^2 R\)로 전류의 제곱에 비례해 15 W에서 60 W가 된다.</div></div>
+
+      <div class="quiz-q"><p>직렬 팩에서 한 셀만 SOC가 다른 셀보다 10 %p 높은 채로 충전을 시작했다. 밸런싱이 없다면?</p><div class="opts">
+        <button class="opt">모든 셀이 100 %가 될 때까지 충전된다</button>
+        <button class="opt" data-correct>그 셀이 상한에 닿는 순간 충전이 끝나 나머지는 약 90 %에 머문다</button>
+        <button class="opt">높은 셀의 전하가 저절로 낮은 셀로 넘어간다</button>
+        <button class="opt">팩 전압이 낮아져 충전이 더 빨라진다</button>
+      </div><div class="quiz-exp">직렬 셀에는 같은 전류가 흐르므로 SOC 차이는 그대로 유지된다. 어느 한 셀이라도 상한 전압을 넘으면 안 되므로 가장 높은 셀이 충전을 끝낸다. 밸런싱은 높은 셀의 전하를 덜어 내 이 차이를 없앤다.</div></div>
+
+      <div class="quiz-q"><p>급속 충전 전력이 SOC가 높아질수록 줄어드는 주된 이유는?</p><div class="opts">
+        <button class="opt">충전기가 과열을 막으려고 출력을 낮추기 때문</button>
+        <button class="opt">팩 전압이 낮아지기 때문</button>
+        <button class="opt" data-correct>음극에 빈자리가 줄어 리튬 플레이팅 위험이 커지고 셀 전압이 상한에 가까워지기 때문</button>
+        <button class="opt">케이블 저항이 SOC에 비례해 커지기 때문</button>
+      </div><div class="quiz-exp">SOC가 높으면 흑연이 리튬을 받아들이는 속도가 느려지고 단자 전압이 상한에 닿는다. BMS는 플레이팅과 과전압을 피하려고 허용 전류를 줄인다. 팩 전압은 오히려 SOC와 함께 올라간다.</div></div>
+
+      <div class="quiz-q"><p>영하의 날씨에 시내를 천천히 달릴 때 전비가 특히 나빠지는 이유로 가장 알맞은 것은?</p><div class="opts">
+        <button class="opt">공기 저항이 속도의 제곱에 비례하기 때문</button>
+        <button class="opt" data-correct>난방 전력은 속도와 무관하게 계속 쓰이므로 느릴수록 km당 몫이 커지기 때문</button>
+        <button class="opt">회생 제동이 저온에서 더 강해지기 때문</button>
+        <button class="opt">모터 효율이 저온에서 절반으로 떨어지기 때문</button>
+      </div><div class="quiz-exp">난방은 시간당 일정한 전력을 쓴다. 같은 거리를 가는 데 시간이 오래 걸릴수록 km당 난방 에너지가 커진다. 3 kW 난방은 시속 100 km에서 30 Wh/km지만 시속 30 km에서는 100 Wh/km다. 저온에서는 회생 제동도 오히려 제한된다.</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  const clamp = CB.clamp;
+  const fontOf = (mono) => getComputedStyle(document.body).getPropertyValue(mono ? "--mono" : "--font");
+  const setFont = (ctx, px, mono, bold) => { ctx.font = (bold ? "600 " : "") + px + "px " + fontOf(mono); };
+  const HV = "#f08a1c";
+
+  const ocvN = (s) => 3.45 + 0.70 * s - 0.45 * Math.exp(-25 * s) + 0.05 * Math.exp(-20 * (1 - s));
+  const ocvL = (s) => 3.22 + 0.10 * s - 0.70 * Math.exp(-30 * s) + 0.25 * Math.exp(-40 * (1 - s));
+  const ocv = (chem, s) => (chem === "lfp" ? ocvL(s) : ocvN(s));
+  const LIM = { ncm: [2.8, 4.2], lfp: [2.5, 3.65] };
+
+  function legend(ctx, x, y, items, maxW) {
+    const P = CB.palette();
+    setFont(ctx, 11); ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    let cx = x, cy = y;
+    items.forEach(([col, txt]) => {
+      const tw = ctx.measureText(txt).width + 26;
+      if (cx + tw > x + maxW && cx > x) { cx = x; cy += 16; }
+      ctx.fillStyle = col; ctx.fillRect(cx, cy - 4, 12, 8);
+      ctx.fillStyle = P.dim; ctx.fillText(txt, cx + 16, cy);
+      cx += tw;
+    });
+    return cy;
+  }
+
+  /* ------------------------------------------------------------ 1. 셀 내부 */
+  (function () {
+    const N = 40, CAP = 60, R = 0.0015, SPEED = 240;
+    let soc = 0.8, iNow = 0, phase = 0, status = "";
+    const slotA = (k) => [0.085 + (k % 8) * 0.04, 0.37 + Math.floor(k / 8) * 0.115];
+    const slotC = (k) => [0.915 - (k % 8) * 0.04, 0.37 + Math.floor(k / 8) * 0.115];
+    const slot = (side, k) => (side === "a" ? slotA(k) : slotC(k));
+    const ions = [];
+    const nA0 = Math.round(soc * N);
+    for (let i = 0; i < N; i++) {
+      const side = i < nA0 ? "a" : "c", k = i < nA0 ? i : i - nA0;
+      const [u, v] = slot(side, k);
+      ions.push({ side, k, u, v });
+    }
+    const freeSlot = (side) => { const used = new Set(ions.filter((o) => o.side === side).map((o) => o.k)); for (let k = 0; k < N; k++) if (!used.has(k)) return k; return 0; };
+    const mode = CB.seg("ce-mode"), chem = CB.seg("ce-chem");
+    const crate = CB.range("ce-c", (v) => v.toFixed(1) + " C (" + Math.round(v * CAP) + " A)");
+
+    function step(dt) {
+      const c = crate(), ch = chem(), [vmin, vmax] = LIM[ch], o = ocv(ch, soc);
+      let I = 0;
+      if (mode() === "dis") {
+        I = c * CAP;
+        if (soc <= 0.002 || o - I * R < vmin) { I = 0; status = "하한 전압 도달"; } else status = I > 0 ? "방전 중" : "전류 0";
+      } else if (mode() === "chg") {
+        let ic = Math.min(c * CAP, (vmax - o) / R);
+        if (soc >= 0.999 || (c > 0 && ic < 0.03 * CAP)) { ic = 0; status = "충전 완료"; }
+        else status = c === 0 ? "전류 0" : ic < c * CAP - 1e-6 ? "CV: 전류 감소" : "CC 충전 중";
+        I = -Math.max(0, ic);
+      } else status = "정지";
+      iNow = I;
+      soc = clamp(soc - ((I / CAP) * dt * SPEED) / 3600, 0, 1);
+      phase += (I / CAP) * dt * 0.22;
+      const want = Math.round(soc * N), have = ions.filter((o) => o.side === "a").length;
+      if (have !== want) {
+        const from = have < want ? "c" : "a", to = have < want ? "a" : "c";
+        const cand = ions.filter((o) => o.side === from).sort((a, b) => b.k - a.k)[0];
+        if (cand) { cand.k = freeSlot(to); cand.side = to; }
+      }
+      ions.forEach((o) => {
+        const [tu, tv] = slot(o.side, o.k), du = tu - o.u, dv = tv - o.v, d = Math.hypot(du, dv);
+        const sp = 0.55 * dt;
+        if (d <= sp) { o.u = tu; o.v = tv; } else { o.u += (du / d) * sp; o.v += (dv / d) * sp; }
+      });
+    }
+
+    const cv = CB.canvas("#cv-cell", (ctx, w, h) => {
+      const P = CB.palette(), X = (u) => u * w, Y = (v) => v * h;
+      ctx.fillStyle = P.surface; ctx.fillRect(X(0.055), Y(0.29), X(0.89), Y(0.63));
+      ctx.fillStyle = "#c8763a"; ctx.fillRect(X(0.03), Y(0.27), X(0.025), Y(0.67));
+      ctx.fillStyle = "#aab2c0"; ctx.fillRect(X(0.945), Y(0.27), X(0.025), Y(0.67));
+      ctx.strokeStyle = P.dim; ctx.lineWidth = Math.max(2, h * 0.012); ctx.lineCap = "round";
+      for (let r = 0; r <= 5; r++) { const y = Y(0.37 + (r - 0.5) * 0.115); ctx.beginPath(); ctx.moveTo(X(0.068), y); ctx.lineTo(X(0.385), y); ctx.stroke(); }
+      ctx.fillStyle = P.accent; ctx.globalAlpha = 0.55;
+      const rr = Math.max(1.5, w * 0.005);
+      for (let r = 0; r <= 5; r++) for (let c = 0; c <= 8; c++) { ctx.beginPath(); ctx.arc(X(0.915 - (c - 0.5) * 0.04), Y(0.37 + (r - 0.5) * 0.115), rr, 0, 7); ctx.fill(); }
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = P.border; ctx.fillRect(X(0.488), Y(0.29), X(0.024), Y(0.63));
+      ctx.strokeStyle = P.dim; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(X(0.5), Y(0.29)); ctx.lineTo(X(0.5), Y(0.92)); ctx.stroke(); ctx.setLineDash([]);
+      // 외부 회로
+      ctx.strokeStyle = P.dim; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(X(0.0425), Y(0.27)); ctx.lineTo(X(0.0425), Y(0.1)); ctx.lineTo(X(0.9575), Y(0.1)); ctx.lineTo(X(0.9575), Y(0.27)); ctx.stroke();
+      const vl = 0.17 * h, hl = 0.915 * w, tot = 2 * vl + hl;
+      const pt = (s) => { let d = s * tot; if (d < vl) return [X(0.0425), Y(0.27) - d]; d -= vl; if (d < hl) return [X(0.0425) + d, Y(0.1)]; d -= hl; return [X(0.9575), Y(0.1) + d]; };
+      ctx.fillStyle = P.accent2;
+      for (let i = 0; i < 14; i++) { const s = (((i / 14 + phase) % 1) + 1) % 1; const [x, y] = pt(s); if (Math.abs(x - w / 2) < 0.1 * w) continue; ctx.beginPath(); ctx.arc(x, y, Math.max(2.5, w * 0.006), 0, 7); ctx.fill(); }
+      ctx.fillStyle = P.bg; ctx.strokeStyle = P.border; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.rect(X(0.4), Y(0.035), X(0.2), Y(0.13)); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = P.text; setFont(ctx, 12, false, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(mode() === "chg" ? "충전기" : mode() === "dis" ? "부하" : "개방", X(0.5), Y(0.1));
+      setFont(ctx, 11, true); ctx.fillStyle = P.accent2;
+      if (Math.abs(iNow) > 0.5) {
+        const dir = iNow > 0 ? 1 : -1;
+        ctx.fillText("e⁻", X(0.25), Y(0.045)); CB.arrow(ctx, X(0.25 - 0.06 * dir), Y(0.045) + 12, X(0.25 + 0.06 * dir), Y(0.045) + 12, P.accent2, 1.5);
+        CB.arrow(ctx, X(0.5 - 0.07 * dir), Y(0.315), X(0.5 + 0.07 * dir), Y(0.315), P.ok, 2);
+        ctx.fillStyle = P.ok; ctx.fillText("Li⁺", X(0.5), Y(0.315) - 9);
+      }
+      ctx.fillStyle = P.ok;
+      const ir = Math.max(3, Math.min(w * 0.011, h * 0.022));
+      ions.forEach((o) => { ctx.beginPath(); ctx.arc(X(o.u), Y(o.v), ir, 0, 7); ctx.fill(); });
+      ctx.fillStyle = P.text; setFont(ctx, 13, false, true);
+      ctx.fillText("−", X(0.085), Y(0.2)); ctx.fillText("+", X(0.915), Y(0.2));
+      setFont(ctx, 11); ctx.fillStyle = P.dim;
+      ctx.fillText("음극 (흑연)", X(0.225), Y(0.965)); ctx.fillText("분리막", X(0.5), Y(0.965)); ctx.fillText("양극 (금속 산화물)", X(0.775), Y(0.965));
+    }, { aspect: 0.6, maxHeight: 380 });
+
+    const cvv = CB.canvas("#cv-cellv", (ctx) => {
+      const P = CB.palette(), ch = chem(), [vmin, vmax] = LIM[ch];
+      const data = []; for (let i = 0; i <= 200; i++) data.push([i / 2, ocv(ch, i / 200)]);
+      const o = ocv(ch, soc), v = o - iNow * R;
+      CB.chart(ctx, null, { x: [0, 100], y: ch === "lfp" ? [2.3, 3.9] : [2.6, 4.4], xLabel: "SOC (%)", yLabel: "셀 전압 (V)",
+        series: [{ data, color: P.accent2, width: 2 }],
+        hlines: [{ y: vmax, color: P.bad, label: "상한 " + vmax + " V" }, { y: vmin, color: P.bad, label: "하한 " + vmin + " V" }],
+        vlines: [{ x: soc * 100, color: P.faint }],
+        points: [{ x: soc * 100, y: o, color: P.accent2, r: 5 }, { x: soc * 100, y: v, color: P.accent, r: 5 }] });
+    }, { aspect: 0.42, minHeight: 180, maxHeight: 240 });
+
+    CB.loop(cv.canvas, (dt) => {
+      step(dt); cv.redraw(); cvv.redraw();
+      const ch = chem(), o = ocv(ch, soc);
+      CB.stat("ce-soc", (soc * 100).toFixed(0) + " %");
+      CB.stat("ce-ocv", o.toFixed(3) + " V");
+      CB.stat("ce-v", (o - iNow * R).toFixed(3) + " V");
+      CB.stat("ce-i", (iNow >= 0 ? "" : "−") + Math.abs(iNow).toFixed(0) + " A <small>" + (iNow > 0 ? "방전" : iNow < 0 ? "충전" : "") + "</small>");
+      CB.stat("ce-st", status);
+    });
+  })();
+
+  /* ------------------------------------------------------------ 3. 등가 회로 */
+  (function () {
+    const CAP = 60, VMIN = 2.8;
+    let res = null;
+    const upd = () => { calc(); cv.redraw(); cvd.redraw(); };
+    const iG = CB.range("ec-i", (v) => v + " A (" + (v / CAP).toFixed(1) + " C)", upd);
+    const rG = CB.range("ec-r", (v) => v.toFixed(1) + " mΩ", upd);
+    const tG = CB.range("ec-t", (v) => v + " °C", upd);
+    const sG = CB.range("ec-soc", (v) => v + " %", upd);
+    const mult = (T) => Math.exp(0.035 * (25 - T));
+    function discharge(I, Rt) {
+      const out = []; let use = CAP;
+      for (let q = 0; q <= CAP + 1e-9; q += 0.25) {
+        const v = ocvN(1 - q / CAP) - I * Rt;
+        out.push([q, v]);
+        if (v < VMIN) { use = q; break; }
+      }
+      return { data: out, use };
+    }
+    function calc() {
+      const I = iG(), R0 = rG() * 1e-3 * mult(tG()), R1 = 0.8 * R0, tau = 12, dt = 0.1;
+      let s = sG() / 100, v1 = 0, vmin = 9;
+      const V = [], O = [], Ic = [];
+      for (let t = 0; t <= 90 + 1e-9; t += dt) {
+        const i = t >= 10 && t < 50 ? I : 0;
+        v1 += ((i * R1 - v1) / tau) * dt;
+        s = Math.max(0, s - (i * dt) / (CAP * 3600));
+        const o = ocvN(s), v = o - i * R0 - v1;
+        vmin = Math.min(vmin, v);
+        V.push([t, v]); O.push([t, o]); Ic.push([t, i]);
+      }
+      const vEnd = V[Math.round(49.9 / dt)][1], oEnd = O[Math.round(49.9 / dt)][1];
+      res = { V, O, vmin, d0: I * R0, d1: oEnd - vEnd, heat: I * I * (R0 + R1), cur: discharge(I, R0 + R1), ref: discharge(I, rG() * 1e-3 * 1.8) };
+      CB.stat("ec-d0", (res.d0 * 1000).toFixed(0) + " mV");
+      CB.stat("ec-d1", (res.d1 * 1000).toFixed(0) + " mV");
+      CB.stat("ec-vmin", vmin.toFixed(2) + " V" + (vmin < VMIN ? ' <small style="color:var(--bad)">하한 침범</small>' : ""));
+      CB.stat("ec-heat", CB.fmt(res.heat, 3) + " W");
+      CB.stat("ec-use", res.cur.use.toFixed(1) + " Ah <small>(" + ((res.cur.use / CAP) * 100).toFixed(0) + " %)</small>");
+    }
+    const cv = CB.canvas("#cv-ecm", (ctx) => {
+      if (!res) return;
+      const P = CB.palette();
+      const lo = Math.min(2.6, Math.floor(res.vmin * 5) / 5);
+      CB.chart(ctx, null, { x: [0, 90], y: [lo, 4.3], xLabel: "시간 (s)", yLabel: "단자 전압 (V)",
+        bands: [{ x0: 10, x1: 50, color: CB.color("accent-soft") }],
+        series: [{ data: res.O, color: P.accent2, width: 1.5, dash: [5, 4] }, { data: res.V, color: P.accent, width: 2.5 }],
+        hlines: [{ y: VMIN, color: P.bad, label: "하한 2.8 V" }],
+        vlines: [{ x: 10, color: P.faint, label: "전류 ON" }, { x: 50, color: P.faint, label: "OFF" }] });
+    }, { aspect: 0.5, minHeight: 200, maxHeight: 300 });
+    const cvd = CB.canvas("#cv-ecmd", (ctx) => {
+      if (!res) return;
+      const P = CB.palette();
+      CB.chart(ctx, null, { x: [0, CAP], y: [2.6, 4.3], xLabel: "방전한 전하량 (Ah)", yLabel: "단자 전압 (V)",
+        series: [{ data: res.ref.data, color: P.dim, width: 1.5, dash: [5, 4] }, { data: res.cur.data, color: P.accent, width: 2.5 }],
+        hlines: [{ y: VMIN, color: P.bad, label: "하한 2.8 V" }],
+        vlines: [{ x: res.cur.use, color: P.accent, label: res.cur.use.toFixed(0) + " Ah" }] });
+    }, { aspect: 0.42, minHeight: 180, maxHeight: 250 });
+    calc(); cv.redraw(); cvd.redraw();
+  })();
+
+  /* ------------------------------------------------------------ 2. 팩 설계기 */
+  (function () {
+    const RC = 0.003;
+    const PRE = { a400: ["ncm", 110, 96, 2], a800: ["ncm", 110, 192, 1], cyl: ["ncm", 5, 96, 46], lfp: ["lfp", 160, 110, 1] };
+    let d = {}, busy = false;
+    const upd = () => { if (busy) return; calc(); cv.redraw(); };
+    const chem = CB.seg("pk-chem", upd);
+    const capG = CB.range("pk-cap", (v) => v + " Ah", upd);
+    const sG = CB.range("pk-s", (v) => v + "s", upd);
+    const pG = CB.range("pk-p", (v) => v + "p", upd);
+    const pwG = CB.range("pk-pw", (v) => v + " kW", upd);
+    CB.seg("pk-preset", (k) => { const [c, cap, s, p] = PRE[k]; busy = true; chem.set(c); capG.set(cap); sG.set(s); pG.set(p); busy = false; upd(); });
+    function calc() {
+      const lfp = chem() === "lfp", vn = lfp ? 3.2 : 3.65, sp = lfp ? 175 : 260, [vlo, vhi] = LIM[chem()];
+      const s = sG(), p = pG(), cap = capG();
+      const V = s * vn, Ah = p * cap, E = (V * Ah) / 1000, n = s * p;
+      const mass = (n * cap * vn) / sp / 0.68;
+      const I = (pwG() * 1000) / V;
+      d = { V, Ah, E, n, mass, I, s, p, loss: (I * I * RC) / 1000 };
+      CB.stat("pk-v", V.toFixed(0) + " V <small>(" + (s * vlo).toFixed(0) + "~" + (s * vhi).toFixed(0) + ")</small>");
+      CB.stat("pk-ah", CB.fmt(Ah, 3) + " Ah");
+      CB.stat("pk-e", E.toFixed(1) + " kWh");
+      CB.stat("pk-m", n.toLocaleString("en-US") + "개 / " + mass.toFixed(0) + " kg");
+      CB.stat("pk-pm", (3 * E * 0.9).toFixed(0) + " kW");
+      CB.stat("pk-i", I.toFixed(0) + " A / " + d.loss.toFixed(2) + " kW");
+    }
+    const cv = CB.canvas("#cv-pack", (ctx, w, h) => {
+      const P = CB.palette(), m = 16, gy = 30, gh = h * 0.36, gw = w - 2 * m;
+      const cw = gw / d.s, chh = Math.min(gh / d.p, cw * 3.2, 22), top = gy + (gh - chh * d.p) / 2;
+      setFont(ctx, 11); ctx.fillStyle = P.dim; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillText("직렬 " + d.s + "단 → 전압이 쌓인다", m, 14);
+      ctx.textAlign = "right"; ctx.fillText("병렬 " + d.p + "개 ↓ 용량이 쌓인다", w - m, 14);
+      const gx = cw > 4 ? 1 : 0, gyy = chh > 4 ? 1 : 0;
+      for (let i = 0; i < d.s; i++) {
+        ctx.fillStyle = i % 2 ? P.accent : P.accent2; ctx.globalAlpha = cw > 4 ? 0.8 : 0.65;
+        for (let j = 0; j < d.p; j++) ctx.fillRect(m + i * cw, top + j * chh, Math.max(0.6, cw - gx), Math.max(0.6, chh - gyy));
+      }
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = HV; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(m, top - 5); ctx.lineTo(w - m, top - 5); ctx.stroke();
+      const box = { x: 58, y: gy + gh + 26, w: w - 58 - 18, h: h - (gy + gh + 26) - 46 };
+      const pw = pwG(), data = [];
+      for (let v = 150; v <= 900; v += 10) data.push([v, (pw * 1000) / v]);
+      CB.chart(ctx, box, { x: [150, 900], y: [0, 1400], xLabel: "팩 전압 (V)", yLabel: "전류 (A)",
+        series: [{ data, color: P.accent2, width: 2 }],
+        hlines: [{ y: 500, color: P.bad, label: "케이블 한계 약 500 A" }],
+        points: [{ x: clamp(d.V, 150, 900), y: Math.min(d.I, 1400), color: P.accent, r: 6, label: d.I.toFixed(0) + " A" }] });
+    }, { aspect: 0.8, minHeight: 330, maxHeight: 470 });
+    calc(); cv.redraw();
+  })();
+
+  /* ------------------------------------------------------------ 7. SOC 추정 */
+  (function () {
+    let res = null;
+    const upd = () => { calc(); cv.redraw(); };
+    const biasG = CB.range("se-bias", (v) => (v > 0 ? "+" : "") + v.toFixed(1) + " A", upd);
+    const e0G = CB.range("se-e0", (v) => (v > 0 ? "+" : "") + v + " %p", upd);
+    const gG = CB.range("se-g", (v) => (v === 0 ? "끔" : v.toFixed(1)), upd);
+    const chem = CB.seg("se-chem", upd);
+    function rng(seed) { let a = seed; return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+    function calc() {
+      const ch = chem(), bias = biasG(), L = gG() * 0.0005, Q = 100 * 3600, R = 0.0012, dt = 2, T = 9000, r = rng(11);
+      let s = 0.95, sc = clamp(0.95 + e0G() / 100, 0, 1), so = sc, n = 0, acc = 0, cnt = 0;
+      const tr = [], cc = [], ob = [];
+      for (let t = 0; t <= T; t += dt, n++) {
+        const I = 28 + 30 * Math.sin((2 * Math.PI * t) / 600) + 20 * Math.sin((2 * Math.PI * t) / 97);
+        const Im = I + bias;
+        const Vm = ocv(ch, s) - I * R + 0.008 * (r() + r() + r() - 1.5) * 2;
+        if (n % 15 === 0) { tr.push([t / 60, s * 100]); cc.push([t / 60, sc * 100]); ob.push([t / 60, so * 100]); }
+        if (t > T / 2) { acc += Math.abs(so - s); cnt++; }
+        s -= (I * dt) / Q;
+        sc = clamp(sc - (Im * dt) / Q, 0, 1.05);
+        so = clamp(so - (Im * dt) / Q + L * (Vm - (ocv(ch, clamp(so, 0, 1)) - Im * R)) * dt, 0, 1.05);
+      }
+      res = { tr, cc, ob };
+      const sg = (x) => (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(1) + " %p";
+      CB.stat("se-true", (s * 100).toFixed(1) + " %");
+      CB.stat("se-cc", sg((sc - s) * 100));
+      CB.stat("se-ob", sg((so - s) * 100));
+      CB.stat("se-rms", ((acc / cnt) * 100).toFixed(1) + " %p");
+    }
+    const cv = CB.canvas("#cv-soc", (ctx, w) => {
+      if (!res) return;
+      const P = CB.palette();
+      CB.chart(ctx, null, { x: [0, 150], y: [0, 110], xLabel: "시간 (분)", yLabel: "SOC (%)",
+        series: [{ data: res.tr, color: P.dim, width: 4 }, { data: res.cc, color: P.accent2, width: 2, dash: [6, 4] }, { data: res.ob, color: P.accent, width: 2 }] });
+      legend(ctx, 70, 26, [[P.dim, "실제"], [P.accent2, "전류 적산만"], [P.accent, "OCV 보정 포함"]], w - 90);
+    }, { aspect: 0.6, minHeight: 240, maxHeight: 380 });
+    calc(); cv.redraw();
+  })();
+
+  /* ------------------------------------------------------------ 5. 셀 밸런싱 */
+  (function () {
+    const N = 8;
+    let socs = [], hold = false, status = "", bleeding = [];
+    const mode = CB.seg("bl-mode", () => { hold = false; });
+    const spG = CB.range("bl-sp", (v) => v + " %p", () => shuffle());
+    const onEl = document.getElementById("bl-on");
+    function shuffle() {
+      const sp = spG() / 100;
+      socs = Array.from({ length: N }, () => 0.5 + (Math.random() - 0.5) * sp);
+      const i = Math.floor(Math.random() * N); socs[i] = 0.5 + sp / 2; socs[(i + 3) % N] = 0.5 - sp / 2;
+      hold = false;
+    }
+    document.getElementById("bl-shuffle").addEventListener("click", shuffle);
+    shuffle();
+    function step(dt) {
+      const mx = Math.max(...socs), mn = Math.min(...socs), bal = onEl.checked, m = mode();
+      bleeding = socs.map(() => false);
+      if (m === "chg") {
+        if (mx >= 1) hold = true; else if (mx < 0.992) hold = false;
+        if (!hold) { const d = Math.min(0.07 * dt, 1 - mx); socs = socs.map((s) => s + d); status = "충전 중"; }
+        else status = bal && mx - mn > 0.004 ? "대기: 높은 셀 방전 중" : mx - mn > 0.004 ? "최고 셀 상한, 충전 종료" : "충전 완료";
+      } else if (m === "dis") {
+        if (mn > 0) { const d = Math.min(0.07 * dt, mn); socs = socs.map((s) => s - d); status = "방전 중"; } else status = "최저 셀 하한, 방전 종료";
+      } else status = bal && mx - mn > 0.004 ? "정지: 밸런싱 중" : "정지";
+      if (bal && m !== "dis") {
+        const mn2 = Math.min(...socs);
+        socs = socs.map((s, i) => { if (s > mn2 + 0.003) { bleeding[i] = true; return Math.max(mn2, s - 0.014 * dt); } return s; });
+      }
+    }
+    const geo = (w, h) => ({ x0: 44, x1: w - 14, yt: h * 0.14, yb: h * 0.86 });
+    const cv = CB.canvas("#cv-bal", (ctx, w, h) => {
+      const P = CB.palette(), g = geo(w, h), bw = (g.x1 - g.x0) / N, Y = (s) => g.yb - s * (g.yb - g.yt);
+      const mx = Math.max(...socs), mn = Math.min(...socs);
+      setFont(ctx, 11, true); ctx.textBaseline = "middle";
+      [[1, "100"], [0.5, "50"], [0, "0 %"]].forEach(([s, t]) => {
+        ctx.strokeStyle = s === 0.5 ? P.grid : P.bad; ctx.setLineDash(s === 0.5 ? [] : [5, 4]); ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(g.x0, Y(s)); ctx.lineTo(g.x1, Y(s)); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = P.dim; ctx.textAlign = "right"; ctx.fillText(t, g.x0 - 6, Y(s));
+      });
+      socs.forEach((s, i) => {
+        const x = g.x0 + i * bw + bw * 0.14, ww = bw * 0.72;
+        ctx.strokeStyle = P.border; ctx.lineWidth = 1.5; ctx.strokeRect(x, Y(1), ww, Y(0) - Y(1));
+        ctx.fillStyle = s === mx ? P.accent : s === mn ? P.accent2 : P.ok; ctx.globalAlpha = 0.85;
+        ctx.fillRect(x, Y(s), ww, Y(0) - Y(s)); ctx.globalAlpha = 1;
+        if (bleeding[i]) { ctx.fillStyle = "#ff3b30"; ctx.fillRect(x + ww * 0.25, Y(1) - 12, ww * 0.5, 6); }
+        ctx.fillStyle = P.text; ctx.textAlign = "center"; setFont(ctx, bw < 40 ? 10 : 11, true);
+        ctx.fillText((s * 100).toFixed(0), x + ww / 2, Math.min(Y(s) - 9, Y(0) - 9));
+        ctx.fillStyle = P.dim; ctx.fillText("#" + (i + 1), x + ww / 2, g.yb + 14);
+      });
+      setFont(ctx, 11); ctx.fillStyle = P.dim; ctx.textAlign = "left";
+      legend(ctx, g.x0, h * 0.05, [[P.accent, "최고 셀"], [P.accent2, "최저 셀"], ["#ff3b30", "밸런싱 저항 동작"]], g.x1 - g.x0);
+    }, { aspect: 0.6, minHeight: 240, maxHeight: 360 });
+    let di = -1;
+    const setAt = (p) => { const g = geo(cv.w, cv.h); if (di >= 0) socs[di] = clamp((g.yb - p.y) / (g.yb - g.yt), 0, 1); hold = false; };
+    CB.drag(cv.canvas, {
+      down(p) { const g = geo(cv.w, cv.h); di = Math.floor(((p.x - g.x0) / (g.x1 - g.x0)) * N); if (di < 0 || di >= N) { di = -1; return false; } setAt(p); },
+      move: setAt, up() { di = -1; },
+    });
+    CB.loop(cv.canvas, (dt) => {
+      if (di < 0) step(dt);
+      cv.redraw();
+      const mx = Math.max(...socs), mn = Math.min(...socs);
+      CB.stat("bl-max", (mx * 100).toFixed(1) + " %"); CB.stat("bl-min", (mn * 100).toFixed(1) + " %");
+      CB.stat("bl-d", ((mx - mn) * 100).toFixed(1) + " %p"); CB.stat("bl-use", ((1 - (mx - mn)) * 100).toFixed(1) + " %");
+      CB.stat("bl-st", status);
+    });
+  })();
+
+  /* ------------------------------------------------------------ 8. 열화 */
+  (function () {
+    let res = null;
+    const upd = () => { calc(); cv.redraw(); };
+    const kmG = CB.range("dg-km", (v) => (v * 1000).toLocaleString("en-US") + " km", upd);
+    const tG = CB.range("dg-t", (v) => v + " °C", upd);
+    const fcG = CB.range("dg-fc", (v) => v + " %", upd);
+    const rng = CB.seg("dg-rng", upd);
+    const RNG = { a: [0.5, 0.7], b: [0.55, 1.0], c: [0.75, 1.5] };
+    function calc() {
+      const T = tG(), fc = fcG() / 100, [sa, dod] = RNG[rng()];
+      const efc = (kmG() * 1000 * 0.17) / 75;
+      const kc = 2.4 * Math.pow(2, (T - 25) / 12) * (0.6 + 0.8 * sa);
+      const ky = efc * 0.012 * dod * (1 + 0.6 * fc) * (1 + 0.03 * Math.max(0, T - 25) + 0.04 * Math.max(0, 10 - T) * fc);
+      const cal = (y) => kc * Math.sqrt(y), tot = (y) => cal(y) + ky * y;
+      const a = [], b = [];
+      for (let y = 0; y <= 15.001; y += 0.25) { a.push([y, 100 - tot(y)]); b.push([y, 100 - cal(y)]); }
+      let y80 = null; for (let y = 0; y <= 40; y += 0.05) if (tot(y) >= 20) { y80 = y; break; }
+      res = { a, b, y80 };
+      CB.stat("dg-10", (100 - tot(10)).toFixed(1) + " %");
+      CB.stat("dg-80", y80 == null ? "40년 이상" : y80.toFixed(1) + "년 <small>" + Math.round(y80 * kmG()).toLocaleString("en-US") + "천 km</small>");
+      CB.stat("dg-efc", efc.toFixed(0) + "회");
+      CB.stat("dg-cal", ((cal(10) / tot(10)) * 100).toFixed(0) + " %");
+    }
+    const cv = CB.canvas("#cv-deg", (ctx, w) => {
+      if (!res) return;
+      const P = CB.palette();
+      CB.chart(ctx, null, { x: [0, 15], y: [60, 100], xLabel: "사용 연수 (년)", yLabel: "용량 유지율 (%)",
+        series: [{ data: res.b, color: P.accent2, width: 2, dash: [6, 4] }, { data: res.a, color: P.accent, width: 2.5 }],
+        hlines: [{ y: 80, color: P.warn, label: "80 %" }, { y: 70, color: P.bad, label: "보증 기준 70 %" }],
+        vlines: res.y80 != null && res.y80 <= 15 ? [{ x: res.y80, color: P.accent }] : [] });
+      legend(ctx, 70, CB.canvasH ? 0 : cv.h - 62, [[P.accent, "캘린더 + 사이클"], [P.accent2, "캘린더만"]], w - 90);
+    }, { aspect: 0.6, minHeight: 240, maxHeight: 380 });
+    calc(); cv.redraw();
+  })();
+
+  /* ------------------------------------------------------------ 4. 급속 충전 */
+  (function () {
+    const E = 77000, IMAX = 500;
+    let res = null;
+    const upd = () => { calc(); cv.redraw(); cvt.redraw(); };
+    const pG = CB.range("ch-p", (v) => v + " kW", upd);
+    const tG = CB.range("ch-t", (v) => v + " °C", upd);
+    const s0G = CB.range("ch-s0", (v) => v + " %", upd);
+    const arch = CB.seg("ch-arch", upd);
+    const cLim = (s) => (s < 0.25 ? 3.2 : s < 0.8 ? 3.2 - ((s - 0.25) / 0.55) * 2.1 : Math.max(0.12, 1.1 - ((s - 0.8) / 0.2) * 0.98));
+    const tF = (T) => (T < 25 ? clamp(0.12 + (0.88 * (T + 10)) / 35, 0.12, 1) : T > 40 ? 1 - 0.06 * (T - 40) : 1);
+    function calc() {
+      const ns = arch() === "800" ? 192 : 96, cap = E / (ns * 3.65), Pc = pG() * 1000, f = tF(tG()), s0 = s0G() / 100;
+      const lims = (s) => { const V = ns * (ocvN(s) + 0.03); return [Pc, IMAX * V, cLim(s) * f * cap * V]; };
+      const lc = [], lk = [], lb = [];
+      for (let i = 0; i <= 200; i++) { const s = i / 200, [a, b, c] = lims(s); lc.push([s * 100, a / 1000]); lk.push([s * 100, b / 1000]); lb.push([s * 100, c / 1000]); }
+      let s = s0, t = 0, t80 = null, e80 = 0, pk = 0;
+      const act = [], st = [];
+      const dt = 2;
+      while (s < 0.999 && t < 4 * 3600) {
+        const P = Math.min(...lims(s)), V = ns * (ocvN(s) + 0.03);
+        if ((t / dt) % 5 === 0) { act.push([s * 100, P / 1000]); st.push([t / 60, s * 100]); }
+        pk = Math.max(pk, P);
+        if (s < 0.8) e80 += (P * dt) / 3600;
+        s += ((P / V) * dt) / (cap * 3600); t += dt;
+        if (t80 == null && s >= 0.8) t80 = t;
+      }
+      act.push([s * 100, Math.min(...lims(s)) / 1000]); st.push([t / 60, s * 100]);
+      const l0 = lims(s0), k = l0.indexOf(Math.min(...l0));
+      res = { lc, lk, lb, act, st, t80, tEnd: t };
+      CB.stat("ch-pk", (pk / 1000).toFixed(0) + " kW");
+      CB.stat("ch-t80", s0 >= 0.8 ? "—" : (t80 / 60).toFixed(1) + "분");
+      CB.stat("ch-avg", s0 >= 0.8 ? "—" : (e80 / 1000 / (t80 / 3600)).toFixed(0) + " kW");
+      CB.stat("ch-t100", ((t - (t80 || 0)) / 60).toFixed(0) + "분");
+      CB.stat("ch-lim", ["충전기 정격", "케이블 전류", tG() < 20 ? "배터리 (저온)" : "배터리 허용 전류"][k]);
+    }
+    const cv = CB.canvas("#cv-chg", (ctx) => {
+      if (!res) return;
+      const P = CB.palette();
+      CB.chart(ctx, null, { x: [0, 100], y: [0, 380], xLabel: "SOC (%)", yLabel: "충전 전력 (kW)",
+        bands: [{ x0: 10, x1: 80, color: CB.color("accent-2-soft") }],
+        series: [{ data: res.lc, color: P.dim, width: 1.3, dash: [4, 4] }, { data: res.lk, color: P.accent2, width: 1.3, dash: [4, 4] }, { data: res.lb, color: P.ok, width: 1.3, dash: [4, 4] }, { data: res.act, color: P.accent, width: 3 }],
+        vlines: [{ x: s0G(), color: P.faint, label: "시작" }] });
+    }, { aspect: 0.52, minHeight: 210, maxHeight: 320 });
+    const cvt = CB.canvas("#cv-chgt", (ctx) => {
+      if (!res) return;
+      const P = CB.palette(), tm = Math.max(20, Math.ceil(res.tEnd / 600) * 10);
+      CB.chart(ctx, null, { x: [0, tm], y: [0, 100], xLabel: "시간 (분)", yLabel: "SOC (%)",
+        series: [{ data: res.st, color: P.accent, width: 2.5 }],
+        hlines: [{ y: 80, color: P.warn, label: "80 %" }],
+        vlines: res.t80 != null && s0G() < 80 ? [{ x: res.t80 / 60, color: P.warn, label: (res.t80 / 60).toFixed(1) + "분" }] : [] });
+    }, { aspect: 0.4, minHeight: 170, maxHeight: 230 });
+    calc(); cv.redraw(); cvt.redraw();
+  })();
+
+  /* ------------------------------------------------------------ 6. 주행 거리 */
+  (function () {
+    const A = 2.4, ETA = 0.88, AUX = 0.3;
+    let cur = null, curve = [], ref = [];
+    const upd = () => { calc(); cv.redraw(); cvb.redraw(); };
+    const eG = CB.range("rg-e", (v) => v + " kWh", upd);
+    const vG = CB.range("rg-v", (v) => v + " km/h", upd);
+    const tG = CB.range("rg-t", (v) => v + " °C", upd);
+    const mG = CB.range("rg-m", (v) => v.toLocaleString("en-US") + " kg", upd);
+    const cdG = CB.range("rg-cd", (v) => v.toFixed(2), upd);
+    const hv = CB.seg("rg-hv", upd);
+    function hvac(T, mode) {
+      if (mode === "off") return 0;
+      if (T > 22) return (0.12 * (T - 22)) / 2.5 + 0.2;
+      if (T >= 20) return 0;
+      const q = 0.14 * (21 - T);
+      return mode === "ptc" ? q : q / clamp(1 + 0.06 * (T + 20), 1.2, 3.2);
+    }
+    const capF = (T) => 1 - 0.003 * Math.max(0, 20 - T);
+    function model(vk, T, mode, m, cd) {
+      const v = CB.ms(vk), rho = (CB.RHO * 288) / (273 + T), crr = 0.009 * (1 + 0.006 * Math.max(0, 20 - T));
+      const roll = (crr * m * CB.G * v) / 1000, aero = (0.5 * rho * cd * A * v * v * v) / 1000;
+      const drv = (roll + aero) * (1 / ETA - 1), h = hvac(T, mode);
+      const tot = roll + aero + drv + h + AUX, k = 1000 / vk;
+      return { roll: roll * k, aero: aero * k, drv: drv * k, hvac: h * k, aux: AUX * k, cons: tot * k, kw: tot };
+    }
+    function calc() {
+      const E = eG(), T = tG(), m = mG(), cd = cdG(), f = capF(T);
+      cur = model(vG(), T, hv(), m, cd); cur.f = f; cur.range = (E * f * 1000) / cur.cons;
+      curve = []; ref = [];
+      for (let v = 30; v <= 160; v += 2) { curve.push([v, (E * f * 1000) / model(v, T, hv(), m, cd).cons]); ref.push([v, (E * 1000) / model(v, 20, "off", m, cd).cons]); }
+      CB.stat("rg-e1", cur.cons.toFixed(0) + " Wh/km");
+      CB.stat("rg-e2", (1000 / cur.cons).toFixed(2) + " km/kWh");
+      CB.stat("rg-r", cur.range.toFixed(0) + " km");
+      CB.stat("rg-p", cur.kw.toFixed(1) + " kW");
+      CB.stat("rg-f", (f * 100).toFixed(0) + " %");
+    }
+    const cv = CB.canvas("#cv-rng", (ctx, w) => {
+      if (!cur) return;
+      const P = CB.palette(), ym = Math.ceil(Math.max(...ref.map((p) => p[1]), ...curve.map((p) => p[1])) / 200) * 200;
+      CB.chart(ctx, null, { x: [30, 160], y: [0, ym], xLabel: "차속 (km/h)", yLabel: "주행 가능 거리 (km)",
+        series: [{ data: ref, color: P.dim, width: 1.5, dash: [5, 4] }, { data: curve, color: P.accent, width: 2.5 }],
+        points: [{ x: vG(), y: cur.range, color: P.accent, r: 6, label: cur.range.toFixed(0) + " km" }] });
+    }, { aspect: 0.55, minHeight: 220, maxHeight: 340 });
+    const cvb = CB.canvas("#cv-rngb", (ctx, w, h) => {
+      if (!cur) return;
+      const P = CB.palette(), m = 16, bw = w - 2 * m, y = 30, bh = 26;
+      const parts = [["공기 저항", cur.aero, P.accent2], ["구름 저항", cur.roll, P.ok], ["구동계 손실", cur.drv, P.dim], ["공조", cur.hvac, P.accent], ["전장", cur.aux, P.warn]];
+      setFont(ctx, 12, false, true); ctx.fillStyle = P.text; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillText("1 km당 " + cur.cons.toFixed(0) + " Wh의 내역", m, 14);
+      let x = m;
+      setFont(ctx, 11, true);
+      parts.forEach(([, val, col]) => {
+        const ww = (val / cur.cons) * bw;
+        ctx.fillStyle = col; ctx.fillRect(x, y, Math.max(0, ww - 1), bh);
+        if (ww > 30) { ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.fillText(val.toFixed(0), x + ww / 2, y + bh / 2); }
+        x += ww;
+      });
+      legend(ctx, m, y + bh + 18, parts.map(([n, val, col]) => [col, n + " " + ((val / cur.cons) * 100).toFixed(0) + "%"]), bw);
+    }, { height: 116 });
+    calc(); cv.redraw(); cvb.redraw();
+  })();
+})();
+</script>
+</body>
+</html>

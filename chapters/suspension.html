@@ -1,0 +1,1227 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>서스펜션 · CarBook</title>
+<meta name="description" content="스프링과 댐퍼, 쿼터카 모델과 주파수 응답, 맥퍼슨·더블 위시본·멀티링크의 기구학, 캠버·캐스터·토와 롤 센터, 안티롤 바와 전자 제어 서스펜션을 시뮬레이터로 배운다.">
+<link rel="canonical" href="https://carbook.euiyun.com/chapters/suspension.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="CarBook">
+<meta property="og:title" content="서스펜션 · CarBook">
+<meta property="og:description" content="스프링과 댐퍼, 쿼터카 모델과 주파수 응답, 맥퍼슨·더블 위시본·멀티링크의 기구학, 캠버·캐스터·토와 롤 센터, 안티롤 바와 전자 제어 서스펜션을 시뮬레이터로 배운다.">
+<meta property="og:url" content="https://carbook.euiyun.com/chapters/suspension.html">
+<meta property="og:image" content="https://carbook.euiyun.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TechArticle","headline":"서스펜션","name":"서스펜션 · CarBook","url":"https://carbook.euiyun.com/chapters/suspension.html","mainEntityOfPage":"https://carbook.euiyun.com/chapters/suspension.html","inLanguage":"ko","isAccessibleForFree":true,"learningResourceType":"interactive textbook chapter","position":9,"image":"https://carbook.euiyun.com/og.png","dateModified":"2026-10-02","isPartOf":{"@type":"Book","@id":"https://carbook.euiyun.com/#book","name":"CarBook — 인터랙티브 자동차 교과서","url":"https://carbook.euiyun.com/"},"publisher":{"@type":"Organization","name":"CarBook","url":"https://carbook.euiyun.com/"},"description":"스프링과 댐퍼, 쿼터카 모델과 주파수 응답, 맥퍼슨·더블 위시본·멀티링크의 기구학, 캠버·캐스터·토와 롤 센터, 안티롤 바와 전자 제어 서스펜션을 시뮬레이터로 배운다."},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"CarBook","item":"https://carbook.euiyun.com/"},{"@type":"ListItem","position":2,"name":"09 서스펜션","item":"https://carbook.euiyun.com/chapters/suspension.html"}]}]}</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="../css/style.css">
+<script src="../js/common.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+  .sim-view canvas + canvas { border-top: 1px solid var(--border); }
+  .al-desc { padding: 12px 18px; font-size: 14px; line-height: 1.65; border-top: 1px solid var(--border); }
+  .al-desc p { margin: 0 0 6px; }
+  .al-desc p:last-child { margin-bottom: 0; }
+  .al-desc b { color: var(--accent); }
+  .legend { padding-bottom: 10px; }
+  input[type="range"]:disabled { opacity: 0.35; }
+</style>
+</head>
+<body data-chapter="suspension">
+<main class="chapter">
+  <header class="chapter-hero">
+    <div class="eyebrow">Chapter 09</div>
+    <h1>서스펜션</h1>
+    <p class="lead">서스펜션은 차체와 바퀴 사이에 놓인 스프링, 댐퍼, 링크의 묶음이다. 노면의 요철을 삼켜 탑승자를 편하게 하는 동시에, 타이어를 노면에 눌러 붙여 <a href="tire.html">7장</a>에서 본 접지력을 끝까지 쓰게 해 준다. 이 두 임무는 서로 다투며, 서스펜션 설계는 그 타협점을 찾는 일이다. 이 장에서는 진동 모델로 그 상충을 직접 확인하고, 링크가 바퀴의 자세를 어떻게 정하는지 기구학으로 풀어 본다.</p>
+    <ul class="objectives">
+      <li>승차감과 접지라는 두 임무가 왜 상충하는지 스프링 위·아래 질량으로 설명한다.</li>
+      <li>스프링 상수, 모션비, 휠 레이트, 감쇠비를 계산하고 고유 진동수와 연결한다.</li>
+      <li>쿼터카 모델의 두 공진(차체 약 1~1.5 Hz, 휠 홉 약 10~15 Hz)을 이해한다.</li>
+      <li>맥퍼슨 스트럿, 더블 위시본, 멀티링크, 토션빔, 리지드 액슬의 구조와 장단점을 비교한다.</li>
+      <li>캠버·캐스터·토, 순간 중심과 롤 센터, 안티롤 바와 하중 이동의 관계를 설명한다.</li>
+    </ul>
+  </header>
+
+  <!-- =============================================================== 1 -->
+  <section id="jobs">
+    <h2>두 가지 임무: 승차감과 접지</h2>
+    <p>바퀴를 차체에 그대로 볼트로 고정한 차를 생각해 보자. 손수레나 카트가 그렇다. 노면의 요철이 고스란히 차체로 올라오고, 조금만 빨리 달려도 바퀴가 튀어 올라 공중에 뜬다. 뜬 바퀴는 구동도 제동도 조향도 하지 못한다. 서스펜션은 이 두 문제를 함께 푼다.</p>
+    <ul>
+      <li><b>승차감</b><span class="en">(Ride)</span>: 차체를 노면으로부터 <b>격리</b>한다. 바퀴가 요철을 따라 오르내리는 동안 차체는 되도록 제자리에 머물게 한다.</li>
+      <li><b>접지</b><span class="en">(Road Holding)</span>: 타이어를 노면에 <b>붙여 둔다</b>. 접지 하중이 출렁이면 타이어가 낼 수 있는 힘도 출렁이므로, 하중 변동을 작게 유지한다.</li>
+    </ul>
+    <p>여기에 세 번째 일이 더해진다. 링크가 바퀴의 <b>자세</b>(캠버, 토)를 정하고, 가속·제동·선회 때 차체가 기우는 정도(피치, 롤)를 조절하는 것이다. 이 일은 <a href="steering.html">10장</a>의 차량 거동과 직접 이어진다.</p>
+    <p>모델을 세우려면 질량을 둘로 나눈다. 스프링이 떠받치는 차체·탑승자·파워트레인이 <span class="term">스프링 위 질량</span><span class="en">(Sprung Mass)</span>, 스프링 아래에서 노면을 따라 움직이는 휠·타이어·브레이크·너클·암의 일부가 <span class="term">스프링 아래 질량</span><span class="en">(Unsprung Mass)</span>이다. 중형 승용차에서 한 바퀴가 맡는 스프링 위 질량은 대표적으로 약 300~450 kg, 스프링 아래 질량은 약 30~60 kg이다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 320" role="img" aria-label="쿼터카 모델과 서스펜션의 두 임무">
+        <!-- quarter car model -->
+        <rect x="70" y="30" width="160" height="56" rx="8" class="f-acc-soft"/>
+        <text x="150" y="56" class="t" text-anchor="middle">스프링 위 질량</text>
+        <text x="150" y="76" class="t-mono" text-anchor="middle">m_s ≈ 350 kg</text>
+        <path d="M110 86 l0 10 l-13 7 l26 14 l-26 14 l26 14 l-26 14 l13 7 l0 10" fill="none" stroke="var(--accent)" stroke-width="2.4"/>
+        <path d="M190 86 v30 M176 116 h28 M176 116 v44 M204 116 v44 M190 176 v-40 M180 136 h20" fill="none" stroke="var(--accent-2)" stroke-width="2.4"/>
+        <text x="84" y="136" class="t-mono" text-anchor="end">k_s</text>
+        <text x="216" y="140" class="t-mono">c</text>
+        <rect x="90" y="176" width="120" height="36" rx="6" class="f-acc2-soft"/>
+        <text x="150" y="199" class="t" text-anchor="middle">스프링 아래 m_u</text>
+        <path d="M150 212 l0 6 l-11 5 l22 10 l-22 10 l22 10 l-11 5 l0 6" fill="none" stroke="var(--text)" stroke-width="2.2"/>
+        <text x="170" y="242" class="t-mono">k_t (타이어)</text>
+        <path d="M30 276 q30 -22 60 -6 t60 -6 t60 2 t60 6" fill="none" class="s-axis" stroke-width="2"/>
+        <text x="150" y="304" class="t-dim" text-anchor="middle">노면 z_r(t)</text>
+        <line x1="250" y1="58" x2="250" y2="30" class="s-line"/><path d="M246 36 l4 -8 l4 8z" fill="var(--text-dim)"/><text x="258" y="46" class="t-mono">z_s</text>
+        <line x1="250" y1="196" x2="250" y2="170" class="s-line"/><path d="M246 176 l4 -8 l4 8z" fill="var(--text-dim)"/><text x="258" y="186" class="t-mono">z_u</text>
+        <!-- two jobs -->
+        <g transform="translate(330,20)">
+          <text x="0" y="14" class="t-acc">임무 1 · 승차감: 차체는 제자리에</text>
+          <path d="M0 110 h70 q40 -50 80 0 h70 q20 -22 40 0 h130" fill="none" class="s-axis" stroke-width="2"/>
+          <path d="M0 96 h70 q40 -50 80 0 h70 q20 -22 40 0 h130" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-dasharray="5 4"/>
+          <path d="M0 46 h60 q60 -12 110 0 q60 6 100 -2 q40 2 120 2" fill="none" stroke="var(--accent)" stroke-width="2.6"/>
+          <text x="394" y="40" class="t-dim" text-anchor="end">차체 궤적 (완만)</text>
+          <text x="394" y="90" class="t-dim" text-anchor="end">바퀴 궤적 (노면을 따라감)</text>
+        </g>
+        <g transform="translate(330,170)">
+          <text x="0" y="14" class="t-acc">임무 2 · 접지: 하중 변동은 작게</text>
+          <line x1="0" y1="110" x2="400" y2="110" class="s-axis"/>
+          <line x1="0" y1="62" x2="400" y2="62" class="s-line" stroke-dasharray="3 4"/>
+          <path d="M0 62 h60 q14 -44 30 0 q14 40 30 0 q12 -22 26 0 q10 12 22 0 h232" fill="none" stroke="var(--ok)" stroke-width="2.4"/>
+          <path d="M0 62 h60 q14 -70 30 22 l10 26 h22 q20 -110 40 -40 q14 30 30 -8 q14 -16 30 0 h178" fill="none" stroke="var(--bad)" stroke-width="2" stroke-dasharray="5 4"/>
+          <text x="394" y="56" class="t-dim" text-anchor="end">정적 하중</text>
+          <text x="394" y="104" class="t-dim" text-anchor="end">하중 0 = 바퀴가 뜸</text>
+          <text x="210" y="134" class="t-dim" text-anchor="middle">초록: 잘 감쇠된 접지 하중 · 빨강: 감쇠 부족</text>
+        </g>
+      </svg>
+      <figcaption><b>그림 9-1.</b> 차의 한 모서리를 떼어 낸 쿼터카 모델(왼쪽)과 두 임무(오른쪽). 차체 변위 z_s는 작게, 타이어 변형 z_r − z_u의 출렁임도 작게 만드는 것이 목표다.</figcaption>
+    </figure>
+
+    <p>두 임무가 다투는 이유는 단순하다. 차체를 잘 격리하려면 스프링과 댐퍼가 <b>부드러워야</b> 한다. 그러나 부드러운 댐퍼는 가벼운 스프링 아래 질량이 타이어라는 딱딱한 스프링 위에서 튀는 것(휠 홉)을 잡지 못한다. 반대로 댐퍼를 단단하게 하면 바퀴는 진정되지만 요철의 힘이 댐퍼를 타고 차체로 전달된다. 스프링 아래 질량이 가벼울수록 이 타협이 쉬워지므로, 알루미늄 너클이나 경량 휠이 승차감과 접지를 함께 개선한다.</p>
+  </section>
+
+  <!-- =============================================================== 2 -->
+  <section id="spring">
+    <h2>스프링과 댐퍼</h2>
+    <h3>스프링: 에너지를 저장한다</h3>
+    <p>스프링은 변형량에 비례하는 힘 \(F = kx\)를 내며, 요철의 에너지를 잠시 저장했다가 돌려준다. 비례 상수 \(k\)가 <span class="term">스프링 상수</span><span class="en">(Spring Rate)</span>이며 단위는 N/mm 또는 kN/m다. 승용차 코일 스프링은 대표적으로 약 20~60 N/mm다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>종류</th><th>원리</th><th>특징</th><th>주 용도</th></tr></thead>
+      <tbody>
+        <tr><td>코일 스프링</td><td>감긴 강선의 비틀림</td><td>가볍고 마찰이 없다. 횡력을 받지 못해 링크가 따로 필요</td><td>거의 모든 승용차</td></tr>
+        <tr><td>판 스프링<span class="en">(Leaf)</span></td><td>겹친 강판의 굽힘</td><td>스프링이 링크 역할도 겸한다. 판 사이 마찰이 감쇠가 되지만 승차감은 거칠다</td><td>트럭, 픽업 뒤축</td></tr>
+        <tr><td>토션바<span class="en">(Torsion Bar)</span></td><td>곧은 봉의 비틀림</td><td>낮게 깔 수 있고 차고 조절이 쉽다</td><td>일부 SUV·트럭 앞축, 전차</td></tr>
+        <tr><td>에어 스프링</td><td>압축 공기의 압력</td><td>공기압으로 차고와 강성을 바꾼다. 하중이 변해도 고유 진동수가 거의 일정</td><td>고급 승용차, 버스, 대형 트럭</td></tr>
+      </tbody>
+    </table></div>
+    <div class="formula">$$k = \frac{G\,d^{4}}{8\,D^{3}\,n}$$
+      <div class="where">코일 스프링의 스프링 상수. \(G\): 강의 전단 탄성 계수(약 79 GPa), \(d\): 선 지름, \(D\): 코일 평균 지름, \(n\): 유효 감김 수. 선 지름의 네제곱에 비례하므로 선을 조금만 굵게 해도 크게 단단해진다.</div>
+    </div>
+    <div class="callout tip">
+      <strong>계산 예: 코일 스프링</strong>
+      <p>\(d\) = 13 mm, \(D\) = 120 mm, \(n\) = 6이면 \(k = 79\times10^{9}\times(0.013)^4 / (8\times0.12^3\times6) \approx 27{,}200\) N/m, 약 27 N/mm다. 선 지름을 14 mm로 바꾸면 \((14/13)^4 \approx 1.35\)배인 약 37 N/mm가 된다.</p>
+    </div>
+
+    <h3>모션비와 휠 레이트</h3>
+    <p>스프링은 대개 바퀴 중심이 아니라 암의 중간에 붙는다. 바퀴가 1 mm 움직일 때 스프링이 줄어드는 양의 비를 <span class="term">모션비</span><span class="en">(Motion Ratio, MR)</span>라 한다. 스프링이 덜 움직이므로 힘도 MR배, 그 힘이 바퀴에 전달될 때 지렛대비로 다시 MR배가 되어, 바퀴에서 느끼는 강성인 <span class="term">휠 레이트</span><span class="en">(Wheel Rate)</span>는 MR의 제곱에 비례한다.</p>
+    <div class="formula">$$k_w = k_s\cdot \mathrm{MR}^2,\qquad \mathrm{MR} = \frac{\Delta x_{\text{spring}}}{\Delta z_{\text{wheel}}}$$
+      <div class="where">예: 스프링 60 N/mm, MR = 0.62 → \(k_w\) = 60 × 0.384 ≈ 23 N/mm. 맥퍼슨 스트럿은 MR이 0.9~1에 가깝고, 더블 위시본은 대표적으로 0.5~0.8이다.</div>
+    </div>
+
+    <h3>댐퍼: 에너지를 버린다</h3>
+    <p>스프링만 있으면 한 번 받은 충격으로 차가 계속 출렁인다. <span class="term">댐퍼</span><span class="en">(Damper, 쇼크 업소버)</span>는 피스톤이 오일을 좁은 구멍과 밸브로 밀어내면서 운동 에너지를 열로 바꾼다. 힘은 변위가 아니라 <b>속도</b>에 비례한다: \(F = c\,v\). 댐퍼가 줄어드는 쪽을 <b>압축</b><span class="en">(Bump, Compression)</span>, 늘어나는 쪽을 <b>신장</b><span class="en">(Rebound)</span>이라 하며, 승용차는 보통 신장 쪽 감쇠력을 압축의 2~3배로 둔다. 턱을 만났을 때는 바퀴가 쉽게 올라가 충격을 덜 전하고, 그 뒤 스프링에 저장된 에너지가 차체를 튕겨 올리는 것은 강하게 억제하기 위해서다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 290" role="img" aria-label="모션비와 댐퍼의 감쇠력-속도 특성">
+        <!-- motion ratio -->
+        <text x="170" y="22" class="t" text-anchor="middle">모션비</text>
+        <rect x="20" y="40" width="26" height="200" class="f-surface"/>
+        <text x="33" y="258" class="t-dim" text-anchor="middle">차체</text>
+        <circle cx="46" cy="200" r="6" fill="var(--text)"/>
+        <line x1="46" y1="200" x2="290" y2="182" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
+        <rect x="290" y="110" width="34" height="140" rx="8" fill="var(--text)" opacity="0.8"/>
+        <path d="M190 189 l0 -12 l-12 -7 l24 -13 l-24 -13 l24 -13 l-24 -13 l12 -7 l0 -22" fill="none" stroke="var(--accent-2)" stroke-width="2.4"/>
+        <rect x="150" y="76" width="80" height="12" class="f-surface"/>
+        <line x1="46" y1="222" x2="190" y2="222" class="s-line"/><line x1="46" y1="216" x2="46" y2="228" class="s-line"/><line x1="190" y1="216" x2="190" y2="228" class="s-line"/>
+        <text x="118" y="240" class="t-mono" text-anchor="middle">a</text>
+        <line x1="46" y1="262" x2="290" y2="262" class="s-line"/><line x1="46" y1="256" x2="46" y2="268" class="s-line"/><line x1="290" y1="256" x2="290" y2="268" class="s-line"/>
+        <text x="168" y="280" class="t-mono" text-anchor="middle">b</text>
+        <text x="240" y="60" class="t-acc">MR ≈ a / b</text>
+        <text x="240" y="80" class="t-dim">k_w = k_s · MR²</text>
+        <!-- damper curve -->
+        <g transform="translate(400,0)">
+          <text x="170" y="22" class="t" text-anchor="middle">댐퍼의 감쇠력–속도 특성</text>
+          <line x1="20" y1="170" x2="340" y2="170" class="s-axis"/>
+          <line x1="170" y1="40" x2="170" y2="262" class="s-axis"/>
+          <path d="M170 170 C190 110 220 86 260 70 S320 52 336 48" fill="none" stroke="var(--accent)" stroke-width="2.6"/>
+          <path d="M170 170 C150 196 120 208 80 216 S24 226 22 227" fill="none" stroke="var(--accent-2)" stroke-width="2.6"/>
+          <line x1="170" y1="170" x2="278" y2="40" stroke="var(--text-faint)" stroke-dasharray="4 4"/>
+          <text x="338" y="188" class="t-dim" text-anchor="end">신장 속도 →</text>
+          <text x="22" y="188" class="t-dim">← 압축 속도</text>
+          <text x="178" y="48" class="t-dim">감쇠력</text>
+          <text x="262" y="96" class="t-acc">신장 (크다)</text>
+          <text x="40" y="246" class="t" style="fill:var(--accent-2);font-weight:700">압축 (작다)</text>
+          <text x="196" y="150" class="t-dim">저속: 가파름</text>
+          <text x="232" y="282" class="t-dim" text-anchor="middle">고속에서 기울기가 눕는 디그레시브 특성</text>
+        </g>
+      </svg>
+      <figcaption><b>그림 9-2.</b> 왼쪽: 스프링이 로어 암의 중간(거리 a)에 붙으면 바퀴(거리 b)보다 덜 움직인다. 오른쪽: 실제 댐퍼는 직선이 아니다. 차체의 느린 움직임(약 0.05~0.3 m/s)은 가파르게 잡고, 요철의 빠른 입력(1 m/s 이상)에서는 밸브가 열려 힘이 완만하게 늘어난다.</figcaption>
+    </figure>
+  </section>
+
+  <!-- =============================================================== 3 -->
+  <section id="sdof">
+    <h2>질량–스프링–댐퍼: 진동의 기본</h2>
+    <p>가장 단순한 모델은 질량 하나를 스프링과 댐퍼로 받친 1자유도 계다. 평형점에서의 변위를 \(x\)라 하면 운동 방정식은 다음과 같다.</p>
+    <div class="formula">$$m\ddot x + c\dot x + kx = 0,\qquad f_n = \frac{1}{2\pi}\sqrt{\frac{k}{m}},\qquad \zeta = \frac{c}{2\sqrt{km}}$$
+      <div class="where">\(f_n\): 고유 진동수, \(\zeta\): 감쇠비. \(c_c = 2\sqrt{km}\)가 임계 감쇠 계수이며 \(\zeta = c/c_c\)다.</div>
+    </div>
+    <p>감쇠비 하나가 응답의 모양을 정한다. \(\zeta &lt; 1\)이면 <b>부족 감쇠</b>로 진폭이 줄어드는 진동, \(\zeta = 1\)이면 <b>임계 감쇠</b>로 진동 없이 가장 빨리 제자리로, \(\zeta &gt; 1\)이면 <b>과감쇠</b>로 느릿하게 돌아온다. 승용차는 대표적으로 \(\zeta \approx 0.2\sim0.4\), 스포츠카는 0.5 안팎, 경주차는 그 이상을 쓴다. 임계 감쇠가 제일 좋아 보이지만, 뒤에서 보듯 감쇠가 크면 고주파 요철이 차체로 더 많이 전달된다.</p>
+    <p>고유 진동수는 정적 처짐과도 묶여 있다. 스프링이 차 무게로 눌린 양이 \(\delta = mg/k\)이므로 \(f_n = \frac{1}{2\pi}\sqrt{g/\delta}\)다. 처짐이 170 mm면 약 1.2 Hz다. 승용차의 차체 고유 진동수는 약 1~1.5 Hz로 잡는데, 사람이 걸을 때 몸이 오르내리는 주파수와 비슷해 편안하게 느끼기 때문이다.</p>
+    <div class="callout tip">
+      <strong>계산 예: 한 모서리</strong>
+      <p>\(m\) = 350 kg, 휠 레이트 \(k\) = 22 kN/m, \(c\) = 1,500 N·s/m. \(f_n = \frac{1}{2\pi}\sqrt{22000/350} \approx 1.26\) Hz, \(c_c = 2\sqrt{22000\times350} \approx 5{,}550\) N·s/m, \(\zeta = 1500/5550 \approx 0.27\). 정적 처짐은 \(350\times9.81/22000 \approx 156\) mm다.</p>
+    </div>
+
+    <div class="sim" id="sim-msd">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>질량–스프링–댐퍼: 눌렀다 놓기</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-msd" style="touch-action:none;cursor:grab"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>질량 m <output id="msd-m-out"></output></span><input type="range" id="msd-m" min="200" max="600" value="350" step="10"></label>
+          <label class="ctrl"><span>스프링 상수 k <output id="msd-k-out"></output></span><input type="range" id="msd-k" min="10" max="60" value="22" step="1"></label>
+          <label class="ctrl"><span>감쇠 계수 c <output id="msd-c-out"></output></span><input type="range" id="msd-c" min="0" max="12000" value="1500" step="50"></label>
+          <div class="ctrl-row"><button class="btn primary" id="msd-kick">80 mm 눌렀다 놓기</button><button class="btn" id="msd-crit">임계 감쇠로</button></div>
+        </div>
+      </div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>스프링 힘 · 변위</span><span><i style="background:var(--accent-2)"></i>감쇠력</span><span><i style="background:var(--text-faint)"></i>포락선 e<sup>−ζω<sub>n</sub>t</sup></span></div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">고유 진동수 f_n</span><span class="v" id="o-msd-fn">—</span></div>
+        <div class="stat"><span class="k">감쇠비 ζ</span><span class="v" id="o-msd-z">—</span></div>
+        <div class="stat"><span class="k">응답 종류</span><span class="v" id="o-msd-type">—</span></div>
+        <div class="stat"><span class="k">감쇠 진동수 f_d</span><span class="v" id="o-msd-fd">—</span></div>
+        <div class="stat"><span class="k">임계 감쇠 c_c</span><span class="v" id="o-msd-cc">—</span></div>
+        <div class="stat"><span class="k">정적 처짐 mg/k</span><span class="v" id="o-msd-st">—</span></div>
+      </div>
+      <div class="sim-note">왼쪽의 질량을 위아래로 끌었다 놓으면 진동한다. 질량 옆 화살표는 그 순간 스프링 힘과 감쇠력이다. 해볼 것: c를 0으로 하면 영원히 흔들린다. c를 올려 ζ가 1을 지나는 순간 진동이 사라지고, 더 올리면 오히려 느리게 돌아온다. k를 두 배로 해도 f_n은 √2배만 오른다.</div>
+    </div>
+
+    <p>이번에는 바닥(노면)이 흔들릴 때 질량이 얼마나 따라 움직이는지 보자. 노면 진폭에 대한 질량 진폭의 비를 <span class="term">전달률</span><span class="en">(Transmissibility)</span>이라 한다. 주파수비 \(r = f/f_n\)에 대해</p>
+    <div class="formula">$$T(r) = \sqrt{\frac{1+(2\zeta r)^2}{(1-r^2)^2+(2\zeta r)^2}}$$
+      <div class="where">\(r \ll 1\): \(T \approx 1\) (차체가 노면을 그대로 따라감). \(r \approx 1\): 공진, \(T \approx 1/(2\zeta)\). \(r &gt; \sqrt2\): \(T &lt; 1\) (격리). 모든 감쇠비의 곡선이 \(r=\sqrt2\)에서 \(T=1\)을 지난다.</div>
+    </div>
+    <p>핵심은 \(r=\sqrt2\)를 경계로 감쇠의 효과가 <b>뒤집힌다</b>는 점이다. 공진 부근에서는 감쇠가 클수록 좋지만, 격리 영역에서는 감쇠가 클수록 전달률이 커진다. 예를 들어 \(r=3\)에서 \(\zeta=0.1\)이면 \(T \approx 0.15\), \(\zeta=0.3\)이면 \(T \approx 0.25\)다. 댐퍼가 스프링 옆에서 힘을 직접 전하는 통로가 되기 때문이다.</p>
+  </section>
+
+  <!-- =============================================================== 4 -->
+  <section id="quarter">
+    <h2>쿼터카 모델: 두 개의 공진</h2>
+    <p>타이어도 스프링이다. 공기압이 든 타이어의 세로 강성은 대표적으로 약 180~250 kN/m로, 서스펜션 스프링보다 열 배쯤 단단하다. 스프링 아래 질량과 타이어 강성을 더한 2자유도 모델이 <span class="term">쿼터카 모델</span><span class="en">(Quarter-Car Model)</span>이다(그림 9-1).</p>
+    <div class="formula">$$\begin{aligned} m_s\ddot z_s &amp;= -k_s(z_s-z_u) - c(\dot z_s-\dot z_u)\\ m_u\ddot z_u &amp;= \;\;\,k_s(z_s-z_u) + c(\dot z_s-\dot z_u) + k_t(z_r-z_u) \end{aligned}$$
+      <div class="where">\(z_s, z_u, z_r\): 차체, 바퀴, 노면의 변위(정적 평형 기준). 타이어가 노면을 누르는 힘은 \(N = (m_s+m_u)g + k_t(z_r-z_u)\)이며, 0보다 작아질 수 없다. \(N=0\)이면 바퀴가 뜬 것이다.</div>
+    </div>
+    <p>이 계에는 공진이 둘 있다.</p>
+    <div class="formula">$$f_{\text{body}} \approx \frac{1}{2\pi}\sqrt{\frac{k_sk_t/(k_s+k_t)}{m_s}}\ \ (\approx 1\sim1.5\ \text{Hz}),\qquad f_{\text{hop}} \approx \frac{1}{2\pi}\sqrt{\frac{k_s+k_t}{m_u}}\ \ (\approx 10\sim15\ \text{Hz})$$
+      <div class="where">예: \(m_s\)=350 kg, \(m_u\)=40 kg, \(k_s\)=22 kN/m, \(k_t\)=200 kN/m → 차체 1.20 Hz, 휠 홉 11.9 Hz. 차체 공진에서는 차체가 크게 출렁이고, 휠 홉에서는 차체는 거의 가만히 있고 바퀴만 스프링과 타이어 사이에서 떤다.</div>
+    </div>
+    <p>과속방지턱을 넘는 것은 이 모델에 짧은 충격을 넣는 일이다. 턱 길이 \(L\)을 속도 \(V\)로 지나면 입력의 주된 주파수는 대략 \(V/L\)이다. 길이 3.6 m 턱을 시속 30 km로 넘으면 약 2.3 Hz로 차체 공진에 가깝고, 짧은 턱을 빠르게 넘으면 휠 홉 쪽을 때린다.</p>
+
+    <div class="sim" id="sim-qc">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>쿼터카로 과속방지턱 넘기</h3></div>
+      <div class="sim-body">
+        <div class="sim-view"><canvas id="cv-qc"></canvas><canvas id="cv-qcg"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>스프링 위 질량 m_s <output id="qc-ms-out"></output></span><input type="range" id="qc-ms" min="200" max="500" value="350" step="10"></label>
+          <label class="ctrl"><span>스프링 아래 질량 m_u <output id="qc-mu-out"></output></span><input type="range" id="qc-mu" min="20" max="80" value="40" step="1"></label>
+          <label class="ctrl"><span>스프링(휠 레이트) k_s <output id="qc-ks-out"></output></span><input type="range" id="qc-ks" min="10" max="60" value="22" step="1"></label>
+          <label class="ctrl"><span>댐퍼 c <output id="qc-c-out"></output></span><input type="range" id="qc-c" min="100" max="5000" value="1500" step="50"></label>
+          <label class="ctrl"><span>타이어 강성 k_t <output id="qc-kt-out"></output></span><input type="range" id="qc-kt" min="120" max="300" value="200" step="5"></label>
+          <label class="ctrl"><span>턱 높이 <output id="qc-h-out"></output></span><input type="range" id="qc-h" min="2" max="12" value="8" step="0.5"></label>
+          <label class="ctrl"><span>턱 길이 <output id="qc-l-out"></output></span><input type="range" id="qc-l" min="0.3" max="4" value="3.6" step="0.1"></label>
+          <label class="ctrl"><span>속도 <output id="qc-v-out"></output></span><input type="range" id="qc-v" min="5" max="100" value="30" step="1"></label>
+          <div class="ctrl"><span>재생 속도</span><div class="seg" id="qc-rate"><button data-value="1" class="on">실시간</button><button data-value="0.25">1/4 느리게</button></div></div>
+          <div class="ctrl-row"><button class="btn primary" id="qc-run">다시 넘기</button></div>
+        </div>
+      </div>
+      <div class="legend"><span><i style="background:var(--text-faint)"></i>노면</span><span><i style="background:var(--accent-2)"></i>바퀴 z_u</span><span><i style="background:var(--accent)"></i>차체 z_s</span><span><i style="background:var(--ok)"></i>접지 하중 N</span><span><i style="background:rgba(220,60,60,0.5);height:8px"></i>바퀴가 뜬 구간</span></div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">입력 주파수 V/L</span><span class="v" id="o-qc-f">—</span></div>
+        <div class="stat"><span class="k">차체 최대 변위</span><span class="v" id="o-qc-zs">—</span></div>
+        <div class="stat"><span class="k">차체 최대 가속도</span><span class="v" id="o-qc-as">—</span></div>
+        <div class="stat"><span class="k">최소 접지 하중</span><span class="v" id="o-qc-nmin">—</span></div>
+        <div class="stat"><span class="k">바퀴가 뜬 시간</span><span class="v" id="o-qc-air">—</span></div>
+      </div>
+      <div class="sim-note">위의 운동 방정식을 0.2 ms 간격으로 적분한 결과다. 턱은 코사인 모양이고 타이어는 점 접촉으로 단순화했다. 해볼 것: 기본 턱(3.6 m)을 20 → 60 km/h로 올리면 차체 가속도가 어떻게 변하는가. 턱 길이를 0.5 m로 줄이고 60 km/h로 넘으면 턱 뒤에서 접지 하중이 0이 되어 바퀴가 뜬다. 그 상태에서 댐퍼를 올리거나 m_u를 줄여 바퀴를 다시 붙여 보자.</div>
+    </div>
+
+    <p>턱 하나가 아니라 모든 주파수의 요철이 섞인 실제 도로에서는 <b>주파수 응답</b>으로 보는 편이 낫다. 아래는 노면 속도 입력에 대한 차체 가속도(승차감)와 타이어 접지 하중 변동(접지)의 이득이다. 실제 도로의 요철은 속도 스펙트럼이 주파수에 대해 거의 평탄하므로, 곡선 아래 면적이 곧 그 도로에서 느끼는 크기다. 사람은 상하 진동 가운데 약 4~8 Hz에 가장 민감하다(몸통과 내장의 공진대). 그래서 두 공진 사이의 이 골짜기를 얼마나 낮게 유지하느냐가 승차감의 핵심이다.</p>
+
+    <div class="sim" id="sim-fr">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>주파수 응답: 승차감과 접지의 상충</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-fr"></canvas><canvas id="cv-tr"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>감쇠비 ζ <output id="fr-z-out"></output></span><input type="range" id="fr-z" min="0.05" max="1" value="0.3" step="0.01"></label>
+          <label class="ctrl"><span>스프링 k_s <output id="fr-ks-out"></output></span><input type="range" id="fr-ks" min="10" max="60" value="22" step="1"></label>
+          <label class="ctrl"><span>스프링 아래 질량 m_u <output id="fr-mu-out"></output></span><input type="range" id="fr-mu" min="20" max="80" value="40" step="1"></label>
+          <label class="ctrl"><span>스카이훅 감쇠 c_sky <output id="fr-sky-out"></output></span><input type="range" id="fr-sky" min="0" max="4000" value="0" step="100"></label>
+          <p style="margin:0;font-size:13px;color:var(--text-dim)">고정값: m_s = 350 kg, k_t = 200 kN/m. 점선은 기준 설정(ζ = 0.3, k_s = 22 kN/m, m_u = 40 kg).</p>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">댐퍼 계수 c</span><span class="v" id="o-fr-c">—</span></div>
+        <div class="stat"><span class="k">차체 공진</span><span class="v" id="o-fr-fb">—</span></div>
+        <div class="stat"><span class="k">휠 홉</span><span class="v" id="o-fr-fw">—</span></div>
+        <div class="stat"><span class="k">차체 가속도 RMS</span><span class="v" id="o-fr-a">—</span></div>
+        <div class="stat"><span class="k">그중 4–8 Hz 대역</span><span class="v" id="o-fr-a48">—</span></div>
+        <div class="stat"><span class="k">접지 하중 변동 RMS</span><span class="v" id="o-fr-n">—</span></div>
+      </div>
+      <div class="sim-note">위 두 그래프는 로그–로그 축이고 노란 띠가 4–8 Hz 민감 대역이다. 아래 그래프는 ζ를 0.05에서 1까지 바꿀 때의 (접지 하중 변동, 차체 가속도) 궤적으로, 왼쪽 아래일수록 둘 다 좋다. RMS는 0.3–30 Hz에서 평탄한 노면 속도 스펙트럼을 가정한 값이며 기준 설정 대비 %로 표시한다. 해볼 것: ζ를 0.1로 내리면 두 공진 봉우리가 솟고, 0.7로 올리면 봉우리는 눕지만 4–8 Hz 골짜기가 메워진다. 가속도가 최소인 ζ와 하중 변동이 최소인 ζ가 서로 다르다는 것을 아래 곡선에서 확인하자. 스카이훅 감쇠를 올리면 곡선 전체가 어떻게 움직이는가.</div>
+    </div>
+    <div class="callout">
+      <strong>세 가지 손잡이의 효과</strong>
+      <p>스프링을 부드럽게 하면 차체 공진이 낮아지고 4–8 Hz의 격리가 좋아지지만, 스트로크가 커지고 롤·피치가 늘어난다. 감쇠는 두 공진의 봉우리를 낮추는 대신 그 사이 대역의 전달을 키운다. 스프링 아래 질량을 줄이면 휠 홉 주파수가 올라가고 봉우리가 작아져 접지와 승차감이 함께 좋아진다. 대가가 없는 유일한 손잡이지만 비용이 든다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== 5 -->
+  <section id="types">
+    <h2>서스펜션 형식</h2>
+    <p>스프링과 댐퍼는 위아래 힘만 받는다. 바퀴가 앞뒤·좌우로 달아나지 않도록 붙잡고, 상하로 움직일 때 지나는 경로와 자세를 정하는 것은 <b>링크</b>다. 좌우 바퀴가 서로 독립으로 움직이면 <span class="term">독립 현가</span>, 한 축으로 묶여 있으면 <span class="term">일체 차축식</span>이다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 270" role="img" aria-label="서스펜션 형식 네 가지">
+        <!-- MacPherson -->
+        <g transform="translate(0,0)">
+          <text x="95" y="22" class="t" text-anchor="middle">맥퍼슨 스트럿</text>
+          <rect x="18" y="40" width="44" height="170" class="f-surface"/>
+          <rect x="140" y="80" width="30" height="140" rx="8" fill="var(--text)" opacity="0.8"/>
+          <line x1="62" y1="186" x2="132" y2="192" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
+          <line x1="132" y1="192" x2="104" y2="52" stroke="var(--accent-2)" stroke-width="7" stroke-linecap="round"/>
+          <path d="M92 58 l30 -4 M95 74 l30 -4 M98 90 l30 -4 M101 106 l30 -4" stroke="var(--bad)" stroke-width="2.4" fill="none"/>
+          <line x1="128" y1="150" x2="140" y2="150" stroke="var(--text-dim)" stroke-width="5"/>
+          <rect x="62" y="40" width="60" height="10" class="f-surface"/>
+          <circle cx="62" cy="186" r="4.5" fill="var(--text)"/><circle cx="132" cy="192" r="4.5" fill="var(--text)"/><circle cx="104" cy="52" r="4.5" fill="var(--text)"/>
+          <text x="95" y="244" class="t-dim" text-anchor="middle">암 1개 + 스트럿</text>
+        </g>
+        <!-- double wishbone -->
+        <g transform="translate(190,0)">
+          <text x="95" y="22" class="t" text-anchor="middle">더블 위시본</text>
+          <rect x="18" y="40" width="44" height="170" class="f-surface"/>
+          <rect x="140" y="80" width="30" height="140" rx="8" fill="var(--text)" opacity="0.8"/>
+          <line x1="62" y1="186" x2="132" y2="192" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
+          <line x1="78" y1="112" x2="128" y2="106" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
+          <line x1="128" y1="106" x2="132" y2="192" stroke="var(--text-dim)" stroke-width="6" stroke-linecap="round"/>
+          <line x1="130" y1="150" x2="140" y2="150" stroke="var(--text-dim)" stroke-width="5"/>
+          <line x1="104" y1="189" x2="84" y2="52" stroke="var(--accent-2)" stroke-width="5" stroke-linecap="round"/>
+          <rect x="62" y="40" width="40" height="10" class="f-surface"/><rect x="62" y="100" width="16" height="24" class="f-surface"/>
+          <circle cx="62" cy="186" r="4.5" fill="var(--text)"/><circle cx="132" cy="192" r="4.5" fill="var(--text)"/><circle cx="78" cy="112" r="4.5" fill="var(--text)"/><circle cx="128" cy="106" r="4.5" fill="var(--text)"/>
+          <text x="95" y="244" class="t-dim" text-anchor="middle">위·아래 암 2개</text>
+        </g>
+        <!-- torsion beam (top view) -->
+        <g transform="translate(380,0)">
+          <text x="95" y="22" class="t" text-anchor="middle">토션빔 (위에서 본 그림)</text>
+          <rect x="14" y="130" width="24" height="76" rx="7" fill="var(--text)" opacity="0.8"/>
+          <rect x="152" y="130" width="24" height="76" rx="7" fill="var(--text)" opacity="0.8"/>
+          <line x1="50" y1="60" x2="50" y2="168" stroke="var(--accent)" stroke-width="6" stroke-linecap="round"/>
+          <line x1="140" y1="60" x2="140" y2="168" stroke="var(--accent)" stroke-width="6" stroke-linecap="round"/>
+          <line x1="50" y1="104" x2="140" y2="104" stroke="var(--accent-2)" stroke-width="8" stroke-linecap="round"/>
+          <line x1="38" y1="168" x2="50" y2="168" stroke="var(--text-dim)" stroke-width="5"/><line x1="140" y1="168" x2="152" y2="168" stroke="var(--text-dim)" stroke-width="5"/>
+          <circle cx="50" cy="60" r="6" fill="var(--text)"/><circle cx="140" cy="60" r="6" fill="var(--text)"/>
+          <text x="95" y="94" class="t-dim" text-anchor="middle">비틀리는 빔</text>
+          <text x="95" y="52" class="t-dim" text-anchor="middle">↑ 전방</text>
+          <text x="95" y="244" class="t-dim" text-anchor="middle">트레일링 암 + 가로 빔</text>
+        </g>
+        <!-- rigid axle -->
+        <g transform="translate(570,0)">
+          <text x="95" y="22" class="t" text-anchor="middle">리지드 액슬</text>
+          <rect x="14" y="80" width="30" height="140" rx="8" fill="var(--text)" opacity="0.8"/>
+          <rect x="146" y="80" width="30" height="140" rx="8" fill="var(--text)" opacity="0.8"/>
+          <line x1="44" y1="150" x2="146" y2="150" stroke="var(--accent)" stroke-width="10" stroke-linecap="round"/>
+          <circle cx="95" cy="150" r="20" fill="var(--accent)"/>
+          <path d="M62 142 l0 -8 l-9 -5 l18 -10 l-18 -10 l18 -10 l-18 -10 l9 -5 l0 -8" fill="none" stroke="var(--bad)" stroke-width="2.4"/>
+          <path d="M128 142 l0 -8 l-9 -5 l18 -10 l-18 -10 l18 -10 l-18 -10 l9 -5 l0 -8" fill="none" stroke="var(--bad)" stroke-width="2.4"/>
+          <rect x="44" y="56" width="102" height="14" class="f-surface"/>
+          <text x="95" y="244" class="t-dim" text-anchor="middle">좌우가 한 덩어리</text>
+        </g>
+      </svg>
+      <figcaption><b>그림 9-3.</b> 대표적인 네 형식. 맥퍼슨 스트럿은 댐퍼 자체가 위쪽 링크를 겸하고, 더블 위시본은 위아래 두 암이 너클을 잡는다. 토션빔은 좌우 트레일링 암을 비틀림이 가능한 빔으로 이었고, 리지드 액슬은 좌우 바퀴가 하나의 축이다.</figcaption>
+    </figure>
+
+    <div class="table-wrap"><table>
+      <thead><tr><th>형식</th><th>구조</th><th>장점</th><th>단점</th><th>주 용도</th></tr></thead>
+      <tbody>
+        <tr><td>맥퍼슨 스트럿</td><td>로어 암 1개 + 스트럿(댐퍼·스프링 일체)이 너클에 고정</td><td>부품이 적고 가볍다. 폭을 덜 차지해 가로 배치 엔진과 잘 맞는다</td><td>범프 시 캠버 변화가 작다. 댐퍼가 횡력을 받아 마찰이 생긴다. 높이를 차지</td><td>대부분의 전륜구동 승용차 앞축</td></tr>
+        <tr><td>더블 위시본</td><td>위·아래 A형 암 2개</td><td>암 길이와 각도로 캠버 변화, 롤 센터를 자유롭게 설계한다. 댐퍼에 횡력이 없다</td><td>부품과 공간이 많이 든다</td><td>스포츠카, 고급 세단, 픽업·SUV 앞축</td></tr>
+        <tr><td>멀티링크</td><td>암을 3~5개의 독립 링크로 분해</td><td>토·캠버·전후 컴플라이언스를 따로 조정한다. 승차감과 조종성 양립</td><td>복잡하고 비싸다. 부싱이 많아 세팅이 어렵다</td><td>중형 이상 뒤축, 고급차 앞축</td></tr>
+        <tr><td>토션빔</td><td>좌우 트레일링 암을 가로 빔으로 연결. 빔이 비틀리며 반독립으로 동작</td><td>싸고 가볍고 납작해 트렁크 공간에 유리. 빔이 안티롤 바 역할도 한다</td><td>캠버·토 설계 자유도가 낮고, 횡력에 토아웃되기 쉽다</td><td>소형·준중형 전륜구동차 뒤축</td></tr>
+        <tr><td>리지드 액슬</td><td>좌우 바퀴가 하나의 강체 축</td><td>튼튼하고 하중 변화에도 캠버가 변하지 않는다. 휠 트래블이 크다</td><td>스프링 아래 질량이 크다. 한쪽 요철이 반대쪽에 전달된다</td><td>트럭, 정통 오프로드 차</td></tr>
+      </tbody>
+    </table></div>
+
+    <p>더블 위시본을 3D로 뜯어 보자. 차체에 고정된 두 암의 회전축, 두 암 끝의 볼 조인트, 그 둘을 잇는 너클이 앞에서 보면 <b>4절 링크</b>를 이룬다. 휠 스트로크가 주어지면 너클의 위치와 기울기가 기구학적으로 하나로 정해진다. 조향은 타이로드가 너클의 조향 암을 밀고 당겨, 너클이 두 볼 조인트를 잇는 <b>킹핀 축</b>을 중심으로 회전하는 것이다.</p>
+
+    <div class="sim" id="sim-dw">
+      <div class="sim-head"><span class="sim-tag three">3D</span><h3>더블 위시본 서스펜션 (우측 앞바퀴)</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view three" id="dw-view"><span class="hint">드래그: 회전 · 휠: 확대</span></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>휠 스트로크 <output id="dw-tr-out"></output></span><input type="range" id="dw-tr" min="-80" max="80" value="0" step="1"></label>
+          <label class="ctrl"><span>스티어링 랙 이동 <output id="dw-rack-out"></output></span><input type="range" id="dw-rack" min="-60" max="60" value="0" step="1"></label>
+          <label class="check"><input type="checkbox" id="dw-auto"> 스트로크 자동 왕복</label>
+          <label class="check"><input type="checkbox" id="dw-ghost" checked> 타이어 반투명</label>
+          <label class="check"><input type="checkbox" id="dw-lab" checked> 부품 이름 표시</label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">캠버</span><span class="v" id="o-dw-cam">—</span></div>
+        <div class="stat"><span class="k">바퀴 조향각</span><span class="v" id="o-dw-steer">—</span></div>
+        <div class="stat"><span class="k">스프링 압축량</span><span class="v" id="o-dw-sp">—</span></div>
+        <div class="stat"><span class="k">모션비</span><span class="v" id="o-dw-mr">—</span></div>
+        <div class="stat"><span class="k">휠 레이트 (스프링 60 N/mm)</span><span class="v" id="o-dw-kw">—</span></div>
+      </div>
+      <div class="sim-note">주황 = 어퍼 암, 파랑 = 로어 암, 회색 = 너클, 빨강·노랑 = 코일오버, 초록 = 타이로드. 암의 위치는 4절 링크 방정식을 풀어, 조향각은 타이로드 길이가 일정하다는 조건을 풀어 구한다. 해볼 것: 스트로크를 +80 mm(범프)로 올리면 짧은 어퍼 암이 너클 윗부분을 안으로 당겨 캠버가 네거티브로 간다. 랙을 고정한 채 스트로크만 움직였을 때 조향각이 조금 변하는 것이 범프 스티어다. 랙을 끝까지 밀면 캐스터와 킹핀 경사 때문에 캠버도 함께 변한다.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 6 -->
+  <section id="geometry">
+    <h2>지오메트리: 바퀴의 자세</h2>
+    <p>바퀴가 차체와 노면에 대해 이루는 각도를 통틀어 <span class="term">휠 얼라인먼트</span><span class="en">(Wheel Alignment)</span>라 한다. 정지 상태의 값도 중요하지만, 스트로크와 조향에 따라 이 값이 <b>어떻게 변하는가</b>가 서스펜션 설계의 본론이다.</p>
+    <ul>
+      <li><span class="term">캠버</span><span class="en">(Camber)</span>: 앞에서 볼 때 바퀴가 수직에서 기운 각. 윗부분이 안쪽으로 기울면 네거티브. 승용차는 대표적으로 약 −0.5°~−1.5°.</li>
+      <li><span class="term">토</span><span class="en">(Toe)</span>: 위에서 볼 때 바퀴가 진행 방향에서 벌어진 각. 앞쪽이 모이면 토인, 벌어지면 토아웃. 바퀴당 대표적으로 0~0.2° 수준으로 아주 작다.</li>
+      <li><span class="term">캐스터</span><span class="en">(Caster)</span>: 옆에서 볼 때 조향 축(킹핀 축)이 뒤로 누운 각. 대표적으로 약 3°~8°. 조향 축이 지면과 만나는 점이 접지 중심보다 앞에 오게 해, 쇼핑 카트 바퀴처럼 스스로 직진으로 돌아오게 한다. 그 거리가 <b>기계적 트레일</b>이다.</li>
+      <li><span class="term">킹핀 경사</span><span class="en">(Kingpin Inclination, KPI)</span>: 앞에서 볼 때 조향 축이 안쪽으로 누운 각. 대표적으로 약 7°~14°. 조향하면 차체를 살짝 들어 올리므로 차 무게가 조향을 직진으로 되돌린다.</li>
+      <li><span class="term">스크럽 반경</span><span class="en">(Scrub Radius)</span>: 조향 축이 지면과 만나는 점과 접지 중심 사이의 가로 거리. 제동력·구동력이 조향 축에 거는 모멘트의 팔 길이다. 크면 좌우 제동력 차이나 노면 충격이 핸들로 올라온다.</li>
+    </ul>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 300" role="img" aria-label="킹핀 경사, 스크럽 반경, 캐스터와 트레일">
+        <!-- front view -->
+        <text x="190" y="22" class="t" text-anchor="middle">앞에서 본 그림</text>
+        <line x1="30" y1="250" x2="360" y2="250" class="s-axis"/>
+        <rect x="200" y="70" width="70" height="180" rx="14" fill="var(--text)" opacity="0.18" stroke="var(--text-dim)"/>
+        <line x1="235" y1="40" x2="235" y2="262" class="s-line" stroke-dasharray="5 4"/>
+        <line x1="150" y1="50" x2="207" y2="262" stroke="var(--accent)" stroke-width="2.4"/>
+        <line x1="178" y1="40" x2="178" y2="150" class="s-line" stroke-dasharray="3 3"/>
+        <circle cx="163" cy="100" r="5" fill="var(--text)"/><circle cx="191" cy="200" r="5" fill="var(--text)"/>
+        <line x1="90" y1="96" x2="163" y2="100" stroke="var(--text-dim)" stroke-width="4" stroke-linecap="round"/>
+        <line x1="70" y1="204" x2="191" y2="200" stroke="var(--text-dim)" stroke-width="4" stroke-linecap="round"/>
+        <path d="M178 74 A40 40 0 0 0 157 78" fill="none" class="s-acc"/>
+        <text x="120" y="64" class="t-acc">킹핀 경사</text>
+        <line x1="204" y1="270" x2="235" y2="270" stroke="var(--bad)" stroke-width="2.4"/><line x1="204" y1="264" x2="204" y2="276" stroke="var(--bad)" stroke-width="2"/><line x1="235" y1="264" x2="235" y2="276" stroke="var(--bad)" stroke-width="2"/>
+        <text x="220" y="292" class="t" text-anchor="middle" style="fill:var(--bad)">스크럽 반경</text>
+        <text x="290" y="60" class="t-dim">타이어 중심면</text>
+        <text x="60" y="230" class="t-dim">← 차 안쪽</text>
+        <!-- side view -->
+        <g transform="translate(400,0)">
+          <text x="170" y="22" class="t" text-anchor="middle">옆에서 본 그림</text>
+          <line x1="20" y1="250" x2="340" y2="250" class="s-axis"/>
+          <circle cx="180" cy="160" r="90" fill="var(--text)" opacity="0.14" stroke="var(--text-dim)"/>
+          <circle cx="180" cy="160" r="4" fill="var(--text)"/>
+          <line x1="180" y1="40" x2="180" y2="262" class="s-line" stroke-dasharray="5 4"/>
+          <line x1="212" y1="40" x2="152" y2="264" stroke="var(--accent)" stroke-width="2.4"/>
+          <path d="M180 84 A76 76 0 0 1 200 86" fill="none" class="s-acc"/>
+          <text x="222" y="70" class="t-acc">캐스터</text>
+          <line x1="156" y1="270" x2="180" y2="270" stroke="var(--bad)" stroke-width="2.4"/><line x1="156" y1="264" x2="156" y2="276" stroke="var(--bad)" stroke-width="2"/><line x1="180" y1="264" x2="180" y2="276" stroke="var(--bad)" stroke-width="2"/>
+          <text x="168" y="292" class="t" text-anchor="middle" style="fill:var(--bad)">기계적 트레일</text>
+          <text x="40" y="150" class="t-dim">← 전방</text>
+          <text x="254" y="150" class="t-dim">조향 축</text>
+        </g>
+      </svg>
+      <figcaption><b>그림 9-4.</b> 조향 축(파란 선)은 위·아래 볼 조인트를 잇는 선이다. 앞에서 본 기울기가 킹핀 경사, 옆에서 본 기울기가 캐스터다. 조향 축이 지면과 만나는 점이 접지 중심에서 가로로 떨어진 거리가 스크럽 반경, 세로로 떨어진 거리가 기계적 트레일이다.</figcaption>
+    </figure>
+
+    <div class="sim" id="sim-al">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>얼라인먼트: 캠버 · 토 · 캐스터</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-al"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>캠버 <output id="al-cam-out"></output></span><input type="range" id="al-cam" min="-4" max="4" value="-1" step="0.1"></label>
+          <label class="ctrl"><span>토 (바퀴당, + 토인) <output id="al-toe-out"></output></span><input type="range" id="al-toe" min="-1" max="1" value="0.1" step="0.05"></label>
+          <label class="ctrl"><span>캐스터 <output id="al-cas-out"></output></span><input type="range" id="al-cas" min="0" max="10" value="5" step="0.5"></label>
+        </div>
+      </div>
+      <div class="al-desc" id="al-desc"></div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">기계적 트레일</span><span class="v" id="o-al-trail">—</span></div>
+        <div class="stat"><span class="k">토 합계 (17인치 림)</span><span class="v" id="o-al-toe">—</span></div>
+        <div class="stat"><span class="k">직진 1 km당 옆 미끄럼</span><span class="v" id="o-al-scrub">—</span></div>
+        <div class="stat"><span class="k">20° 조향 시 바깥 바퀴 캠버</span><span class="v" id="o-al-cam20">—</span></div>
+      </div>
+      <div class="sim-note">그림은 보기 쉽게 캠버를 4배, 토를 10배 과장했다(캐스터는 실제 각). 트레일은 타이어 반지름 0.33 m 기준, 조향 시 캠버 변화는 캐스터만 고려한 근사 \(\Delta\gamma \approx -\tau\sin\delta\)다. 해볼 것: 캐스터를 키우면 트레일이 길어져 복원력이 커지고, 조향했을 때 바깥 바퀴가 네거티브 캠버를 더 얻는다.</div>
+    </div>
+
+    <h3>순간 중심과 롤 센터</h3>
+    <p>앞에서 본 그림에서 어퍼 암과 로어 암의 연장선이 만나는 점이 <span class="term">순간 중심</span><span class="en">(Instant Center, IC)</span>이다. 그 순간 바퀴(너클)는 차체에 대해 이 점을 중심으로 회전한다. 즉 복잡한 링크가 IC에 피벗을 둔 긴 가상의 스윙 암 하나와 같다. 이 가상 암의 길이가 짧을수록 스트로크당 캠버 변화가 크다.</p>
+    <div class="formula">$$\frac{d\gamma}{dz} \approx -\frac{1}{L_{\text{fvsa}}}\ \text{[rad/m]}$$
+      <div class="where">\(L_{\text{fvsa}}\): 접지 중심에서 IC까지의 가로 거리(가상 스윙 암 길이). 예: 2 m면 범프 10 mm당 약 −0.29°. 코너에서 차체가 3° 롤할 때 바깥 바퀴는 50 mm쯤 눌리므로 약 1.4°를 되찾는다.</div>
+    </div>
+    <p>왜 캠버 변화가 필요할까. 차체가 롤하면 바퀴도 함께 기울어, 하중을 가장 많이 받는 바깥 타이어가 바깥 어깨로 서게 된다. 어퍼 암을 로어 암보다 <b>짧게</b> 만들면(SLA: Short-Long Arm) 범프 쪽에서 너클 윗부분이 안으로 당겨져 네거티브 캠버가 생기고, 롤로 잃은 각을 보상한다.</p>
+    <p>접지 중심과 IC를 이은 선이 차 중심선과 만나는 점이 <span class="term">롤 센터</span><span class="en">(Roll Center, RC)</span>다. 타이어의 횡력이 이 선을 따라 차체에 전달되므로, 차체는 롤 센터를 중심으로 롤한다고 볼 수 있다. 롤 센터가 높으면 무게중심까지의 팔이 짧아져 롤이 줄지만, 횡력의 일부가 차체를 들어 올리는 <b>재킹</b><span class="en">(Jacking)</span> 힘이 커지고 스트로크에 따른 트레드 변화도 커진다. 승용차 앞축은 대표적으로 지면 위 약 30~100 mm, 뒤축은 그보다 조금 높게 잡는다.</p>
+
+    <div class="sim" id="sim-geo">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>지오메트리 실험대: 순간 중심 · 롤 센터 · 캠버 곡선</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-geo"></canvas><canvas id="cv-geoc"></canvas></div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>형식</span><div class="seg" id="geo-mode"><button data-value="dw" class="on">더블 위시본</button><button data-value="strut">맥퍼슨 스트럿</button></div></div>
+          <label class="ctrl"><span>어퍼 암 길이 <output id="geo-lu-out"></output></span><input type="range" id="geo-lu" min="140" max="450" value="240" step="5"></label>
+          <label class="ctrl"><span>어퍼 암 각도 <output id="geo-ua-out"></output></span><input type="range" id="geo-ua" min="-12" max="25" value="7" step="0.5"></label>
+          <label class="ctrl"><span>로어 암 길이 <output id="geo-ll-out"></output></span><input type="range" id="geo-ll" min="250" max="480" value="370" step="5"></label>
+          <label class="ctrl"><span>휠 스트로크 <output id="geo-tr-out"></output></span><input type="range" id="geo-tr" min="-80" max="80" value="0" step="1"></label>
+          <div class="ctrl-row"><button class="btn" id="geo-par">평행·등장 암</button><button class="btn" id="geo-sla">SLA 기본값</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">캠버 변화</span><span class="v" id="o-geo-cam">—</span></div>
+        <div class="stat"><span class="k">캠버 게인</span><span class="v" id="o-geo-gain">—</span></div>
+        <div class="stat"><span class="k">롤 센터 높이</span><span class="v" id="o-geo-rc">—</span></div>
+        <div class="stat"><span class="k">가상 스윙 암 길이</span><span class="v" id="o-geo-ic">—</span></div>
+        <div class="stat"><span class="k">트레드 변화 (한쪽)</span><span class="v" id="o-geo-tw">—</span></div>
+      </div>
+      <div class="sim-note">차를 앞에서 본 그림이다. 점선은 두 암의 연장선, 그 교점이 IC, 접지 중심–IC 선이 중심선과 만나는 점이 RC다. 어퍼 암 각도는 안쪽 피벗이 바깥 볼 조인트보다 낮을 때 +다. 해볼 것: '평행·등장 암'에서는 IC가 무한히 멀어 스트로크를 움직여도 캠버가 변하지 않는다(그 대신 롤하면 바퀴가 차체와 똑같이 기운다). 어퍼 암을 짧게 하면 캠버 곡선이 휘고, 각도를 키우면 IC가 가까워져 롤 센터가 올라간다. 맥퍼슨 스트럿으로 바꾸면 IC가 멀어 캠버 게인이 작다. 이것이 표에서 말한 단점이다.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 7 -->
+  <section id="roll">
+    <h2>롤과 피치: 차체를 세우는 법</h2>
+    <p>코너를 돌면 무게중심에 걸리는 원심력(관성력)이 차체를 바깥으로 기울인다. 이 <span class="term">롤</span><span class="en">(Roll)</span>에 맞서는 것이 좌우 스프링과 안티롤 바가 만드는 <b>롤 강성</b> \(K_\phi\)다. 롤 센터에서 무게중심까지의 높이를 \(h_r\)이라 하면 롤각은</p>
+    <div class="formula">$$\phi \approx \frac{m\,a_y\,h_r}{K_{\phi f}+K_{\phi r}-m\,g\,h_r},\qquad K_{\phi,\text{spring}} = \frac{k_w\,t^2}{2}$$
+      <div class="where">\(a_y\): 횡가속도, \(t\): 트레드, \(k_w\): 휠 레이트. 한 축의 스프링이 만드는 롤 강성은 트레드의 제곱에 비례한다. 승용차의 롤 구배는 대표적으로 약 3~6°/g, 스포츠카는 2°/g 안팎이다.</div>
+    </div>
+    <p><span class="term">안티롤 바</span><span class="en">(Anti-Roll Bar, 스태빌라이저)</span>는 좌우 바퀴를 잇는 U자 모양 토션바다. 양쪽 바퀴가 같이 오르내릴 때는 그냥 따라 돌 뿐이지만, 좌우가 반대로 움직이면(롤) 비틀리면서 저항한다. 직진 승차감을 해치지 않고 롤 강성만 올릴 수 있는 장치다. 단 한쪽 바퀴만 요철을 밟을 때는 반대쪽으로 힘을 전하므로 좌우 독립성은 나빠진다.</p>
+    <p>여기서 놓치기 쉬운 사실이 있다. 좌우 타이어 사이의 <b>총 하중 이동량은 롤 강성과 거의 무관</b>하다. 모멘트 평형에서 바로 나온다.</p>
+    <div class="formula">$$\Delta F_z = \frac{m\,a_y\,h}{t}$$
+      <div class="where">\(h\): 무게중심 높이. 예: 1,500 kg, 0.8 g, \(h\) = 0.55 m, \(t\) = 1.56 m → \(\Delta F_z \approx 4{,}150\) N. 한쪽 정적 하중 7,360 N에서 바깥쪽은 11,510 N, 안쪽은 3,210 N이 된다. 안쪽이 0이 되는 \(a_y = g\,t/(2h)\)가 정적 전복 한계다.</div>
+    </div>
+    <p>롤 강성이 바꾸는 것은 롤각, 그리고 그 하중 이동을 <b>앞축과 뒤축이 나눠 갖는 비율</b>이다. 롤 강성이 큰 축이 하중 이동을 더 많이 가져간다. <a href="tire.html">7장</a>에서 보았듯 타이어의 횡력은 하중에 비례해서 늘지 않으므로(하중 민감도), 하중 이동이 큰 축일수록 좌우 합계 접지력을 더 잃는다. 그래서 앞 안티롤 바를 굵게 하면 앞이 먼저 미끄러지는 언더스티어 쪽으로, 뒤를 굵게 하면 오버스티어 쪽으로 간다. 이 균형은 <a href="steering.html">10장</a>에서 이어서 다룬다.</p>
+
+    <div class="sim" id="sim-roll">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>롤과 좌우 하중 이동 (뒤에서 본 그림, 좌회전 중)</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-roll"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>횡가속도 a_y <output id="roll-ay-out"></output></span><input type="range" id="roll-ay" min="0" max="1.5" value="0.5" step="0.01"></label>
+          <label class="ctrl"><span>무게중심 높이 h <output id="roll-h-out"></output></span><input type="range" id="roll-h" min="0.4" max="0.9" value="0.55" step="0.01"></label>
+          <label class="ctrl"><span>트레드 t <output id="roll-t-out"></output></span><input type="range" id="roll-t" min="1.4" max="1.7" value="1.56" step="0.01"></label>
+          <label class="ctrl"><span>휠 레이트 k_w <output id="roll-kw-out"></output></span><input type="range" id="roll-kw" min="15" max="60" value="25" step="1"></label>
+          <label class="ctrl"><span>앞 안티롤 바 <output id="roll-af-out"></output></span><input type="range" id="roll-af" min="0" max="1500" value="500" step="50"></label>
+          <label class="ctrl"><span>뒤 안티롤 바 <output id="roll-ar-out"></output></span><input type="range" id="roll-ar" min="0" max="1500" value="200" step="50"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">롤각</span><span class="v" id="o-roll-phi">—</span></div>
+        <div class="stat"><span class="k">롤 구배</span><span class="v" id="o-roll-grad">—</span></div>
+        <div class="stat"><span class="k">총 하중 이동</span><span class="v" id="o-roll-dw">—</span></div>
+        <div class="stat"><span class="k">앞축 분담률</span><span class="v" id="o-roll-fs">—</span></div>
+        <div class="stat"><span class="k">앞 바깥 / 안쪽 바퀴</span><span class="v" id="o-roll-fw">—</span></div>
+        <div class="stat"><span class="k">뒤 바깥 / 안쪽 바퀴</span><span class="v" id="o-roll-rw">—</span></div>
+        <div class="stat"><span class="k">정적 전복 한계</span><span class="v" id="o-roll-crit">—</span></div>
+      </div>
+      <div class="sim-note">가정: 1,500 kg, 앞뒤 무게 배분 50:50, 롤 센터 높이 80 mm, 앞뒤 휠 레이트 동일. 차체 기울기는 3배 과장해 그렸다. 해볼 것: 안티롤 바를 둘 다 0에서 최대로 올리면 롤각은 크게 줄지만 총 하중 이동은 거의 그대로다. 앞 바만 올리면 앞축 분담률이 올라간다. 무게중심을 0.9 m로 올리고(높은 SUV·화물차) 횡가속도를 키우면 안쪽 바퀴 하중이 0이 되는 순간이 타이어 마찰 한계(약 1 g)보다 먼저 온다.</div>
+    </div>
+
+    <h3>안티 다이브와 안티 스쿼트</h3>
+    <p>제동하면 앞이 숙여지고(다이브), 가속하면 뒤가 주저앉는다(스쿼트). <a href="tire.html">7장</a>의 전후 하중 이동 \(\Delta F_z = m a_x h / L\)이 스프링을 누르기 때문이다. 스프링을 단단하게 하지 않고 이를 줄이는 방법이 링크의 <b>옆에서 본 기울기</b>를 이용하는 것이다. 암의 회전축을 옆에서 볼 때 기울여 두면 옆에서 본 순간 중심이 생기고, 제동력이 접지점에서 그 점을 향하는 선을 따라 전달되면서 차체를 위로 미는 성분이 나온다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 270" role="img" aria-label="안티 다이브 지오메트리">
+        <line x1="20" y1="220" x2="740" y2="220" class="s-axis"/>
+        <path d="M110 190 L110 150 Q120 120 200 112 L290 70 L500 66 L600 110 L660 120 Q680 130 680 160 L680 190 Z" class="f-surface" opacity="0.8"/>
+        <circle cx="200" cy="180" r="40" fill="var(--text)" opacity="0.75"/><circle cx="590" cy="180" r="40" fill="var(--text)" opacity="0.75"/>
+        <circle cx="200" cy="180" r="18" class="f-surface"/><circle cx="590" cy="180" r="18" class="f-surface"/>
+        <text x="60" y="150" class="t-dim">← 전방</text>
+        <circle cx="390" cy="128" r="9" fill="var(--bg-elev)" stroke="var(--text)" stroke-width="2"/><path d="M390 119 A9 9 0 0 1 399 128 L390 128 Z M390 137 A9 9 0 0 1 381 128 L390 128 Z" fill="var(--text)"/>
+        <text x="390" y="106" class="t" text-anchor="middle">무게중심</text>
+        <line x1="412" y1="128" x2="412" y2="220" class="s-line"/><text x="420" y="180" class="t-mono">h</text>
+        <line x1="200" y1="244" x2="590" y2="244" class="s-line"/><line x1="200" y1="238" x2="200" y2="250" class="s-line"/><line x1="590" y1="238" x2="590" y2="250" class="s-line"/><text x="395" y="262" class="t-mono" text-anchor="middle">L (휠베이스)</text>
+        <!-- arms side view -->
+        <line x1="182" y1="146" x2="300" y2="168" stroke="var(--accent)" stroke-width="3" stroke-dasharray="6 4"/>
+        <line x1="182" y1="208" x2="300" y2="186" stroke="var(--accent)" stroke-width="3" stroke-dasharray="6 4"/>
+        <line x1="300" y1="168" x2="345" y2="176.500" class="s-line" stroke-dasharray="3 3"/><line x1="300" y1="186" x2="345" y2="177.600" class="s-line" stroke-dasharray="3 3"/>
+        <circle cx="348" cy="177" r="5" fill="var(--accent)"/><text x="356" y="170" class="t-acc">IC (옆에서 본)</text>
+        <line x1="200" y1="220" x2="470" y2="141.600" stroke="var(--accent-2)" stroke-width="2.2"/>
+        <path d="M250 220 A50 50 0 0 0 248 205.500" fill="none" stroke="var(--accent-2)" stroke-width="2"/>
+        <text x="258" y="214" class="t-mono">θ</text>
+        <line x1="200" y1="220" x2="412" y2="88" stroke="var(--text-faint)" stroke-width="2" stroke-dasharray="5 4"/>
+        <text x="320" y="96" class="t-dim" text-anchor="end">100% 안티 다이브 선</text>
+        <path d="M200 232 h60" stroke="var(--bad)" stroke-width="3"/><path d="M256 226 l10 6 l-10 6z" fill="var(--bad)"/>
+        <text x="270" y="238" class="t" style="fill:var(--bad)">제동력</text>
+      </svg>
+      <figcaption><b>그림 9-5.</b> 앞 서스펜션 암의 회전축(파란 점선)을 옆에서 볼 때 서로 모이게 하면 옆에서 본 IC가 생긴다. 접지점과 IC를 잇는 선의 기울기 θ가 클수록 제동력이 차체 앞을 들어 올려 다이브를 줄인다.</figcaption>
+    </figure>
+
+    <div class="formula">$$\text{Anti-dive} = p_f\,\tan\theta_f\,\frac{L}{h}\times 100\,\%$$
+      <div class="where">\(p_f\): 앞바퀴 제동력 배분(대표적으로 0.6~0.75), \(\theta_f\): 접지점–IC 선의 기울기. 예: \(p_f\)=0.7, \(\tan\theta_f\)=0.08, \(L\)=2.7 m, \(h\)=0.55 m → 약 27%. 승용차는 대표적으로 20~50%를 쓴다. 100%에 가까우면 제동 중 서스펜션이 굳어 요철을 못 받고, 운전자가 제동 강도를 자세로 느끼기도 어렵다.</div>
+    </div>
+    <p>뒤축에서는 같은 원리로 구동력이 차체 뒤를 받쳐 올려 가속 때의 주저앉음을 줄이는 <span class="term">안티 스쿼트</span>, 제동 때 뒤가 들리는 것을 줄이는 <span class="term">안티 리프트</span>를 만든다. 어느 것이든 하중 이동 자체는 줄이지 못한다. 하중 이동이 스프링을 거치느냐 링크를 직접 거치느냐를 바꿀 뿐이다.</p>
+  </section>
+
+  <!-- =============================================================== 8 -->
+  <section id="electronic">
+    <h2>전자 제어 서스펜션</h2>
+    <p>수동 스프링과 댐퍼는 값이 하나로 고정되므로 승차감과 접지 사이의 한 점을 고를 수밖에 없다. 전자 제어 서스펜션은 상황에 따라 그 점을 <b>옮긴다</b>.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>종류</th><th>바꾸는 것</th><th>원리</th><th>에너지</th></tr></thead>
+      <tbody>
+        <tr><td>가변 댐퍼 (세미 액티브)</td><td>감쇠력</td><td>솔레노이드 밸브로 오일 통로를 조절하거나, 자기장으로 점도가 변하는 자기유변 유체를 쓴다. 수 ms~수십 ms 안에 감쇠력을 바꾼다</td><td>거의 안 씀 (밸브 구동만)</td></tr>
+        <tr><td>에어 서스펜션</td><td>차고, 스프링 상수</td><td>컴프레서와 밸브로 에어 스프링의 공기량을 조절한다. 고속에서 차고를 낮추고 험로에서 높이며, 짐을 실어도 차고를 유지한다</td><td>차고 조절 때만</td></tr>
+        <tr><td>액티브 안티롤 바</td><td>롤 강성</td><td>바 중간의 전기·유압 액추에이터가 바를 능동적으로 비튼다. 직진에서는 풀어 좌우 독립성을 살리고 코너에서 조인다</td><td>중간 (48 V 시스템)</td></tr>
+        <tr><td>풀 액티브</td><td>바퀴마다의 힘</td><td>유압 또는 전기 액추에이터가 스프링·댐퍼와 나란히 힘을 직접 낸다. 롤과 피치를 0으로 만들거나 카메라로 본 요철에 맞춰 바퀴를 미리 들어 올릴 수 있다</td><td>큼 (수 kW)</td></tr>
+      </tbody>
+    </table></div>
+    <h3>스카이훅 제어</h3>
+    <p>가변 댐퍼를 어떤 규칙으로 조절할까. 가장 널리 알려진 생각이 <span class="term">스카이훅</span><span class="en">(Skyhook)</span>이다. 댐퍼를 차체와 바퀴 사이가 아니라 차체와 <b>하늘에 고정된 가상의 갈고리</b> 사이에 단다고 상상하자. 그러면 감쇠력이 차체의 절대 속도에만 비례하므로, 차체의 출렁임은 강하게 잡으면서 바퀴의 움직임은 차체에 전하지 않는다. 주파수 응답 시뮬레이터에서 스카이훅 감쇠를 올리면 차체 공진 봉우리만 낮아지고 4–8 Hz 대역은 나빠지지 않는 것을 확인할 수 있다.</p>
+    <div class="formula">$$F_{\text{sky}} = -c_{\text{sky}}\,\dot z_s \qquad\Longrightarrow\qquad c = \begin{cases} c_{\max} &amp; \dot z_s(\dot z_s-\dot z_u) &gt; 0\\ c_{\min} &amp; \dot z_s(\dot z_s-\dot z_u) \le 0 \end{cases}$$
+      <div class="where">하늘에 갈고리를 걸 수는 없으므로 실제 댐퍼로 흉내 낸다. 댐퍼는 에너지를 버릴 수만 있어서, 원하는 힘의 방향이 댐퍼가 지금 낼 수 있는 방향과 같을 때만(차체 속도와 댐퍼 신축 속도의 부호가 같을 때) 단단하게, 아니면 최대한 무르게 한다.</div>
+    </div>
+    <p>실제 시스템은 차체 가속도 센서와 휠 스트로크 센서로 속도를 추정하고, 여기에 조향각·제동 압력·차속을 더해 롤과 다이브가 시작되기 전에 미리 댐퍼를 조인다. 전방 카메라나 지도로 요철을 미리 읽는 프리뷰 제어는 <a href="adas.html">17장</a> 이후의 센서와 만나는 지점이다. 전기차는 바닥의 배터리(<a href="battery.html">16장</a>) 덕에 무게중심이 낮아 롤은 작지만 차가 무겁고 스프링 아래 질량도 커서, 가변 댐퍼와 에어 서스펜션의 역할이 더 커졌다.</p>
+    <div class="callout warn">
+      <strong>스카이훅의 한계</strong>
+      <p>스카이훅은 차체만 본다. 휠 홉에는 손을 대지 않으므로 접지 하중 변동은 줄지 않고, 수동 감쇠를 너무 낮추면 오히려 늘어난다. 그래서 양산 제어기는 바퀴 쪽 감쇠(그라운드훅)를 섞거나, 차체 감쇠와 최소 수동 감쇠를 함께 두는 절충을 쓴다.</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== summary -->
+  <section class="keypoints" id="summary">
+    <h2>핵심 정리</h2>
+    <ol>
+      <li>서스펜션의 임무는 차체를 노면에서 격리하는 것(승차감)과 타이어 접지 하중을 일정하게 유지하는 것(접지)이며, 둘은 감쇠를 두고 상충한다.</li>
+      <li>스프링은 에너지를 저장하고 댐퍼는 버린다. 바퀴에서 느끼는 강성은 휠 레이트 \(k_w = k_s\,\mathrm{MR}^2\)다.</li>
+      <li>고유 진동수 \(f_n = \frac{1}{2\pi}\sqrt{k/m}\), 감쇠비 \(\zeta = c/(2\sqrt{km})\). 승용차는 약 1~1.5 Hz, \(\zeta \approx 0.2\sim0.4\).</li>
+      <li>쿼터카에는 차체 공진(약 1~1.5 Hz)과 휠 홉(약 10~15 Hz)이 있다. 감쇠는 두 봉우리를 낮추지만 그 사이, 사람이 민감한 4–8 Hz의 전달을 키운다.</li>
+      <li>맥퍼슨 스트럿은 단순하고 좁고, 더블 위시본·멀티링크는 지오메트리 자유도가 높다. 토션빔은 싸고 납작하며, 리지드 액슬은 튼튼하지만 스프링 아래 질량이 크다.</li>
+      <li>두 암의 연장선이 만나는 순간 중심이 캠버 변화율을, 접지 중심–순간 중심 선이 롤 센터를 정한다. 짧은 어퍼 암은 범프에서 네거티브 캠버를 만든다.</li>
+      <li>총 좌우 하중 이동 \(m a_y h/t\)는 롤 강성과 거의 무관하다. 롤 강성은 롤각과 앞뒤 분담을 정하며, 분담이 큰 축이 먼저 접지를 잃는다.</li>
+      <li>전자 제어 서스펜션은 감쇠·차고·롤 강성을 상황에 맞게 옮긴다. 스카이훅은 차체 절대 속도에 비례해 감쇠하는 제어 법칙이다.</li>
+    </ol>
+  </section>
+
+  <!-- =============================================================== quiz -->
+  <section class="quiz-sec" id="quiz">
+    <h2>확인 퀴즈</h2>
+    <div class="quiz">
+      <div class="quiz-q"><p>Q1. 스프링 상수 50 N/mm인 스프링이 모션비 0.7로 달려 있다. 휠 레이트는?</p><div class="opts">
+        <button class="opt">35 N/mm</button><button class="opt" data-correct>24.5 N/mm</button><button class="opt">71 N/mm</button><button class="opt">102 N/mm</button>
+      </div><div class="quiz-exp">\(k_w = k_s\,\mathrm{MR}^2 = 50 \times 0.49 = 24.5\) N/mm. 스프링이 덜 움직여서 한 번, 지렛대비로 힘이 줄어서 또 한 번 MR이 곱해진다.</div></div>
+
+      <div class="quiz-q"><p>Q2. 한 모서리의 스프링 위 질량 400 kg, 휠 레이트 25 kN/m일 때 차체 고유 진동수는 대략?</p><div class="opts">
+        <button class="opt">0.4 Hz</button><button class="opt" data-correct>1.26 Hz</button><button class="opt">2.5 Hz</button><button class="opt">7.9 Hz</button>
+      </div><div class="quiz-exp">\(f_n = \frac{1}{2\pi}\sqrt{25000/400} = 7.91/6.28 \approx 1.26\) Hz. 7.9는 각진동수(rad/s)다.</div></div>
+
+      <div class="quiz-q"><p>Q3. 댐퍼를 더 단단하게(감쇠비를 크게) 했을 때 일어나는 일로 옳은 것은?</p><div class="opts">
+        <button class="opt">모든 주파수에서 차체 진동이 줄어든다</button>
+        <button class="opt" data-correct>공진 봉우리는 낮아지지만 그 사이 4–8 Hz 대역의 전달은 커진다</button>
+        <button class="opt">차체 고유 진동수가 두 배가 된다</button>
+        <button class="opt">타이어 강성이 커진다</button>
+      </div><div class="quiz-exp">전달률 곡선은 \(r=\sqrt2\)를 경계로 감쇠의 효과가 뒤집힌다. 공진에서는 감쇠가 이롭지만, 격리 영역에서는 댐퍼가 노면의 힘을 차체로 전하는 통로가 된다.</div></div>
+
+      <div class="quiz-q"><p>Q4. 더블 위시본에서 어퍼 암을 로어 암보다 짧게 만드는 주된 이유는?</p><div class="opts">
+        <button class="opt">스프링 아래 질량을 줄이려고</button>
+        <button class="opt">스크럽 반경을 0으로 만들려고</button>
+        <button class="opt" data-correct>범프 시 네거티브 캠버를 얻어, 롤로 기운 바깥 바퀴를 세우려고</button>
+        <button class="opt">캐스터 각을 키우려고</button>
+      </div><div class="quiz-exp">짧은 어퍼 암은 같은 스트로크에서 더 큰 호를 그려 너클 윗부분을 안쪽으로 당긴다. 코너에서 눌리는 바깥 바퀴가 네거티브 캠버를 얻어 차체 롤로 잃은 접지면을 되찾는다.</div></div>
+
+      <div class="quiz-q"><p>Q5. 앞뒤 안티롤 바를 모두 두 배로 단단하게 바꿨다. 같은 횡가속도에서 좌우 타이어 사이의 총 하중 이동량은?</p><div class="opts">
+        <button class="opt">절반으로 줄어든다</button>
+        <button class="opt">두 배로 늘어난다</button>
+        <button class="opt" data-correct>거의 변하지 않는다</button>
+        <button class="opt">0이 된다</button>
+      </div><div class="quiz-exp">총 하중 이동은 \(m a_y h/t\)로, 질량·횡가속도·무게중심 높이·트레드만으로 정해진다. 롤 강성은 롤각과 앞뒤 축의 분담 비율을 바꿀 뿐이다(롤각이 줄어 무게중심의 옆 이동이 작아지는 만큼만 조금 준다).</div></div>
+
+      <div class="quiz-q"><p>Q6. 스카이훅 제어에서 세미 액티브 댐퍼를 단단하게 하는 조건은?</p><div class="opts">
+        <button class="opt">바퀴가 위로 움직일 때 항상</button>
+        <button class="opt" data-correct>차체 절대 속도와 댐퍼 신축 속도(차체 − 바퀴)의 부호가 같을 때</button>
+        <button class="opt">차속이 일정 값을 넘을 때</button>
+        <button class="opt">타이어 접지 하중이 최소일 때</button>
+      </div><div class="quiz-exp">댐퍼는 신축 속도의 반대 방향으로만 힘을 낼 수 있다. 그 방향이 차체 운동을 줄이는 방향(차체 속도의 반대)과 같을 때만 단단하게 하고, 아니면 무르게 해서 차체를 더 밀지 않게 한다.</div></div>
+    </div>
+  </section>
+</main>
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const cs = getComputedStyle(document.body);
+  const FF = cs.getPropertyValue("--font") || "sans-serif", FM = cs.getPropertyValue("--mono") || "monospace";
+  const font = (px, wt) => (wt || 400) + " " + px + "px " + FF;
+  const mono = (px, wt) => (wt || 400) + " " + px + "px " + FM;
+  const G = CB.G, DEG = 180 / Math.PI;
+  const sgn = (v, d) => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(d);
+
+  function spring(ctx, x1, y1, x2, y2, wid, n, col, lw) {
+    const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, px = -uy, py = ux, e = Math.min(L * 0.12, 8);
+    ctx.strokeStyle = col; ctx.lineWidth = lw || 2; ctx.lineJoin = "round";
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x1 + ux * e, y1 + uy * e);
+    for (let i = 0; i < n * 2; i++) { const t = e + ((i + 0.5) / (n * 2)) * (L - 2 * e), s = i % 2 ? -1 : 1; ctx.lineTo(x1 + ux * t + px * wid * s, y1 + uy * t + py * wid * s); }
+    ctx.lineTo(x2 - ux * e, y2 - uy * e); ctx.lineTo(x2, y2); ctx.stroke();
+  }
+  function damper(ctx, x1, y1, x2, y2, wid, bl, col, lw) {
+    const L = Math.hypot(x2 - x1, y2 - y1) || 1, e = 6, p = CB.clamp(L - bl, e + 3, e + bl - 3);
+    ctx.save(); ctx.translate(x1, y1); ctx.rotate(Math.atan2(y2 - y1, x2 - x1));
+    ctx.strokeStyle = col; ctx.lineWidth = lw || 2; ctx.lineJoin = "round";
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(e, 0); ctx.moveTo(e + bl, -wid); ctx.lineTo(e, -wid); ctx.lineTo(e, wid); ctx.lineTo(e + bl, wid);
+    ctx.moveTo(L, 0); ctx.lineTo(p, 0); ctx.moveTo(p, -wid * 0.7); ctx.lineTo(p, wid * 0.7); ctx.stroke();
+    ctx.restore();
+  }
+  const dot = (ctx, x, y, r, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); };
+
+  /* ---------- 앞에서 본 서스펜션 기구학 (2D, [z, y]) : 3D와 실험대가 함께 쓴다 ---------- */
+  function sweepSusp(Gm) {
+    const d2 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+    const th0 = Math.atan2(Gm.LBJ0[1] - Gm.LI[1], Gm.LBJ0[0] - Gm.LI[0]), top0 = Gm.T || Gm.UBJ0;
+    const dk = d2(top0, Gm.LBJ0), phi0 = Math.atan2(top0[1] - Gm.LBJ0[1], top0[0] - Gm.LBJ0[0]);
+    function at(th, prev) {
+      const lbj = [Gm.LI[0] + Gm.Ll * Math.cos(th), Gm.LI[1] + Gm.Ll * Math.sin(th)];
+      let top;
+      if (Gm.T) top = Gm.T;
+      else {
+        const ax = Gm.UI[0], ay = Gm.UI[1], dx = lbj[0] - ax, dy = lbj[1] - ay, d = Math.hypot(dx, dy);
+        const a = (Gm.Lu * Gm.Lu - dk * dk + d * d) / (2 * d), h2 = Gm.Lu * Gm.Lu - a * a;
+        if (h2 < -1e-9) return null;
+        const hh = Math.sqrt(Math.max(0, h2)), mx = ax + (a * dx) / d, my = ay + (a * dy) / d;
+        const p1 = [mx - (hh * dy) / d, my + (hh * dx) / d], p2 = [mx + (hh * dy) / d, my - (hh * dx) / d];
+        top = d2(p1, prev) < d2(p2, prev) ? p1 : p2;
+      }
+      const dphi = Math.atan2(top[1] - lbj[1], top[0] - lbj[0]) - phi0, c = Math.cos(dphi), s = Math.sin(dphi);
+      const rot = (p) => { const x = p[0] - Gm.LBJ0[0], y = p[1] - Gm.LBJ0[1]; return [lbj[0] + x * c - y * s, lbj[1] + x * s + y * c]; };
+      const wc = rot(Gm.WC0);
+      return { lbj, ubj: top, dphi, wc, cp: rot(Gm.CP0), travel: wc[1] - Gm.WC0[1] };
+    }
+    const r0 = at(th0, top0), rows = [r0];
+    [1, -1].forEach((dir) => {
+      let prev = r0;
+      for (let k = 1; k <= 140; k++) {
+        const st = at(th0 + dir * k * 0.005, prev.ubj);
+        if (!st || dir * (st.travel - prev.travel) <= 0 || Math.abs(st.travel) > 0.13) break;
+        if (dir > 0) rows.push(st); else rows.unshift(st);
+        prev = st;
+      }
+    });
+    return rows;
+  }
+  function suspAt(rows, tr) {
+    const n = rows.length;
+    if (tr <= rows[0].travel) return rows[0];
+    if (tr >= rows[n - 1].travel) return rows[n - 1];
+    let i = 0; while (rows[i + 1].travel < tr) i++;
+    const a = rows[i], b = rows[i + 1], f = (tr - a.travel) / (b.travel - a.travel), L = (p, q) => [p[0] + (q[0] - p[0]) * f, p[1] + (q[1] - p[1]) * f];
+    return { lbj: L(a.lbj, b.lbj), ubj: L(a.ubj, b.ubj), wc: L(a.wc, b.wc), cp: L(a.cp, b.cp), dphi: a.dphi + (b.dphi - a.dphi) * f, travel: tr };
+  }
+
+  /* ================================================================ 1. 질량–스프링–댐퍼 */
+  (function () {
+    const el = $("cv-msd"), X_MAX = 0.12, WIN = 4;
+    let x = 0, v = 0, t = 0, dragging = false, rel = null, hist = [], idle = 99, touched = false;
+    const gm = CB.range("msd-m", (a) => a + " kg", stats), gk = CB.range("msd-k", (a) => a + " kN/m", stats), gc = CB.range("msd-c", (a) => a.toLocaleString("en-US") + " N·s/m", stats);
+    const par = () => { const m = gm(), k = gk() * 1000, c = gc(), cc = 2 * Math.sqrt(k * m); return { m, k, c, wn: Math.sqrt(k / m), cc, z: c / cc }; };
+    function stats() {
+      const p = par(), fn = p.wn / (2 * Math.PI);
+      CB.stat("o-msd-fn", fn.toFixed(2) + "<small>Hz</small>");
+      CB.stat("o-msd-z", p.z.toFixed(2));
+      CB.stat("o-msd-type", p.z < 0.98 ? "부족 감쇠" : p.z <= 1.02 ? "임계 감쇠" : "과감쇠");
+      CB.stat("o-msd-fd", p.z < 1 ? (fn * Math.sqrt(1 - p.z * p.z)).toFixed(2) + "<small>Hz</small>" : "진동 없음");
+      CB.stat("o-msd-cc", Math.round(p.cc).toLocaleString("en-US") + "<small>N·s/m</small>");
+      CB.stat("o-msd-st", ((p.m * G) / p.k * 1000).toFixed(0) + "<small>mm</small>");
+      idle = 0;
+    }
+    const lay = (w, h) => ({ mw: CB.clamp(w * 0.3, 96, 210), y0: h * 0.4, sp: (h * 0.26) / X_MAX, gy: h - 22 });
+    function draw(ctx, w, h) {
+      const P = CB.palette(), p = par(), L = lay(w, h), cx = L.mw / 2 - 4, bw = L.mw * 0.56, bh = h * 0.14, yc = L.y0 - x * L.sp;
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(6, L.gy); ctx.lineTo(L.mw - 6, L.gy); ctx.stroke();
+      ctx.lineWidth = 1; ctx.beginPath(); for (let hx = 10; hx < L.mw - 8; hx += 9) { ctx.moveTo(hx, L.gy + 8); ctx.lineTo(hx + 7, L.gy); } ctx.stroke();
+      ctx.setLineDash([4, 4]); ctx.strokeStyle = P.faint; ctx.beginPath(); ctx.moveTo(4, L.y0); ctx.lineTo(L.mw, L.y0); ctx.stroke(); ctx.setLineDash([]);
+      spring(ctx, cx - bw * 0.25, yc + bh / 2, cx - bw * 0.25, L.gy, bw * 0.15, 6, P.accent, 2);
+      damper(ctx, cx + bw * 0.25, L.gy, cx + bw * 0.25, yc + bh / 2, bw * 0.1, (L.gy - L.y0 - bh / 2) * 0.55, P.accent2, 2);
+      ctx.fillStyle = P.surface; ctx.strokeStyle = dragging ? P.accent : P.text; ctx.lineWidth = 2;
+      ctx.fillRect(cx - bw / 2, yc - bh / 2, bw, bh); ctx.strokeRect(cx - bw / 2, yc - bh / 2, bw, bh);
+      ctx.fillStyle = P.text; ctx.font = mono(13, 600); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("m", cx, yc);
+      const fsc = (h * 0.2) / (p.k * X_MAX), ax = cx + bw / 2 + 8;
+      CB.arrow(ctx, ax, yc, ax, yc + p.k * x * fsc, P.accent, 2.5);
+      CB.arrow(ctx, ax + 9, yc, ax + 9, yc + CB.clamp(p.c * v * fsc, -h * 0.3, h * 0.3), P.accent2, 2.5);
+      if (!touched) { ctx.fillStyle = P.dim; ctx.font = font(11); ctx.textBaseline = "top"; ctx.fillText("끌어서 놓기", L.mw / 2, 6); }
+      const box = { x: L.mw + 44, y: 22, w: w - L.mw - 44 - 12, h: h - 22 - 44 };
+      const series = [];
+      if (rel && p.z < 1) {
+        const e1 = [], e2 = [], a0 = Math.abs(rel.x0) * 1000;
+        for (let i = 0; i <= 60; i++) { const tt = rel.t + ((t - rel.t) * i) / 60; if (tt < t - WIN) continue; const ev = a0 * Math.exp(-p.z * p.wn * (tt - rel.t)); e1.push([tt - t, ev]); e2.push([tt - t, -ev]); }
+        series.push({ data: e1, color: P.faint, width: 1.2, dash: [4, 3] }, { data: e2, color: P.faint, width: 1.2, dash: [4, 3] });
+      }
+      series.push({ data: hist.map((q) => [q[0] - t, q[1] * 1000]), color: P.accent, width: 2.2 });
+      CB.chart(ctx, box, { x: [-WIN, 0], y: [-120, 120], xLabel: "시간 (s, 0 = 지금)", series, hlines: [{ y: 0, color: P.axis, dash: [] }] });
+      ctx.fillStyle = P.dim; ctx.font = font(12); ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText("변위 (mm)", box.x, 4);
+    }
+    const cv = CB.canvas(el, draw, { aspect: 0.5, minHeight: 250, maxHeight: 340 });
+    CB.drag(el, {
+      down(p) { const L = lay(cv.w, cv.h); if (p.x > L.mw + 14) return false; dragging = true; touched = true; this.move(p); },
+      move(p) { const L = lay(cv.w, cv.h); x = CB.clamp((L.y0 - p.y) / L.sp, -X_MAX, X_MAX); v = 0; idle = 0; },
+      up() { dragging = false; rel = { t, x0: x }; idle = 0; },
+    });
+    $("msd-kick").addEventListener("click", () => { x = -0.08; v = 0; rel = { t, x0: x }; idle = 0; touched = true; });
+    $("msd-crit").addEventListener("click", () => gc.set(Math.round(par().cc / 50) * 50));
+    CB.loop(el, (dt) => {
+      if (!dragging && Math.abs(x) < 2e-5 && Math.abs(v) < 2e-4) { idle += dt; if (idle > WIN + 0.3) return; } else idle = 0;
+      if (!dragging) { const p = par(), n = Math.ceil(dt / 0.001), hh = dt / n; for (let i = 0; i < n; i++) { v += ((-p.k * x - p.c * v) / p.m) * hh; x += v * hh; } }
+      t += dt; hist.push([t, x]); while (hist.length && hist[0][0] < t - WIN) hist.shift();
+      cv.redraw();
+    });
+    stats();
+  })();
+
+  /* ================================================================ 2. 쿼터카 과속방지턱 */
+  (function () {
+    const elA = $("cv-qc"), elG = $("cv-qcg"), RW = 0.31, T0 = 0.3, DS = 0.002;
+    const g = {};
+    [["ms", " kg"], ["mu", " kg"], ["ks", " kN/m"], ["c", " N·s/m"], ["kt", " kN/m"], ["h", " cm"], ["l", " m"], ["v", " km/h"]].forEach(([k, u]) => { g[k] = CB.range("qc-" + k, (a) => a + u, compute); });
+    const rate = CB.seg("qc-rate");
+    let R = null, tp = 0, hold = 0;
+    const prof = (xx, H, L) => (xx > 0 && xx < L ? (H / 2) * (1 - Math.cos((2 * Math.PI * xx) / L)) : 0);
+    function compute() {
+      const ms = g.ms(), mu = g.mu(), ks = g.ks() * 1e3, c = g.c(), kt = g.kt() * 1e3, H = g.h() / 100, L = g.l(), V = g.v() / 3.6;
+      const W = (ms + mu) * G, T = T0 + L / V + 2.0, dt = 0.0002, n = Math.round(DS / dt), N = Math.ceil(T / DS);
+      const zr = [], zs = [], zu = [], fn = [], bands = [];
+      let a = 0, b = 0, va = 0, vb = 0, amax = 0, zmax = 0, nmin = W, airT = 0, t = 0, lo = 0, hi = H * 1000, nhi = W, b0 = -1;
+      for (let i = 0; i <= N; i++) {
+        let r = prof(V * (t - T0), H, L), ft = Math.max(kt * (r - b), -W);
+        const nn = (W + ft) / 1000;
+        zr.push([t, r * 1000]); zs.push([t, a * 1000]); zu.push([t, b * 1000]); fn.push([t, nn]);
+        lo = Math.min(lo, a * 1000, b * 1000); hi = Math.max(hi, a * 1000, b * 1000); nhi = Math.max(nhi, nn * 1000);
+        if (nn <= 1e-9 && b0 < 0) b0 = t;
+        if (nn > 1e-9 && b0 >= 0) { bands.push({ x0: b0, x1: t, color: "rgba(220,60,60,0.22)" }); b0 = -1; }
+        if (Math.abs(a) > zmax) zmax = Math.abs(a);
+        for (let j = 0; j < n; j++) {
+          r = prof(V * (t - T0), H, L); ft = kt * (r - b);
+          if (ft < -W) { ft = -W; airT += dt; }
+          const fs = ks * (a - b) + c * (va - vb), as = -fs / ms;
+          va += as * dt; vb += ((fs + ft) / mu) * dt; a += va * dt; b += vb * dt; t += dt;
+          if (Math.abs(as) > amax) amax = Math.abs(as);
+          if (W + ft < nmin) nmin = W + ft;
+        }
+      }
+      if (b0 >= 0) bands.push({ x0: b0, x1: t, color: "rgba(220,60,60,0.22)" });
+      const pad = (hi - lo) * 0.1;
+      R = { H, L, V, W, kt, T, zr, zs, zu, fn, bands, zlo: lo - pad, zhi: hi + pad, nhi: (nhi / 1000) * 1.1 };
+      tp = 0; hold = 0;
+      CB.stat("o-qc-f", (V / L).toFixed(1) + "<small>Hz</small>");
+      CB.stat("o-qc-zs", (zmax * 1000).toFixed(0) + "<small>mm</small>");
+      CB.stat("o-qc-as", (amax / G).toFixed(2) + "<small>g</small>");
+      CB.stat("o-qc-nmin", (nmin / 1000).toFixed(2) + "<small>kN (" + ((nmin / W) * 100).toFixed(0) + "%)</small>");
+      CB.stat("o-qc-air", airT > 0 ? (airT * 1000).toFixed(0) + "<small>ms</small>" : "뜨지 않음");
+    }
+    const idx = () => Math.min(R.zs.length - 1, Math.floor(tp / DS));
+    function drawA(ctx, w, h) {
+      if (!R) return;
+      const P = CB.palette(), s = h / 1.32, yg = h - 0.13 * s, cx = w * 0.5, Y = (m) => yg - m * s, i = idx();
+      const zs = R.zs[i][1] / 1000, zu = R.zu[i][1] / 1000, N = R.fn[i][1] * 1000, xw = R.V * (tp - T0), yc = RW - R.W / R.kt + zu;
+      // wheel
+      ctx.save(); ctx.translate(cx, Y(yc));
+      ctx.fillStyle = "#1c2028"; ctx.beginPath(); ctx.arc(0, 0, RW * s, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#aeb6c6"; ctx.beginPath(); ctx.arc(0, 0, RW * s * 0.58, 0, Math.PI * 2); ctx.fill();
+      ctx.rotate(xw / RW); ctx.strokeStyle = "#1c2028"; ctx.lineWidth = Math.max(1.5, s * 0.03);
+      for (let k = 0; k < 5; k++) { const a = (k * Math.PI * 2) / 5; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * RW * s * 0.58, Math.sin(a) * RW * s * 0.58); ctx.stroke(); }
+      ctx.restore();
+      // road
+      ctx.beginPath(); ctx.moveTo(0, h);
+      for (let px = 0; px <= w + 3; px += 3) ctx.lineTo(px, Y(prof(xw + (px - cx) / s, R.H, R.L)));
+      ctx.lineTo(w + 3, h); ctx.closePath(); ctx.fillStyle = P.surface; ctx.fill();
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 2; ctx.beginPath();
+      for (let px = 0; px <= w + 3; px += 3) { const y = Y(prof(xw + (px - cx) / s, R.H, R.L)); px ? ctx.lineTo(px, y) : ctx.moveTo(px, y); }
+      ctx.stroke();
+      ctx.strokeStyle = P.faint; ctx.lineWidth = 1; ctx.beginPath();
+      for (let xr = Math.ceil((xw - cx / s) / 0.5) * 0.5; xr < xw + (w - cx) / s; xr += 0.5) { const px = cx + (xr - xw) * s, y = Y(prof(xr, R.H, R.L)); ctx.moveTo(px, y + 4); ctx.lineTo(px - 4, y + 11); }
+      ctx.stroke();
+      // hub, spring, damper, body
+      const hubT = yc + 0.05, yb = yc + 0.5 + (zs - zu);
+      ctx.fillStyle = P.dim; ctx.fillRect(cx - 0.3 * s, Y(hubT), 0.6 * s, 0.1 * s);
+      spring(ctx, cx - 0.2 * s, Y(yb), cx - 0.2 * s, Y(hubT), 0.06 * s, 5, P.accent, 2.2);
+      damper(ctx, cx + 0.2 * s, Y(hubT), cx + 0.2 * s, Y(yb), 0.04 * s, 0.27 * s, P.accent2, 2.2);
+      ctx.fillStyle = P.surface; ctx.strokeStyle = P.text; ctx.lineWidth = 2;
+      ctx.fillRect(cx - 0.5 * s, Y(yb + 0.26), s, 0.26 * s); ctx.strokeRect(cx - 0.5 * s, Y(yb + 0.26), s, 0.26 * s);
+      ctx.fillStyle = P.text; ctx.font = font(12, 600); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("차체 m_s", cx, Y(yb + 0.13));
+      // contact load
+      const axp = cx - RW * s - 18, len = CB.clamp(N / R.W, 0, 2.6) * 0.3 * s;
+      ctx.font = mono(12, 600); ctx.textAlign = "right"; ctx.textBaseline = "bottom";
+      if (N > 1) { CB.arrow(ctx, axp, yg - 2, axp, yg - 2 - len, P.ok, 3); ctx.fillStyle = P.ok; ctx.fillText("N " + (N / 1000).toFixed(1) + " kN", axp - 6, yg - 4); }
+      else { ctx.fillStyle = P.bad; ctx.fillText("바퀴가 떴다", axp + 8, yg - 4); }
+      ctx.fillStyle = P.dim; ctx.font = font(12); ctx.textAlign = "left"; ctx.textBaseline = "top";
+      ctx.fillText("진행 방향 →  " + (R.V * 3.6).toFixed(0) + " km/h", 10, 8);
+      ctx.textAlign = "right"; ctx.fillText("t = " + tp.toFixed(2) + " s", w - 10, 8);
+    }
+    function drawG(ctx, w, h) {
+      if (!R) return;
+      const P = CB.palette(), i = idx(), bx = 50, bw = w - bx - 14, h1 = h * 0.5;
+      const b1 = { x: bx, y: 22, w: bw, h: h1 - 22 - 26 }, b2 = { x: bx, y: h1 + 22, w: bw, h: h - h1 - 22 - 44 }, vl = [{ x: tp, color: P.dim, dash: [3, 3] }];
+      CB.chart(ctx, b1, { x: [0, R.T], y: [R.zlo, R.zhi], series: [{ data: R.zr, color: P.faint, width: 1.5 }, { data: R.zu.slice(0, i + 1), color: P.accent2, width: 2 }, { data: R.zs.slice(0, i + 1), color: P.accent, width: 2.5 }], vlines: vl });
+      CB.chart(ctx, b2, { x: [0, R.T], y: [0, R.nhi], xLabel: "시간 (s)", series: [{ data: R.fn.slice(0, i + 1), color: P.ok, width: 2.2 }], hlines: [{ y: R.W / 1000, label: "정적 하중" }], bands: R.bands, vlines: vl });
+      ctx.fillStyle = P.dim; ctx.font = font(12); ctx.textAlign = "left"; ctx.textBaseline = "top";
+      ctx.fillText("변위 (mm)", bx, 5); ctx.fillText("접지 하중 (kN)", bx, h1 + 5);
+    }
+    const ca = CB.canvas(elA, drawA, { aspect: 0.4, minHeight: 200, maxHeight: 280 });
+    const cg = CB.canvas(elG, drawG, { aspect: 0.6, minHeight: 320, maxHeight: 400 });
+    $("qc-run").addEventListener("click", () => { tp = 0; hold = 0; });
+    compute();
+    CB.loop(elA, (dt) => {
+      if (!R) return;
+      if (tp >= R.T) { hold += dt; if (hold > 1.2) { tp = 0; hold = 0; } else return; }
+      else tp = Math.min(R.T, tp + dt * Number(rate()));
+      ca.redraw(); cg.redraw();
+    });
+  })();
+
+  /* ================================================================ 3. 주파수 응답 */
+  (function () {
+    const MS = 350, KT = 2e5, NF = 150, F0 = 0.3, F1 = 30, DL = Math.log(F1 / F0) / (NF - 1);
+    const fs = []; for (let i = 0; i < NF; i++) fs.push(F0 * Math.pow(F1 / F0, i / (NF - 1)));
+    function resp(ks, mu, c, sky) {
+      const a = [], n = []; let sa = 0, sa48 = 0, sn = 0;
+      fs.forEach((f) => {
+        const w = 2 * Math.PI * f, Ar = ks, Ai = c * w, Dr = ks - MS * w * w, Di = (c + sky) * w, Er = KT + ks - mu * w * w, Ei = c * w, Br = ks, Bi = (c + sky) * w;
+        const dR = Er * Dr - Ei * Di - (Br * Ar - Bi * Ai), dI = Er * Di + Ei * Dr - (Br * Ai + Bi * Ar), dm = Math.hypot(dR, dI);
+        const ga = (w * KT * Math.hypot(Ar, Ai)) / dm, gn = (KT * Math.hypot(KT * Dr - dR, KT * Di - dI)) / (w * dm), df = DL * f;
+        a.push([f, ga]); n.push([f, gn / 1000]);
+        sa += ga * ga * df; sn += gn * gn * df; if (f >= 4 && f <= 8) sa48 += ga * ga * df;
+      });
+      return { a, n, ra: Math.sqrt(sa), ra48: Math.sqrt(sa48), rn: Math.sqrt(sn) };
+    }
+    const cOf = (z, ks) => z * 2 * Math.sqrt(ks * MS);
+    const base = resp(22000, 40, cOf(0.3, 22000), 0);
+    let cur = base, curve = [];
+    const gz = CB.range("fr-z", (v) => v.toFixed(2), upd), gks = CB.range("fr-ks", (v) => v + " kN/m", upd), gmu = CB.range("fr-mu", (v) => v + " kg", upd), gsky = CB.range("fr-sky", (v) => v.toLocaleString("en-US") + " N·s/m", upd);
+    function calc() {
+      const ks = gks() * 1000, mu = gmu(), sky = gsky(), c = cOf(gz(), ks);
+      cur = resp(ks, mu, c, sky); curve = [];
+      for (let i = 0; i <= 38; i++) { const z = 0.05 + (0.95 * i) / 38, r = resp(ks, mu, cOf(z, ks), sky); curve.push([r.rn / base.rn, r.ra / base.ra]); }
+      const pct = (v) => (v * 100).toFixed(0) + "<small>%</small>";
+      CB.stat("o-fr-c", Math.round(c).toLocaleString("en-US") + "<small>N·s/m</small>");
+      CB.stat("o-fr-fb", (Math.sqrt((ks * KT) / (ks + KT) / MS) / (2 * Math.PI)).toFixed(2) + "<small>Hz</small>");
+      CB.stat("o-fr-fw", (Math.sqrt((ks + KT) / mu) / (2 * Math.PI)).toFixed(1) + "<small>Hz</small>");
+      CB.stat("o-fr-a", pct(cur.ra / base.ra)); CB.stat("o-fr-a48", pct(cur.ra48 / base.ra48)); CB.stat("o-fr-n", pct(cur.rn / base.rn));
+    }
+    function drawF(ctx, w, h) {
+      const P = CB.palette(), bx = 58, bw = w - bx - 14, h1 = h / 2;
+      const b1 = { x: bx, y: 14, w: bw, h: h1 - 14 - 28 }, b2 = { x: bx, y: h1 + 14, w: bw, h: h - h1 - 14 - 44 };
+      const common = { x: [F0, F1], logX: true, logY: true, xTicks: [0.3, 1, 3, 10, 30], xFmt: (v) => String(v), bands: [{ x0: 4, x1: 8, color: "rgba(240,170,40,0.16)" }] };
+      const c1 = CB.chart(ctx, b1, Object.assign({ y: [1, 100], yLabel: "차체 가속도 이득 (1/s)", series: [{ data: base.a, color: P.faint, width: 1.5, dash: [5, 4] }, { data: cur.a, color: P.accent, width: 2.5 }] }, common));
+      CB.chart(ctx, b2, Object.assign({ y: [0.3, 100], yLabel: "접지 하중 이득 (kN·s/m)", xLabel: "주파수 (Hz)", series: [{ data: base.n, color: P.faint, width: 1.5, dash: [5, 4] }, { data: cur.n, color: P.ok, width: 2.5 }] }, common));
+      ctx.fillStyle = P.dim; ctx.font = font(11); ctx.textAlign = "center"; ctx.textBaseline = "top";
+      ctx.fillText("4–8 Hz", (c1.X(4) + c1.X(8)) / 2, b1.y + 3);
+    }
+    function drawT(ctx, w, h) {
+      const P = CB.palette(), xs = curve.map((p) => p[0]).concat([1, cur.rn / base.rn]), ys = curve.map((p) => p[1]).concat([1, cur.ra / base.ra]);
+      const x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys), mx = (x1 - x0) * 0.12 + 0.02, my = (y1 - y0) * 0.14 + 0.02;
+      const box = { x: 58, y: 14, w: w - 58 - 14, h: h - 14 - 46 };
+      const c = CB.chart(ctx, box, { x: [x0 - mx, x1 + mx], y: [y0 - my, y1 + my], xLabel: "접지 하중 변동 RMS (기준 = 1)", yLabel: "차체 가속도 RMS", series: [{ data: curve, color: P.accent2, width: 2 }],
+        points: [{ x: 1, y: 1, color: P.faint, r: 3.5, label: "기준" }, { x: cur.rn / base.rn, y: cur.ra / base.ra, color: P.accent, r: 6 }] });
+      ctx.fillStyle = P.dim; ctx.font = mono(11); ctx.textBaseline = "middle"; ctx.textAlign = "left";
+      const a = curve[0], b = curve[curve.length - 1];
+      ctx.fillText("ζ 0.05", Math.min(c.X(a[0]) + 6, box.x + box.w - 44), c.Y(a[1]));
+      ctx.fillText("ζ 1.0", Math.min(c.X(b[0]) + 6, box.x + box.w - 40), c.Y(b[1]));
+      ctx.font = font(11); ctx.textBaseline = "bottom"; ctx.fillText("↙ 둘 다 좋음", box.x + 6, box.y + box.h - 4);
+    }
+    calc();
+    const cf = CB.canvas($("cv-fr"), drawF, { aspect: 0.85, minHeight: 380, maxHeight: 460 });
+    const ct = CB.canvas($("cv-tr"), drawT, { aspect: 0.5, minHeight: 220, maxHeight: 270 });
+    function upd() { calc(); cf.redraw(); ct.redraw(); }
+  })();
+
+  /* ================================================================ 4. 3D 더블 위시본 */
+  (function () {
+    const T = CB.three($("dw-view"), { camera: [1.8, 0.72, 0.42], target: [0, 0.36, 0.52], fov: 36, minDistance: 0.7, maxDistance: 5 });
+    if (!T) return;
+    const THREE = T.THREE, V3 = (x, y, z) => new THREE.Vector3(x, y, z), UP = V3(0, 1, 0), XA = V3(1, 0, 0);
+    CB.ground3d(T, 4, 16);
+    const G3 = { LI: [0.35, 0.2], LBJ0: [0.72, 0.19], UI: [0.44, 0.44], UBJ0: [0.68, 0.47], WC0: [0.78, 0.33], CP0: [0.78, 0] };
+    G3.Ll = Math.hypot(G3.LBJ0[0] - G3.LI[0], G3.LBJ0[1] - G3.LI[1]); G3.Lu = Math.hypot(G3.UBJ0[0] - G3.UI[0], G3.UBJ0[1] - G3.UI[1]);
+    const rows = sweepSusp(G3), UX = -0.02, p3 = (p, x) => V3(x || 0, p[1], p[0]);
+    const LBJ0 = p3(G3.LBJ0), UBJ0 = p3(G3.UBJ0, UX), WC = p3(G3.WC0), TO0 = V3(-0.13, 0.23, 0.7), TI0 = V3(-0.13, 0.232, 0.35), LT = TO0.distanceTo(TI0);
+    const LIf = V3(0.16, 0.2, 0.35), LIr = V3(-0.16, 0.2, 0.35), LIc = V3(0, 0.2, 0.35), UIf = V3(0.09, 0.44, 0.44), UIr = V3(-0.13, 0.44, 0.44), TM = V3(0, 0.64, 0.52);
+    const asm = new THREE.Group(); T.scene.add(asm);
+    const kn = new THREE.Group(); asm.add(kn);
+    const mt = (c, m, r) => T.material(c, { metalness: m == null ? 0.4 : m, roughness: r == null ? 0.45 : r });
+    const M = { up: mt(0xe0802a), lo: mt(0x2f7fd6), kn: mt(0x8d97ab, 0.6, 0.35), sp: mt(0xd94040, 0.3), dm: mt(0xe8b923), rodm: mt(0xc9d0dc, 0.8, 0.25), tr: mt(0x2fae6a), bj: mt(0x2a2f3a, 0.5), fr: T.material(0x7a8499, { transparent: true, opacity: 0.28, depthWrite: false }) };
+    function rod(parent, r, mat) {
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 1, 14), mat); parent.add(m);
+      m.set = (a, b) => { const d = b.clone().sub(a), L = d.length(); m.position.copy(a).addScaledVector(d, 0.5); m.scale.set(1, L, 1); m.quaternion.setFromUnitVectors(UP, d.normalize()); return m; };
+      return m;
+    }
+    const ball = (parent, p, r, mat) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 12), mat); m.position.copy(p); parent.add(m); return m; };
+    const zcyl = (parent, r, len, mat, pos, open) => { const g = new THREE.CylinderGeometry(r, r, len, 36, 1, !!open); g.rotateX(Math.PI / 2); const m = new THREE.Mesh(g, mat); m.position.copy(pos); parent.add(m); return m; };
+    // knuckle + wheel (rest coordinates)
+    rod(kn, 0.02, M.kn).set(LBJ0, UBJ0);
+    rod(kn, 0.028, M.kn).set(V3(0, 0.33, 0.7), V3(0, 0.33, 0.8));
+    rod(kn, 0.012, M.kn).set(V3(-0.003, 0.23, 0.714), TO0);
+    ball(kn, LBJ0, 0.026, M.bj); ball(kn, UBJ0, 0.026, M.bj); ball(kn, TO0, 0.018, M.bj);
+    zcyl(kn, 0.15, 0.022, mt(0x9aa3b5, 0.8, 0.3), V3(0, 0.33, 0.755));
+    const cal = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.12, 0.07), mt(0xcc3333, 0.3)); cal.position.set(0.14, 0.33, 0.752); kn.add(cal);
+    const tireMat = T.material(0x1c2028, { roughness: 0.9, side: THREE.DoubleSide, transparent: true, opacity: 0.25, depthWrite: false });
+    const tg = new THREE.LatheGeometry([[0.215, -0.11], [0.3, -0.11], [0.33, -0.08], [0.33, 0.08], [0.3, 0.11], [0.215, 0.11]].map((p) => new THREE.Vector2(p[0], p[1])), 40); tg.rotateX(Math.PI / 2);
+    const tire = new THREE.Mesh(tg, tireMat); tire.position.copy(WC); kn.add(tire);
+    const rimMat = T.material(0xb8c0cf, { roughness: 0.3, metalness: 0.8, side: THREE.DoubleSide, transparent: true, opacity: 0.4, depthWrite: false });
+    zcyl(kn, 0.212, 0.2, rimMat, WC, true);
+    zcyl(kn, 0.05, 0.05, M.kn, V3(0, 0.33, 0.85));
+    for (let k = 0; k < 5; k++) { const sp = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.035, 0.014), M.kn), a = (k * Math.PI * 2) / 5; sp.position.set(Math.cos(a) * 0.105, 0.33 + Math.sin(a) * 0.105, 0.86); sp.rotation.z = a; kn.add(sp); }
+    // body side
+    const tower = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.56, 0.2), M.fr); tower.position.set(0, 0.4, 0.3); asm.add(tower);
+    const brk = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.02, 0.2), mt(0x7a8499)); brk.position.set(0, 0.655, 0.46); asm.add(brk);
+    rod(asm, 0.012, M.bj).set(V3(0.19, 0.2, 0.35), V3(-0.19, 0.2, 0.35));
+    rod(asm, 0.012, M.bj).set(V3(0.12, 0.44, 0.44), V3(-0.16, 0.44, 0.44));
+    rod(asm, 0.028, mt(0x7a8499)).set(V3(-0.13, 0.232, -0.05), V3(-0.13, 0.232, 0.24));
+    const lf = rod(asm, 0.016, M.lo), lr = rod(asm, 0.016, M.lo), uf = rod(asm, 0.014, M.up), ur = rod(asm, 0.014, M.up);
+    const tie = rod(asm, 0.01, M.tr), rack = rod(asm, 0.012, M.rodm), tiBall = ball(asm, TI0, 0.018, M.bj);
+    const dBody = rod(asm, 0.024, M.dm), dRod = rod(asm, 0.009, M.rodm);
+    const coilM = new THREE.Mesh(new THREE.BufferGeometry(), M.sp); asm.add(coilM);
+    function coil(a, b) {
+      const d = b.clone().sub(a), L = d.length(), pts = [], s0 = 0.09, s1 = L - 0.015;
+      dBody.set(a, a.clone().addScaledVector(d, 0.2 / L)); dRod.set(a, b);
+      for (let i = 0; i <= 120; i++) { const u = i / 120, an = u * 6.5 * 2 * Math.PI; pts.push(V3(0.045 * Math.cos(an), s0 + (s1 - s0) * u, 0.045 * Math.sin(an))); }
+      coilM.geometry.dispose(); coilM.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 240, 0.0065, 6, false);
+      coilM.position.copy(a); coilM.quaternion.setFromUnitVectors(UP, d.clone().normalize());
+      return L;
+    }
+    const lowerMount = (st) => LIc.clone().lerp(p3(st.lbj), 0.6);
+    const sLen = (tr) => lowerMount(suspAt(rows, tr)).distanceTo(TM), L0 = sLen(0);
+    function pose(tr, s) {
+      const st = suspAt(rows, tr), lbj = p3(st.lbj), ubj = p3(st.ubj, UX), qx = new THREE.Quaternion().setFromAxisAngle(XA, -st.dphi), ax = ubj.clone().sub(lbj).normalize();
+      const ti = V3(TI0.x, TI0.y, TI0.z + s), qk = (d) => new THREE.Quaternion().setFromAxisAngle(ax, d);
+      const outer = (d) => TO0.clone().sub(LBJ0).applyQuaternion(qx).applyQuaternion(qk(d)).add(lbj), f = (d) => outer(d).distanceTo(ti) - LT;
+      let lo = -0.8, hi = 0.8, flo = f(lo), d = 0; const fhi = f(hi);
+      if (flo * fhi > 0) d = Math.abs(flo) < Math.abs(fhi) ? lo : hi;
+      else for (let i = 0; i < 30; i++) { d = (lo + hi) / 2; const fm = f(d); if (fm * flo <= 0) hi = d; else { lo = d; flo = fm; } }
+      return { st, lbj, ubj, ti, to: outer(d), q: qk(d).multiply(qx) };
+    }
+    const labels = [["어퍼 암", [0.05, 0.5, 0.55], asm], ["로어 암", [0.14, 0.14, 0.52], asm], ["코일오버", [0.02, 0.6, 0.6], asm], ["타이로드", [-0.16, 0.18, 0.5], asm], ["차체 쪽 프레임", [0, 0.72, 0.3], asm], ["너클", [0.04, 0.33, 0.68], kn]]
+      .map(([txt, pos, obj]) => { const L = T.label(txt, pos); L.obj = obj; return L; });
+    const gTr = CB.range("dw-tr", (v) => (v > 0 ? "+" : "") + v + " mm" + (v > 0 ? " (범프)" : v < 0 ? " (리바운드)" : ""), apply);
+    const gRack = CB.range("dw-rack", (v) => (v > 0 ? "+" : "") + v + " mm", apply);
+    function apply() {
+      const tr = gTr() / 1000, P = pose(tr, gRack() / 1000);
+      asm.position.y = -P.st.travel;
+      kn.quaternion.copy(P.q); kn.position.copy(P.lbj).sub(LBJ0.clone().applyQuaternion(P.q));
+      lf.set(LIf, P.lbj); lr.set(LIr, P.lbj); uf.set(UIf, P.ubj); ur.set(UIr, P.ubj);
+      tie.set(P.ti, P.to); rack.set(V3(TI0.x, TI0.y, 0.05), P.ti); tiBall.position.copy(P.ti);
+      const L = coil(lowerMount(P.st), TM), n = V3(0, 0, 1).applyQuaternion(P.q), fw = V3(1, 0, 0).applyQuaternion(P.q);
+      const cam = -Math.asin(CB.clamp(n.y, -1, 1)) * DEG, steer = Math.atan2(-fw.z, fw.x) * DEG, mr = (sLen(tr - 0.002) - sLen(tr + 0.002)) / 0.004;
+      CB.stat("o-dw-cam", sgn(cam, 2) + "<small>°</small>");
+      CB.stat("o-dw-steer", Math.abs(steer) < 0.05 ? "0.0<small>°</small>" : (steer > 0 ? "좌 " : "우 ") + Math.abs(steer).toFixed(1) + "<small>°</small>");
+      CB.stat("o-dw-sp", sgn((L0 - L) * 1000, 0) + "<small>mm</small>");
+      CB.stat("o-dw-mr", mr.toFixed(2));
+      CB.stat("o-dw-kw", (60 * mr * mr).toFixed(1) + "<small>N/mm</small>");
+    }
+    const ghost = $("dw-ghost"), lab = $("dw-lab"), auto = $("dw-auto");
+    const setGhost = () => { tireMat.opacity = ghost.checked ? 0.25 : 1; tireMat.depthWrite = !ghost.checked; rimMat.opacity = ghost.checked ? 0.4 : 1; rimMat.depthWrite = !ghost.checked; };
+    ghost.addEventListener("change", setGhost); setGhost();
+    lab.addEventListener("change", () => labels.forEach((L) => L.setVisible(lab.checked)));
+    T.onFrame((dt, t) => { if (auto.checked) gTr.set(Math.round(75 * Math.sin(t * 2.2))); });
+    apply();
+  })();
+
+  /* ================================================================ 5. 지오메트리 실험대 */
+  (function () {
+    const LBJ0 = [0.72, 0.19], UBJ0 = [0.68, 0.47], WC0 = [0.78, 0.33], CP0 = [0.78, 0], TOP = [0.62, 0.8], B = 3 / DEG;
+    const mode = CB.seg("geo-mode", upd);
+    const mm = (v) => v + " mm";
+    const gLu = CB.range("geo-lu", mm, upd), gUa = CB.range("geo-ua", (v) => sgn(v, 1) + "°", upd), gLl = CB.range("geo-ll", mm, upd), gTr = CB.range("geo-tr", (v) => (v > 0 ? "+" : "") + v + " mm", upd);
+    let S = null;
+    function icOf(Gm, st) {
+      const d2 = [st.lbj[0] - Gm.LI[0], st.lbj[1] - Gm.LI[1]];
+      let p1, d1;
+      if (Gm.T) { p1 = Gm.T; d1 = [-(Gm.T[1] - st.lbj[1]), Gm.T[0] - st.lbj[0]]; } else { p1 = Gm.UI; d1 = [st.ubj[0] - Gm.UI[0], st.ubj[1] - Gm.UI[1]]; }
+      const det = d1[0] * d2[1] - d1[1] * d2[0];
+      let ic = null;
+      if (Math.abs(det) > 1e-6 * Math.hypot(d1[0], d1[1]) * Math.hypot(d2[0], d2[1])) { const t = ((Gm.LI[0] - p1[0]) * d2[1] - (Gm.LI[1] - p1[1]) * d2[0]) / det; ic = [p1[0] + d1[0] * t, p1[1] + d1[1] * t]; if (Math.abs(ic[0]) > 200) ic = null; }
+      const dir = ic ? [ic[0] - st.cp[0], ic[1] - st.cp[1]] : d2;
+      return { ic, rcH: Math.abs(dir[0]) < 1e-9 ? NaN : (dir[1] * -st.cp[0]) / dir[0], p1, d1, d2 };
+    }
+    function calc() {
+      const strut = mode() === "strut", Ll = gLl() / 1000;
+      const Gm = { LBJ0, WC0, CP0, Ll, LI: [LBJ0[0] - Ll * Math.cos(B), LBJ0[1] + Ll * Math.sin(B)] };
+      if (strut) Gm.T = TOP;
+      else { const Lu = gLu() / 1000, a = gUa() / DEG; Gm.UBJ0 = UBJ0; Gm.Lu = Lu; Gm.UI = [UBJ0[0] - Lu * Math.cos(a), UBJ0[1] - Lu * Math.sin(a)]; }
+      gLu.el.disabled = gUa.el.disabled = strut;
+      const rows = sweepSusp(Gm), st = suspAt(rows, gTr() / 1000), I = icOf(Gm, st);
+      const a = suspAt(rows, -0.005), b = suspAt(rows, 0.005), gain = (-(b.dphi - a.dphi) * DEG) / ((b.travel - a.travel) * 100);
+      S = { Gm, rows, st, I, strut, curve: rows.map((r) => [r.travel * 1000, -r.dphi * DEG]) };
+      CB.stat("o-geo-cam", sgn(-st.dphi * DEG, 2) + "<small>°</small>");
+      CB.stat("o-geo-gain", sgn(gain, 2) + "<small>°/10 mm</small>");
+      CB.stat("o-geo-rc", isFinite(I.rcH) ? sgn(I.rcH * 1000, 0) + "<small>mm</small>" : "—");
+      CB.stat("o-geo-ic", I.ic ? Math.abs(st.cp[0] - I.ic[0]).toFixed(2) + "<small>m " + (I.ic[0] < st.cp[0] ? "(안쪽)" : "(바깥쪽)") + "</small>" : "∞ <small>(평행)</small>");
+      CB.stat("o-geo-tw", sgn((st.cp[0] - CP0[0]) * 1000, 1) + "<small>mm</small>");
+    }
+    function draw(ctx, w, h) {
+      if (!S) return;
+      const P = CB.palette(), st = S.st, Gm = S.Gm, I = S.I, s = Math.min(w / 1.95, (h - 30) / 0.92), yg = h - 20, oy = -st.cp[1];
+      const X = (z) => w / 2 + z * s, Y = (y) => yg - (y + oy) * s, line = (a, b) => { ctx.beginPath(); ctx.moveTo(X(a[0]), Y(a[1])); ctx.lineTo(X(b[0]), Y(b[1])); ctx.stroke(); };
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, yg); ctx.lineTo(w, yg); ctx.stroke();
+      ctx.setLineDash([6, 5]); ctx.lineWidth = 1; ctx.strokeStyle = P.faint; ctx.beginPath(); ctx.moveTo(w / 2, 4); ctx.lineTo(w / 2, yg); ctx.stroke(); ctx.setLineDash([]);
+      // body
+      ctx.fillStyle = P.surface; ctx.strokeStyle = P.border; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.rect(X(-0.64), Y(0.83), 1.28 * s, 0.7 * s); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = P.dim; ctx.font = font(12); ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillText("차체", X(-0.3), Y(0.8));
+      // tires
+      const tire = (sg, alpha) => { ctx.save(); ctx.globalAlpha = alpha; ctx.translate(X(sg * st.wc[0]), Y(st.wc[1])); ctx.rotate(-sg * st.dphi); ctx.fillStyle = P.text; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(-0.11 * s, -0.33 * s, 0.22 * s, 0.66 * s, 0.05 * s); else ctx.rect(-0.11 * s, -0.33 * s, 0.22 * s, 0.66 * s); ctx.fill(); ctx.restore(); };
+      tire(-1, 0.12); tire(1, 0.3);
+      // extension lines to IC
+      ctx.setLineDash([5, 4]); ctx.lineWidth = 1.2; ctx.strokeStyle = P.dim;
+      const ext = (p, d) => { const n = Math.hypot(d[0], d[1]) || 1; line([p[0] - (d[0] / n) * 60, p[1] - (d[1] / n) * 60], [p[0] + (d[0] / n) * 60, p[1] + (d[1] / n) * 60]); };
+      if (I.ic) { line(st.lbj, I.ic); line(S.strut ? Gm.T : st.ubj, I.ic); } else { ext(Gm.LI, I.d2); ext(I.p1, I.d1); }
+      ctx.strokeStyle = P.accent2; ctx.lineWidth = 1.6;
+      if (I.ic) line(st.cp, I.ic); else ext(st.cp, I.d2);
+      ctx.setLineDash([]);
+      // links
+      ctx.lineCap = "round"; ctx.strokeStyle = P.accent; ctx.lineWidth = 5; line(Gm.LI, st.lbj);
+      if (S.strut) { ctx.strokeStyle = P.warn; ctx.lineWidth = 7; line(st.lbj, Gm.T); ctx.strokeStyle = P.dim; ctx.lineWidth = 4; line([(st.lbj[0] + st.wc[0]) / 2, st.wc[1]], st.wc); }
+      else { ctx.strokeStyle = P.warn; ctx.lineWidth = 5; line(Gm.UI, st.ubj); ctx.strokeStyle = P.dim; ctx.lineWidth = 5; line(st.lbj, st.ubj); ctx.lineWidth = 4; line([(st.lbj[0] + st.ubj[0]) / 2, st.wc[1]], st.wc); }
+      ctx.lineCap = "butt";
+      [Gm.LI, st.lbj, S.strut ? Gm.T : Gm.UI].concat(S.strut ? [] : [st.ubj]).forEach((p) => dot(ctx, X(p[0]), Y(p[1]), 4, P.text));
+      // IC, RC
+      ctx.font = mono(12, 600); ctx.textBaseline = "bottom";
+      if (I.ic) {
+        const ix = X(I.ic[0]), iy = Y(I.ic[1]);
+        if (ix > 8 && ix < w - 8 && iy > 8 && iy < h - 8) { dot(ctx, ix, iy, 5, P.accent2); ctx.fillStyle = P.accent2; ctx.textAlign = "center"; ctx.fillText("IC", ix, iy - 7); }
+        else { ctx.fillStyle = P.accent2; ctx.textAlign = I.ic[0] < 0 ? "left" : "right"; ctx.fillText((I.ic[0] < 0 ? "← IC " : "IC → ") + Math.abs(I.ic[0] - st.cp[0]).toFixed(1) + " m", I.ic[0] < 0 ? 8 : w - 8, 20); }
+      } else { ctx.fillStyle = P.accent2; ctx.textAlign = "left"; ctx.fillText("IC: 무한대 (암이 평행)", 8, 20); }
+      if (isFinite(I.rcH)) {
+        const ry = CB.clamp(yg - I.rcH * s, 10, h - 6);
+        dot(ctx, w / 2, ry, 6, P.accent); ctx.fillStyle = P.accent; ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillText("RC " + sgn(I.rcH * 1000, 0) + " mm", w / 2 - 10, ry - 10);
+      }
+      dot(ctx, X(st.cp[0]), yg, 4, P.accent2);
+    }
+    function drawC(ctx, w, h) {
+      if (!S) return;
+      const P = CB.palette(), m = Math.max(2, Math.ceil(Math.max.apply(null, S.curve.map((p) => Math.abs(p[1]))) + 0.3)), tr = S.st.travel * 1000;
+      CB.chart(ctx, { x: 58, y: 14, w: w - 58 - 14, h: h - 14 - 46 }, { x: [-90, 90], y: [-m, m], xLabel: "휠 스트로크 (mm, + 범프)", yLabel: "캠버 변화 (°)", series: [{ data: S.curve, color: P.accent, width: 2.4 }],
+        hlines: [{ y: 0, color: P.axis, dash: [] }], vlines: [{ x: 0, color: P.axis, dash: [] }], points: [{ x: tr, y: -S.st.dphi * DEG, color: P.accent2, r: 6 }] });
+    }
+    calc();
+    const c1 = CB.canvas($("cv-geo"), draw, { aspect: 0.56, minHeight: 220, maxHeight: 400 });
+    const c2 = CB.canvas($("cv-geoc"), drawC, { aspect: 0.42, minHeight: 200, maxHeight: 250 });
+    function upd() { calc(); c1.redraw(); c2.redraw(); }
+    $("geo-par").addEventListener("click", () => { mode.set("dw", false); gUa.set(-3); gLu.set(gLl()); });
+    $("geo-sla").addEventListener("click", () => { mode.set("dw", false); gLl.set(370); gUa.set(7); gLu.set(240); });
+  })();
+
+  /* ================================================================ 6. 얼라인먼트 */
+  (function () {
+    const R_TIRE = 0.33, RIM = 432;
+    const gCam = CB.range("al-cam", (v) => sgn(v, 1) + "°", upd), gToe = CB.range("al-toe", (v) => sgn(v, 2) + "°", upd), gCas = CB.range("al-cas", (v) => v.toFixed(1) + "°", upd);
+    function info() {
+      const c = gCam(), t = gToe(), k = gCas();
+      CB.stat("o-al-trail", (R_TIRE * Math.tan(k / DEG) * 1000).toFixed(0) + "<small>mm</small>");
+      CB.stat("o-al-toe", sgn(2 * RIM * Math.sin(t / DEG), 1) + "<small>mm</small>");
+      CB.stat("o-al-scrub", (Math.abs(Math.tan(t / DEG)) * 1000).toFixed(1) + "<small>m</small>");
+      CB.stat("o-al-cam20", sgn(c - k * Math.sin(20 / DEG), 1) + "<small>°</small>");
+      const pc = c < -0.3 ? "<b>네거티브 캠버.</b> 코너에서 차체가 롤해도 하중이 실린 바깥 바퀴가 노면에 평평하게 닿아 횡력이 커진다. 지나치면 직진 때 안쪽 어깨만 닳고 제동·구동 접지가 줄어든다."
+        : c > 0.3 ? "<b>포지티브 캠버.</b> 코너에서 바깥 바퀴가 바깥 어깨로 서게 되어 접지를 잃고 바깥쪽이 닳는다. 현대 승용차에서는 거의 쓰지 않는다."
+        : "<b>캠버 0 부근.</b> 직진 마모와 제동 접지에는 가장 좋지만, 코너에서 롤이 생기면 바깥 바퀴가 금방 포지티브 쪽으로 넘어간다.";
+      const pt = t > 0.03 ? "<b>토인.</b> 두 바퀴가 서로 안쪽으로 미는 예하중이 생겨 직진이 안정된다. 지나치면 타이어를 옆으로 끌며 굴러 구름 저항과 바깥쪽 마모가 는다."
+        : t < -0.03 ? "<b>토아웃.</b> 조향 초기 반응이 예민해지지만 직진에서 차가 좌우로 떠돈다. 안쪽 마모가 는다."
+        : "<b>토 0.</b> 구름 저항과 마모가 가장 작다. 실제로는 주행 중 부싱 변형을 감안해 약간의 토인을 둔다.";
+      const pk = k >= 2 ? "<b>캐스터 " + k.toFixed(1) + "°.</b> 조향 축이 접지 중심보다 앞에서 지면과 만나므로 횡력이 바퀴를 직진으로 되돌린다. 조향하면 바깥 바퀴가 네거티브 캠버를 얻는다. 크게 할수록 조타력이 무거워진다."
+        : "<b>캐스터가 거의 없다.</b> 트레일이 짧아 복원력이 약하고 핸들이 스스로 돌아오지 않는다.";
+      $("al-desc").innerHTML = "<p>" + pc + "</p><p>" + pt + "</p><p>" + pk + "</p>";
+    }
+    function draw(ctx, w, h) {
+      const P = CB.palette(), pw = w / 3, c = gCam(), t = gToe(), k = gCas() / DEG, yg = h * 0.86, th = h * 0.46, tw = Math.max(10, pw * 0.15), ox = pw * 0.27;
+      const title = (i, s) => { ctx.fillStyle = P.dim; ctx.font = font(12, 600); ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillText(s, pw * (i + 0.5), 8); };
+      const wheel = (x, y, ang, len, anchorBottom) => { ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.fillStyle = "#1c2028"; ctx.strokeStyle = P.dim; ctx.lineWidth = 1; ctx.beginPath(); const y0 = anchorBottom ? -len : -len / 2; if (ctx.roundRect) ctx.roundRect(-tw / 2, y0, tw, len, tw * 0.3); else ctx.rect(-tw / 2, y0, tw, len); ctx.fill(); ctx.stroke(); ctx.restore(); };
+      const dash = (x1, y1, x2, y2) => { ctx.setLineDash([4, 4]); ctx.strokeStyle = P.faint; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.setLineDash([]); };
+      ctx.strokeStyle = P.border; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(pw, 6); ctx.lineTo(pw, h - 6); ctx.moveTo(2 * pw, 6); ctx.lineTo(2 * pw, h - 6); ctx.stroke();
+      // front view: camber
+      let cx = pw / 2; title(0, "앞에서: 캠버");
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(8, yg); ctx.lineTo(pw - 8, yg); ctx.stroke();
+      ctx.strokeStyle = P.dim; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx - ox, yg - th / 2); ctx.lineTo(cx + ox, yg - th / 2); ctx.stroke();
+      ctx.fillStyle = P.surface; ctx.strokeStyle = P.border; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.rect(cx - ox * 0.62, yg - th * 1.05, ox * 1.24, th * 0.62); ctx.fill(); ctx.stroke();
+      [-1, 1].forEach((sg) => { const x = cx + sg * ox; dash(x, yg, x, yg - th - 10); wheel(x, yg, (sg * c * 4) / DEG, th, true);
+        const len = Math.min(Math.abs(c) * 7, ox * 0.75), dir = c < 0 ? -sg : sg; if (len > 3) CB.arrow(ctx, x, yg + 9, x + dir * len, yg + 9, P.accent, 2.5); });
+      // top view: toe
+      cx = pw * 1.5; title(1, "위에서: 토");
+      const ty = h * 0.55, tl = h * 0.38;
+      ctx.strokeStyle = P.dim; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx - ox, ty); ctx.lineTo(cx + ox, ty); ctx.stroke();
+      [-1, 1].forEach((sg) => { const x = cx + sg * ox; dash(x, ty - tl * 0.75, x, ty + tl * 0.75); wheel(x, ty, (-sg * t * 10) / DEG, tl, false); });
+      CB.arrow(ctx, cx, ty + tl * 0.45, cx, ty - tl * 0.55, P.accent2, 2.5);
+      ctx.fillStyle = P.dim; ctx.font = font(11); ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillText("전방", cx, ty + tl * 0.5);
+      // side view: caster
+      cx = pw * 2.5; title(2, "옆에서: 캐스터");
+      const rr = Math.min(pw * 0.33, h * 0.29), cy = yg - rr, gx = cx - rr * Math.tan(k);
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(2 * pw + 8, yg); ctx.lineTo(w - 8, yg); ctx.stroke();
+      ctx.fillStyle = "#1c2028"; ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#aeb6c6"; ctx.beginPath(); ctx.arc(cx, cy, rr * 0.58, 0, Math.PI * 2); ctx.fill();
+      dash(cx, yg, cx, cy - rr - 12);
+      ctx.strokeStyle = P.accent; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(gx, yg); ctx.lineTo(cx + rr * 1.25 * Math.sin(k), cy - rr * 1.25 * Math.cos(k)); ctx.stroke();
+      dot(ctx, gx, yg, 4, P.accent); dot(ctx, cx, yg, 4, P.text);
+      ctx.strokeStyle = P.bad; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(gx, yg + 9); ctx.lineTo(cx, yg + 9); ctx.stroke();
+      ctx.fillStyle = P.dim; ctx.font = font(11); ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText("← 전방", 2 * pw + 8, cy - rr * 0.9);
+    }
+    info();
+    const cv = CB.canvas($("cv-al"), draw, { aspect: 0.42, minHeight: 230, maxHeight: 300 });
+    function upd() { info(); cv.redraw(); }
+  })();
+
+  /* ================================================================ 7. 롤 */
+  (function () {
+    const M_CAR = 1500, HRC = 0.08, EXG = 3;
+    const gAy = CB.range("roll-ay", (v) => v.toFixed(2) + " g", upd), gH = CB.range("roll-h", (v) => v.toFixed(2) + " m", upd), gT = CB.range("roll-t", (v) => v.toFixed(2) + " m", upd);
+    const gKw = CB.range("roll-kw", (v) => v + " N/mm", upd), gAf = CB.range("roll-af", (v) => v + " N·m/°", upd), gAr = CB.range("roll-ar", (v) => v + " N·m/°", upd);
+    let S = null;
+    function calc() {
+      const ay = gAy() * G, h = gH(), t = gT(), hr = h - HRC, ks = (gKw() * 1000 * t * t) / 2, Kf = ks + gAf() * DEG, Kr = ks + gAr() * DEG;
+      const phi = (M_CAR * ay * hr) / (Kf + Kr - M_CAR * G * hr), geo = ((M_CAR / 2) * ay * HRC) / t, dF = (Kf * phi) / t + geo, dR = (Kr * phi) / t + geo, st = (M_CAR * G) / 4;
+      S = { ay: gAy(), h, t, phi, dF, dR, st, arb: gAf() + gAr(), lift: st - dF <= 0 || st - dR <= 0 };
+      const kn = (v) => (Math.max(0, v) / 1000).toFixed(1);
+      CB.stat("o-roll-phi", (phi * DEG).toFixed(2) + "<small>°</small>");
+      CB.stat("o-roll-grad", S.ay > 0 ? ((phi * DEG) / S.ay).toFixed(1) + "<small>°/g</small>" : "—");
+      CB.stat("o-roll-dw", ((dF + dR) / 1000).toFixed(2) + "<small>kN</small>");
+      CB.stat("o-roll-fs", dF + dR > 0 ? ((dF / (dF + dR)) * 100).toFixed(0) + "<small>%</small>" : "—");
+      CB.stat("o-roll-fw", kn(st + dF) + " / " + kn(st - dF) + "<small>kN</small>");
+      CB.stat("o-roll-rw", kn(st + dR) + " / " + kn(st - dR) + "<small>kN</small>");
+      CB.stat("o-roll-crit", (t / (2 * h)).toFixed(2) + "<small>g</small>");
+    }
+    function draw(ctx, w, h) {
+      if (!S) return;
+      const P = CB.palette(), s = Math.min(w / 2.9, (h - 44) / 1.72), yg = h - 30, a = S.phi * EXG, ca = Math.cos(a), sa = Math.sin(a), half = S.t / 2;
+      const X = (z) => w / 2 + z * s, Y = (y) => yg - y * s, bp = (z, y) => { const dy = y - HRC; return [X(z * ca + dy * sa), Y(HRC - z * sa + dy * ca)]; };
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, yg); ctx.lineTo(w, yg); ctx.stroke();
+      // anti-roll bar
+      ctx.strokeStyle = P.accent2; ctx.lineWidth = 1 + S.arb / 500; ctx.beginPath(); ctx.moveTo(X(-half + 0.11), Y(0.3)); ctx.lineTo(X(-half + 0.3), Y(0.22)); ctx.lineTo(X(half - 0.3), Y(0.22)); ctx.lineTo(X(half - 0.11), Y(0.3)); ctx.stroke();
+      // wheels
+      [-1, 1].forEach((sg) => { ctx.fillStyle = "#1c2028"; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(X(sg * half) - 0.11 * s, Y(0.66), 0.22 * s, 0.66 * s, 0.05 * s); else ctx.rect(X(sg * half) - 0.11 * s, Y(0.66), 0.22 * s, 0.66 * s); ctx.fill(); });
+      // body
+      const poly = [[-0.86, 0.34], [0.86, 0.34], [0.89, 0.78], [0.64, 0.88], [0.5, 1.42], [-0.5, 1.42], [-0.64, 0.88], [-0.89, 0.78]];
+      ctx.beginPath(); poly.forEach((p, i) => { const q = bp(p[0], p[1]); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.closePath();
+      ctx.fillStyle = P.surface; ctx.fill(); ctx.strokeStyle = P.text; ctx.lineWidth = 2; ctx.stroke();
+      [-1, 1].forEach((sg) => { const z = sg * (half - 0.26), q = bp(z, 0.82); spring(ctx, X(z), Y(0.4), q[0], q[1], 0.045 * s, 5, P.accent, 2); });
+      // roll center, CG, forces
+      dot(ctx, X(0), Y(HRC), 4, P.accent2);
+      const cg = bp(0, S.h);
+      dot(ctx, cg[0], cg[1], 6, P.text);
+      CB.arrow(ctx, cg[0], cg[1], cg[0] + Math.min(S.ay * 0.55 * s, w / 2 - 20), cg[1], P.bad, 3);
+      CB.arrow(ctx, cg[0], cg[1], cg[0], cg[1] + 0.4 * s, P.dim, 2.5);
+      ctx.font = mono(12, 600); ctx.textBaseline = "bottom"; ctx.textAlign = "left"; ctx.fillStyle = P.bad;
+      if (S.ay > 0.02) ctx.fillText("m·a_y", cg[0] + 6, cg[1] - 5);
+      ctx.fillStyle = P.dim; ctx.textAlign = "right"; ctx.fillText("mg", cg[0] - 6, cg[1] + 0.4 * s);
+      const side = (sg, load) => {
+        const x = X(sg * (half + 0.24)), len = (Math.max(0, load) / (2 * S.st)) * 0.5 * s, col = load > 0 ? P.ok : P.bad;
+        if (load > 0) CB.arrow(ctx, x, yg - 2, x, yg - 2 - len, col, 3);
+        ctx.fillStyle = col; ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.font = mono(12, 600); ctx.fillText((Math.max(0, load) / 1000).toFixed(1) + " kN", X(sg * half), yg + 6);
+      };
+      side(-1, 2 * S.st - S.dF - S.dR); side(1, 2 * S.st + S.dF + S.dR);
+      ctx.fillStyle = P.dim; ctx.font = font(12); ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText("안쪽", 8, 8); ctx.textAlign = "right"; ctx.fillText("바깥쪽", w - 8, 8);
+      if (S.lift) { ctx.fillStyle = P.bad; ctx.font = font(13, 700); ctx.textAlign = "center"; ctx.fillText("안쪽 바퀴 하중 0: 바퀴가 들린다", w / 2, 8); }
+    }
+    calc();
+    const cv = CB.canvas($("cv-roll"), draw, { aspect: 0.62, minHeight: 250, maxHeight: 400 });
+    function upd() { calc(); cv.redraw(); }
+  })();
+})();
+</script>
+</body>
+</html>

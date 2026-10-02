@@ -1,0 +1,964 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>달리는 힘, 막는 힘 · CarBook</title>
+<meta name="description" content="구름 저항, 공기 저항, 등판 저항, 가속 저항과 구동력의 균형으로 최고 속도, 등판 능력, 0–100 km/h 가속, 연비를 계산하고 구동력 선도와 타력 주행 시험을 시뮬레이터로 익힌다.">
+<link rel="canonical" href="https://carbook.euiyun.com/chapters/dynamics.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="CarBook">
+<meta property="og:title" content="달리는 힘, 막는 힘 · CarBook">
+<meta property="og:description" content="구름 저항, 공기 저항, 등판 저항, 가속 저항과 구동력의 균형으로 최고 속도, 등판 능력, 0–100 km/h 가속, 연비를 계산하고 구동력 선도와 타력 주행 시험을 시뮬레이터로 익힌다.">
+<meta property="og:url" content="https://carbook.euiyun.com/chapters/dynamics.html">
+<meta property="og:image" content="https://carbook.euiyun.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TechArticle","headline":"달리는 힘, 막는 힘","name":"달리는 힘, 막는 힘 · CarBook","url":"https://carbook.euiyun.com/chapters/dynamics.html","mainEntityOfPage":"https://carbook.euiyun.com/chapters/dynamics.html","inLanguage":"ko","isAccessibleForFree":true,"learningResourceType":"interactive textbook chapter","position":2,"image":"https://carbook.euiyun.com/og.png","dateModified":"2026-10-02","isPartOf":{"@type":"Book","@id":"https://carbook.euiyun.com/#book","name":"CarBook — 인터랙티브 자동차 교과서","url":"https://carbook.euiyun.com/"},"publisher":{"@type":"Organization","name":"CarBook","url":"https://carbook.euiyun.com/"},"description":"구름 저항, 공기 저항, 등판 저항, 가속 저항과 구동력의 균형으로 최고 속도, 등판 능력, 0–100 km/h 가속, 연비를 계산하고 구동력 선도와 타력 주행 시험을 시뮬레이터로 익힌다."},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"CarBook","item":"https://carbook.euiyun.com/"},{"@type":"ListItem","position":2,"name":"02 달리는 힘, 막는 힘","item":"https://carbook.euiyun.com/chapters/dynamics.html"}]}]}</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="../css/style.css">
+<script src="../js/common.js"></script>
+<style>
+  .legend { padding-bottom: 10px; }
+  .legend i.sq { height: 10px; width: 10px; border-radius: 3px; opacity: .75; }
+  #cv-hl { cursor: grab; touch-action: none; }
+  #cv-hl:active { cursor: grabbing; }
+</style>
+</head>
+<body data-chapter="dynamics">
+<main class="chapter">
+  <header class="chapter-hero">
+    <div class="eyebrow">Chapter 02</div>
+    <h1>달리는 힘, 막는 힘</h1>
+    <p class="lead">자동차의 성능표에 적힌 최고 속도, 0→100 km/h 가속 시간, 등판 능력, 연비는 서로 다른 시험의 결과처럼 보이지만 모두 한 줄의 식에서 나온다. 타이어가 노면을 미는 힘에서 차를 붙잡는 힘들을 뺀 나머지가 차를 가속한다. 이 장에서는 막는 힘 네 가지를 하나씩 계산하고, 그것을 구동력과 한 그래프에 겹쳐 차의 성능을 읽어 낸다.</p>
+    <ul class="objectives">
+      <li>종방향 운동 방정식을 세우고 구름·공기·등판·가속 저항을 각각 계산한다.</li>
+      <li>구름 저항이 타이어의 히스테리시스에서, 공기 저항이 속도의 제곱에서 나오는 이유를 설명한다.</li>
+      <li>필요 출력이 속도의 세제곱에 비례한다는 사실로 최고 속도와 고속 연비를 추정한다.</li>
+      <li>구동력 선도에서 최고 속도, 여유 구동력, 등판 한계를 읽는다.</li>
+      <li>접지 한계와 출력 한계를 나누어 0→100 km/h 가속 시간을 어림한다.</li>
+      <li>타력 주행 시험 데이터에서 구름 저항 계수와 공기 저항 계수를 분리해 낸다.</li>
+    </ul>
+  </header>
+
+  <!-- =============================================================== 1 -->
+  <section id="balance">
+    <h2>한 줄의 식: 종방향 운동 방정식</h2>
+    <p>차를 앞뒤 방향으로만 움직이는 하나의 질점으로 보자. 차를 앞으로 미는 힘은 하나뿐이다. 구동륜의 타이어가 노면을 뒤로 밀 때 노면이 타이어를 앞으로 미는 반작용, 곧 <span class="term">구동력</span><span class="en">(Tractive Force)</span> \(F_x\)다. 엔진 토크가 기어를 거쳐 이 힘이 되는 과정은 <a href="overview.html#powerflow">1장</a>에서 보았다. 반대로 차를 붙잡는 힘은 여럿이다. 이들을 통틀어 <span class="term">주행 저항</span><span class="en">(Road Load, Driving Resistance)</span>이라 한다.</p>
+    <div class="formula">$$\delta\, m\, \frac{dv}{dt} = F_x - \underbrace{\left(F_r + F_a + F_g\right)}_{R(v)}$$
+      <div class="where">\(m\): 차량 질량, \(v\): 차속, \(F_r\): 구름 저항, \(F_a\): 공기 저항, \(F_g\): 등판(구배) 저항, \(\delta\): 회전하는 부품의 관성을 반영하는 회전 질량 계수(1보다 조금 큼). 좌변 \(\delta m\,dv/dt\)를 우변으로 넘겨 <b>가속 저항</b>이라 부르기도 한다.</div>
+    </div>
+    <p>이 식은 뉴턴 제2법칙 \(F = ma\) 그대로다. 읽는 법은 세 가지다. 구동력이 저항보다 크면 차는 가속한다. 둘이 같으면 정속으로 달린다. 가속 페달에서 발을 떼어 구동력이 0이 되면 저항만 남아 차는 감속한다. 이 장의 나머지는 우변의 각 항이 얼마나 큰지, 그리고 \(F_x\)가 얼마까지 나올 수 있는지를 따지는 일이다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 310" role="img" aria-label="경사로를 오르는 차에 작용하는 종방향 힘">
+        <defs>
+          <path id="dy-side" vector-effect="non-scaling-stroke" d="M-2.2,0.28 L-1.77,0.28 A0.42,0.42 0 0 0 -0.93,0.28 L0.93,0.28 A0.42,0.42 0 0 0 1.77,0.28 L2.22,0.28 L2.25,0.6 L1.95,0.85 L0.95,1.0 L0.25,1.45 L-0.85,1.42 L-1.45,1.05 L-2.05,0.95 L-2.25,0.75 Z"/>
+          <marker id="dy-a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker>
+          <marker id="dy-a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent-2)"/></marker>
+          <marker id="dy-a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--ok)"/></marker>
+          <marker id="dy-a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--warn)"/></marker>
+          <marker id="dy-a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--text-dim)"/></marker>
+        </defs>
+        <line x1="42" y1="271.4" x2="230" y2="271.4" class="s-line" stroke-dasharray="5 4"/>
+        <path d="M150 271.4 A108 108 0 0 0 149.2 258.200" class="s-line"/>
+        <text x="162" y="267" class="t-dim">θ</text>
+        <g transform="rotate(-7 380 230)">
+          <line x1="40" y1="230" x2="720" y2="230" class="s-axis" stroke-width="2"/>
+          <use href="#dy-side" transform="translate(380,230) scale(70,-70)" class="f-acc2-soft"/>
+          <circle cx="285.5" cy="206.9" r="23.1" fill="var(--text-dim)"/><circle cx="474.5" cy="206.9" r="23.1" fill="var(--text-dim)"/>
+          <circle cx="285.5" cy="206.9" r="12.5" class="f-elev"/><circle cx="474.5" cy="206.9" r="12.5" class="f-elev"/>
+          <circle cx="380" cy="190" r="4" fill="var(--text)"/>
+          <line x1="474.5" y1="240" x2="580" y2="240" stroke="var(--accent)" stroke-width="3" marker-end="url(#dy-a1)"/>
+          <text x="530" y="260" class="t-acc" text-anchor="middle">구동력 Fx</text>
+          <line x1="285.5" y1="240" x2="240" y2="240" stroke="var(--ok)" stroke-width="3" marker-end="url(#dy-a3)"/>
+          <text x="262" y="260" class="t-dim" text-anchor="middle">구름 저항 Fr</text>
+          <line x1="660" y1="150" x2="548" y2="150" stroke="var(--accent-2)" stroke-width="3" marker-end="url(#dy-a2)"/>
+          <text x="610" y="138" class="t-dim" text-anchor="middle">공기 저항 Fa</text>
+          <line x1="380" y1="190" x2="300" y2="190" stroke="var(--warn)" stroke-width="3" marker-end="url(#dy-a4)"/>
+          <text x="262" y="182" class="t-dim" text-anchor="middle">mg sin θ</text>
+          <text x="392" y="182" class="t-dim">무게중심</text>
+        </g>
+        <line x1="375.1" y1="190.3" x2="375.1" y2="286" stroke="var(--text-dim)" stroke-width="2.5" stroke-dasharray="6 3" marker-end="url(#dy-a5)"/>
+        <text x="386" y="290" class="t-dim">mg</text>
+        <text x="380" y="28" class="t-dim" text-anchor="middle">진행 방향 →</text>
+      </svg>
+      <figcaption><b>그림 2-1.</b> 경사로를 오르는 차의 자유 물체도(종방향). 구동력은 구동륜 접지면에서 앞으로, 세 저항은 뒤로 작용한다. 중력 \(mg\)의 경사 방향 성분이 등판 저항이다.</figcaption>
+    </figure>
+
+    <p>이 장에서는 계산을 맞춰 보기 쉽도록 한 대의 기준 차를 계속 쓴다. 질량 1,500 kg, 공기 저항 계수 \(C_d\) 0.29, 전면 면적 2.2 m², 구름 저항 계수 0.010, 타이어 유효 반지름 0.32 m인 중형 승용차다.</p>
+  </section>
+
+  <!-- =============================================================== 2 -->
+  <section id="rolling">
+    <h2>구름 저항</h2>
+    <p>완전히 딱딱한 바퀴가 완전히 딱딱한 바닥을 구르면 저항이 없다. 기차 바퀴가 이것에 가깝다. 그러나 공기를 넣은 고무 타이어는 차의 무게에 눌려 바닥이 납작해진 채로 구른다. 트레드와 사이드월의 고무는 접지면에 들어서면서 눌리고, 빠져나오면서 다시 펴진다. 시속 100 km라면 이 변형이 1초에 약 14번 되풀이된다.</p>
+    <p>고무는 눌릴 때 받은 일을 펴질 때 전부 돌려주지 않는다. 점탄성 재료의 이 성질을 <span class="term">히스테리시스</span><span class="en">(Hysteresis)</span>라 하며, 돌려받지 못한 에너지는 열이 된다. 고속도로를 달린 뒤 타이어가 따뜻한 까닭이다. 역학적으로는 접지압 분포가 앞쪽으로 치우치는 것으로 나타난다. 접지면 앞 절반(눌리는 쪽)의 압력이 뒤 절반(펴지는 쪽)보다 커서, 수직 항력의 합력이 바퀴 중심보다 조금 앞에 놓인다. 이 어긋남이 바퀴의 회전을 거스르는 모멘트를 만든다.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 290" role="img" aria-label="타이어 접지압 분포와 히스테리시스 루프">
+        <line x1="40" y1="212" x2="380" y2="212" class="s-axis" stroke-width="2"/>
+        <path d="M150 212 A90 90 0 1 1 250 212 Z" class="f-surface"/>
+        <circle cx="200" cy="137" r="50" class="f-elev"/>
+        <circle cx="200" cy="137" r="4" fill="var(--text)"/>
+        <path d="M150 212 C170 232 196 262 218 266 C236 268 246 240 250 212 Z" class="f-acc-soft"/>
+        <line x1="200" y1="212" x2="200" y2="282" class="s-line" stroke-dasharray="4 3"/>
+        <line x1="214" y1="286" x2="214" y2="220" stroke="var(--accent)" stroke-width="3" marker-end="url(#dy-a1)"/>
+        <text x="226" y="286" class="t-acc">N</text>
+        <line x1="200" y1="137" x2="200" y2="196" stroke="var(--text-dim)" stroke-width="2.5" marker-end="url(#dy-a5)"/>
+        <text x="186" y="176" class="t-dim" text-anchor="end">W</text>
+        <text x="207" y="208" class="t-mono">e</text>
+        <path d="M112 100 A96 96 0 0 1 180 44" class="s-line" marker-end="url(#dy-a5)"/>
+        <text x="104" y="60" class="t-dim" text-anchor="middle">회전</text>
+        <text x="300" y="130" class="t-dim">진행 방향 →</text>
+        <text x="300" y="252" class="t-dim">접지압 분포</text>
+        <text x="300" y="270" class="t-mono">앞쪽이 더 높다</text>
+        <line x1="470" y1="240" x2="730" y2="240" class="s-axis"/><line x1="470" y1="240" x2="470" y2="40" class="s-axis"/>
+        <path d="M470 240 C540 215 630 150 710 60 C660 150 580 222 470 240 Z" class="f-acc-soft"/>
+        <path d="M560 196 L590 172" stroke="var(--accent)" stroke-width="2" marker-end="url(#dy-a1)" fill="none"/>
+        <path d="M640 170 L608 200" stroke="var(--accent)" stroke-width="2" marker-end="url(#dy-a1)" fill="none"/>
+        <text x="540" y="150" class="t-dim" text-anchor="middle">누를 때</text>
+        <text x="672" y="200" class="t-dim" text-anchor="middle">펴질 때</text>
+        <text x="600" y="262" class="t-dim" text-anchor="middle">변형량</text>
+        <text x="458" y="50" class="t-dim" text-anchor="end">힘</text>
+        <text x="600" y="30" class="t-acc" text-anchor="middle">두 곡선 사이 넓이 = 열로 사라진 에너지</text>
+      </svg>
+      <figcaption><b>그림 2-2.</b> 왼쪽: 구르는 타이어의 접지압. 합력 \(N\)이 바퀴 중심보다 \(e\)만큼 앞에 있어 회전을 거스르는 모멘트 \(N e\)가 생긴다. 오른쪽: 고무 한 조각의 하중–변형 곡선. 누를 때와 펴질 때의 경로가 달라 한 번 변형할 때마다 에너지를 잃는다.</figcaption>
+    </figure>
+
+    <p>이 모멘트를 접지면의 힘으로 바꿔 쓰면 \(F_r = N e / r\)이다. \(e/r\)을 하나의 무차원 수로 묶은 것이 <span class="term">구름 저항 계수</span><span class="en">(Rolling Resistance Coefficient)</span> \(C_{rr}\)다. 네 바퀴를 합치면 수직 항력의 합은 차의 무게이므로</p>
+    <div class="formula">$$F_r = C_{rr}\, m\, g \cos\theta \;\approx\; C_{rr}\, m\, g$$
+      <div class="where">\(g\): 중력 가속도 9.81 m/s², \(\theta\): 노면의 경사각. 일반 도로의 경사에서는 \(\cos\theta \approx 1\)이다(10 % 구배에서도 0.995).</div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>조건</th><th class="num">대표적인 \(C_{rr}\)</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>승용차 타이어, 아스팔트</td><td class="num">0.008~0.015</td><td>공기압이 낮으면 변형이 커져 증가</td></tr>
+        <tr><td>저구름저항 타이어(전기차용 등)</td><td class="num">0.006~0.009</td><td>실리카 배합 컴파운드, 얇은 사이드월</td></tr>
+        <tr><td>트럭 타이어(고압)</td><td class="num">0.005~0.008</td><td>공기압 약 8 bar로 변형이 작음</td></tr>
+        <tr><td>비포장 자갈길</td><td class="num">약 0.02~0.03</td><td>노면 쪽도 변형함</td></tr>
+        <tr><td>마른 모래</td><td class="num">약 0.1~0.3</td><td>바퀴가 파묻히며 모래를 밀어냄</td></tr>
+        <tr><td>철도 차륜과 레일</td><td class="num">약 0.001~0.002</td><td>강철끼리라 변형이 매우 작음</td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout tip">
+      <strong>계산 예: 기준 차의 구름 저항</strong>
+      <p>\(F_r = 0.010 \times 1500 \times 9.81 \approx 147\) N이다. 15 kg짜리 물건을 드는 힘 정도로, 평지에서 사람 한 명이 차를 밀 수 있는 이유다. 이 힘은 속도와 거의 무관하게 항상 걸린다. 타이어 공기압이 20 % 부족해 \(C_{rr}\)이 0.012로 오르면 저항은 약 177 N이 된다.</p>
+    </div>
+    <p>엄밀히는 \(C_{rr}\)도 속도에 따라 조금 변한다. 시속 100 km 정도까지는 거의 일정하다가 그 이상에서 서서히 커지고, 한계 속도 근처에서는 접지면 뒤쪽에 정상파<span class="en">(Standing Wave)</span>가 생기며 급격히 늘어난다. 이 장에서는 상수로 둔다. 타이어 고무의 히스테리시스는 접지력의 원천이기도 해서, 구름 저항과 젖은 길 접지력은 서로 맞바꾸는 관계에 있다(<a href="tire.html">7장</a>).</p>
+  </section>
+
+  <!-- =============================================================== 3 -->
+  <section id="aero">
+    <h2>공기 저항</h2>
+    <p>차는 달리는 동안 앞에 있는 공기를 계속 밀어낸다. 속도 \(v\)로 1초 동안 달리면 전면 면적 \(A\)에 길이 \(v\)를 곱한 부피의 공기를 만나고, 그 질량은 \(\rho A v\)다. 이 공기를 차와 같은 속도로 끌고 간다면 초당 \(\rho A v \cdot v\)의 운동량을 주는 셈이니, 필요한 힘은 \(\rho A v^2\)에 비례한다. 실제로는 공기가 차 옆으로 비켜 흐르므로 그 일부만 든다. 그 비율을 형상에 따른 계수로 묶은 것이 <span class="term">항력 계수</span><span class="en">(Drag Coefficient)</span> \(C_d\)다.</p>
+    <div class="formula">$$F_a = \tfrac{1}{2}\, \rho\, C_d\, A\, v^{2}$$
+      <div class="where">\(\rho\): 공기 밀도(15 °C 해수면에서 1.225 kg/m³), \(A\): 전면 투영 면적, \(v\): 공기에 대한 차의 상대 속도(m/s). \(\tfrac12 \rho v^2\)는 동압이다. 맞바람이 불면 \(v\)에 바람 속도를 더한다.</div>
+    </div>
+    <p>차의 공기역학적 크기는 \(C_d\)와 \(A\)의 곱 \(C_dA\)로 정해진다. 세단은 \(C_d\) 0.24~0.30에 면적 2.2 m² 안팎, SUV는 0.30~0.38에 2.6~2.9 m² 정도여서 \(C_dA\)가 1.5배쯤 차이 난다. 형상이 \(C_d\)를 어떻게 바꾸는지는 <a href="aero.html">12장</a>에서 다룬다. 여기서 기억할 것은 속도의 <b>제곱</b>이다. 속도가 2배면 공기 저항은 4배다.</p>
+    <div class="callout tip">
+      <strong>계산 예: 속도별 공기 저항</strong>
+      <p>기준 차는 \(\tfrac12 \rho C_d A = 0.5 \times 1.225 \times 0.29 \times 2.2 \approx 0.391\) kg/m이다. 시속 50 km(13.9 m/s)에서 75 N, 시속 100 km(27.8 m/s)에서 302 N, 시속 150 km(41.7 m/s)에서 678 N이다. 구름 저항 147 N과 같아지는 속도는 \(\sqrt{147/0.391} \approx 19.4\) m/s, 약 시속 70 km다. 그 아래에서는 타이어가, 그 위에서는 공기가 주된 적이다.</p>
+    </div>
+    <p>아래 시뮬레이터에서 지금까지의 두 저항과 다음 절의 등판 저항을 한꺼번에 볼 수 있다. 위쪽 그림의 화살표 길이는 힘의 크기에 비례하고, 아래 그래프는 속도에 따라 각 저항이 어떻게 쌓이는지 보여 준다.</p>
+
+    <div class="sim" id="sim-rs">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>주행 저항 분해</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-rs"></canvas><canvas id="cv-rsc"></canvas>
+          <div class="legend"><span><i class="sq" style="background:var(--ok)"></i>구름 저항</span><span><i class="sq" style="background:var(--accent-2)"></i>공기 저항</span><span><i class="sq" style="background:var(--warn)"></i>등판 저항</span><span><i style="background:var(--text)"></i>합계</span></div>
+        </div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>속도 <output id="rs-v-out"></output></span><input type="range" id="rs-v" min="0" max="200" value="100" step="1"></label>
+          <label class="ctrl"><span>질량 <output id="rs-m-out"></output></span><input type="range" id="rs-m" min="800" max="2500" value="1500" step="10"></label>
+          <label class="ctrl"><span>항력 계수 Cd <output id="rs-cd-out"></output></span><input type="range" id="rs-cd" min="0.2" max="0.45" value="0.29" step="0.005"></label>
+          <label class="ctrl"><span>전면 면적 A <output id="rs-a-out"></output></span><input type="range" id="rs-a" min="1.8" max="3" value="2.2" step="0.05"></label>
+          <label class="ctrl"><span>구름 저항 계수 Crr <output id="rs-crr-out"></output></span><input type="range" id="rs-crr" min="0.006" max="0.02" value="0.01" step="0.0005"></label>
+          <label class="ctrl"><span>구배 <output id="rs-g-out"></output></span><input type="range" id="rs-g" min="-10" max="15" value="0" step="0.5"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">구름 저항</span><span class="v" id="o-rs-r">—</span></div>
+        <div class="stat"><span class="k">공기 저항</span><span class="v" id="o-rs-a">—</span></div>
+        <div class="stat"><span class="k">등판 저항</span><span class="v" id="o-rs-g">—</span></div>
+        <div class="stat"><span class="k">합계(필요 구동력)</span><span class="v" id="o-rs-t">—</span></div>
+        <div class="stat"><span class="k">필요 출력(바퀴)</span><span class="v" id="o-rs-p">—</span></div>
+        <div class="stat"><span class="k">공기 저항 비중</span><span class="v" id="o-rs-s">—</span></div>
+      </div>
+      <div class="sim-note">해볼 것: 평지에서 속도를 50 → 100 → 200 km/h로 올리며 공기 저항과 필요 출력이 몇 배가 되는지 본다. 질량을 바꾸면 초록 띠와 노란 띠만 변하고 파란 띠는 그대로다. 구배를 6 %로 올리면 등판 저항 하나가 평지 시속 100 km의 전체 저항보다 커진다. 내리막(음수 구배)에서 합계가 0 아래로 내려가면 브레이크를 밟아야 속도가 유지된다. 그래프에서 합계 곡선이 0과 만나는 속도가 페달을 모두 뗀 채 내려갈 때 도달하는 종단 속도다. 바퀴 회전은 보기 좋게 늦췄다.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 4 -->
+  <section id="grade">
+    <h2>등판 저항과 가속 저항</h2>
+    <p>경사로에서는 중력이 차를 비탈 아래로 끌어당긴다. 무게 \(mg\)를 노면에 수직인 성분과 나란한 성분으로 나누면, 수직 성분 \(mg\cos\theta\)는 노면이 받쳐 주고 나란한 성분 \(mg\sin\theta\)가 <span class="term">등판 저항</span><span class="en">(Grade Resistance)</span>이 된다. 내리막에서는 부호가 바뀌어 차를 미는 힘이 된다.</p>
+    <div class="formula">$$F_g = m\, g \sin\theta, \qquad \text{grade}\,[\%] = 100 \tan\theta$$
+      <div class="where">도로의 경사는 각도 대신 구배(%)로 적는다. 수평으로 100 m 갈 때 오르는 높이(m)다. 작은 각에서는 \(\sin\theta \approx \tan\theta\)이므로 \(F_g \approx mg \times \text{grade}/100\)으로 어림할 수 있다.</div>
+    </div>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 220" role="img" aria-label="구배 퍼센트와 경사각의 관계">
+        <path d="M50 180 L450 180 L450 120 Z" class="f-acc2-soft"/>
+        <path d="M150 180 A100 100 0 0 0 148.900 165.200" class="s-acc"/>
+        <text x="166" y="176" class="t-acc">θ</text>
+        <line x1="50" y1="198" x2="450" y2="198" class="s-line"/><line x1="50" y1="192" x2="50" y2="204" class="s-line"/><line x1="450" y1="192" x2="450" y2="204" class="s-line"/>
+        <text x="250" y="216" class="t-dim" text-anchor="middle">수평 거리 100 m</text>
+        <line x1="468" y1="120" x2="468" y2="180" class="s-line"/><line x1="462" y1="120" x2="474" y2="120" class="s-line"/><line x1="462" y1="180" x2="474" y2="180" class="s-line"/>
+        <text x="480" y="146" class="t-dim">높이 15 m</text>
+        <text x="480" y="164" class="t-acc">구배 15 %</text>
+        <g class="t-mono">
+          <text x="610" y="50">3 %  = 1.7°   고속도로</text>
+          <text x="610" y="74">6 %  = 3.4°   긴 고갯길</text>
+          <text x="610" y="98">10 % = 5.7°   가파른 국도</text>
+          <text x="610" y="122">17 % = 9.6°   지하 주차장</text>
+          <text x="610" y="146">30 % = 16.7°  급경사 골목</text>
+          <text x="610" y="170">100 % = 45°</text>
+        </g>
+        <text x="250" y="106" class="t-dim" text-anchor="middle">tan θ = 15 / 100</text>
+      </svg>
+      <figcaption><b>그림 2-3.</b> 구배(%)와 경사각. 일상에서 만나는 경사는 각도로는 작지만 등판 저항으로는 크다.</figcaption>
+    </figure>
+
+    <div class="callout tip">
+      <strong>계산 예: 6 % 오르막</strong>
+      <p>\(\theta = \arctan 0.06 = 3.43°\), \(\sin\theta = 0.0599\)이므로 \(F_g = 1500 \times 9.81 \times 0.0599 \approx 881\) N이다. 평지를 시속 100 km로 달릴 때의 전체 저항 \(147 + 302 = 449\) N의 약 2배다. 눈으로는 완만해 보이는 고속도로 오르막에서 차가 힘겨워하는 까닭이다.</p>
+    </div>
+
+    <p>아래 캔버스에서 비탈 끝의 손잡이를 끌어 경사를 바꿔 보자. 무게 벡터가 두 성분으로 나뉘는 모습과, 그 차를 붙잡아 두는 데 필요한 구동력이 구동륜의 접지 한계 안에 드는지를 함께 보여 준다. 구동륜이 낼 수 있는 힘은 그 축이 받는 수직 하중에 마찰 계수 \(\mu\)를 곱한 값을 넘지 못한다. 오르막에서는 하중이 뒤축으로 옮겨 가므로 앞바퀴 굴림 차가 먼저 한계에 닿는다.</p>
+
+    <div class="sim" id="sim-hl">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>언덕: 중력을 분해하고 접지 한계와 비교하기</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-hl"></canvas><span class="hint">비탈 끝 손잡이를 끌어 보세요</span></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>구배 <output id="hl-g-out"></output></span><input type="range" id="hl-g" min="0" max="70" value="20" step="0.5"></label>
+          <label class="ctrl"><span>노면 마찰 계수 μ <output id="hl-mu-out"></output></span><input type="range" id="hl-mu" min="0.1" max="1.1" value="0.9" step="0.05"></label>
+          <label class="ctrl"><span>질량 <output id="hl-m-out"></output></span><input type="range" id="hl-m" min="800" max="2500" value="1500" step="10"></label>
+          <div class="ctrl"><span>구동 방식</span><div class="seg" id="hl-d"><button data-value="ff" class="on">FF</button><button data-value="fr">FR</button><button data-value="awd">AWD</button></div></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">경사 방향 성분</span><span class="v" id="o-hl-s">—</span></div>
+        <div class="stat"><span class="k">수직 항력</span><span class="v" id="o-hl-n">—</span></div>
+        <div class="stat"><span class="k">필요 구동력</span><span class="v" id="o-hl-f">—</span></div>
+        <div class="stat"><span class="k">구동륜 접지 한계</span><span class="v" id="o-hl-l">—</span></div>
+        <div class="stat"><span class="k">등판 한계 구배</span><span class="v" id="o-hl-x">—</span></div>
+        <div class="stat"><span class="k">판정</span><span class="v" id="o-hl-st">—</span></div>
+      </div>
+      <div class="sim-note">모델: 휠베이스 2.7 m, 무게중심 높이 0.55 m, 앞축 정적 하중 비율 FF 61 % · FR 52 % · AWD 56 %, 구름 저항 계수 0.010. 점선 화살표가 무게 \(mg\), 노란 화살표가 경사 방향 성분, 파란 화살표가 노면에 수직인 성분, 초록 화살표가 각 축의 수직 항력, 주황 화살표가 필요한 구동력이다(한계를 넘으면 빨강). 해볼 것: μ = 0.9에서 FF와 FR의 등판 한계를 비교한다. μ를 0.2(눈길)로 내리면 한계가 몇 %로 줄어드는가. 질량을 바꿔도 등판 한계 구배는 변하지 않는다. 필요한 힘과 접지 한계가 모두 질량에 비례하기 때문이다. 엔진 힘은 충분하다고 가정했다.</div>
+    </div>
+
+    <h3>가속 저항과 회전하는 부품</h3>
+    <p>차를 가속하려면 차체를 앞으로 밀어 속도를 올리는 동시에, 바퀴·브레이크 디스크·구동축·기어·엔진의 크랭크축과 플라이휠 같은 회전 부품의 회전 속도도 함께 올려야 한다. 이 몫을 질량으로 환산해 더한 것이 <span class="term">회전 관성 상당 질량</span>이고, 차량 질량에 대한 비로 쓴 것이 회전 질량 계수 \(\delta\)다.</p>
+    <div class="formula">$$F_{acc} = \delta\, m\, a, \qquad \delta = 1 + \frac{\sum I_w}{m r^{2}} + \frac{I_e\, (i_g i_f)^{2}\, \eta}{m r^{2}}$$
+      <div class="where">\(I_w\): 바퀴 하나의 관성 모멘트(네 바퀴 합), \(I_e\): 엔진·플라이휠·클러치의 관성 모멘트, \(i_g i_f\): 전체 감속비, \(r\): 타이어 반지름. 엔진 쪽 관성은 감속비의 <b>제곱</b>으로 커져서 바퀴에 나타난다.</div>
+    </div>
+    <div class="callout tip">
+      <strong>계산 예: 1단과 6단의 \(\delta\)</strong>
+      <p>바퀴 하나 약 1.0 kg·m², 엔진 쪽 약 0.15 kg·m²라 하자. \(m r^2 = 1500 \times 0.32^2 = 153.6\) kg·m²다. 1단(전체 감속비 \(3.6 \times 3.6 = 12.96\))에서는 \(\delta \approx 1 + 4/153.6 + 0.15 \times 168/153.6 \approx 1.19\), 6단(감속비 2.23)에서는 \(\delta \approx 1 + 0.026 + 0.005 \approx 1.03\)이다. 1단으로 가속할 때는 엔진 힘의 약 16 %가 차가 아니라 엔진 자신을 돌리는 데 쓰인다. 가벼운 플라이휠과 경량 휠이 가속에 유리한 이유다.</p>
+    </div>
+    <p>가속 저항은 다른 저항과 성격이 다르다. 구름·공기 저항에 쓴 일은 열이 되어 사라지지만, 가속에 쓴 일은 운동 에너지 \(\tfrac12 \delta m v^2\)로 차에 저장된다. 등판에 쓴 일도 위치 에너지로 저장된다. 저장된 에너지는 타력 주행이나 내리막에서 다시 쓸 수 있고, 회생 제동이 있으면 배터리로 되돌릴 수도 있다(<a href="hybrid.html">14장</a>).</p>
+  </section>
+
+  <!-- =============================================================== 5 -->
+  <section id="power">
+    <h2>필요 출력과 에너지 소비</h2>
+    <p>힘에 속도를 곱하면 출력(일률)이다. 일정한 속도로 평지를 달리는 데 바퀴에서 필요한 출력은</p>
+    <div class="formula">$$P = R(v)\, v = C_{rr}\, m g\, v + \tfrac{1}{2}\rho\, C_d A\, v^{3}$$
+      <div class="where">구름 저항 몫은 속도에 비례하고, 공기 저항 몫은 속도의 <b>세제곱</b>에 비례한다.</div>
+    </div>
+    <p>세제곱의 위력은 크다. 기준 차가 시속 100 km로 달리는 데는 \(449 \times 27.8 \approx 12.5\) kW면 된다. 시속 200 km에서는 저항이 \(147 + 1206 = 1353\) N, 출력은 \(1353 \times 55.6 \approx 75\) kW로 6배가 필요하다. 반대로 말하면, 최고 속도를 10 % 올리려면 출력을 약 33 % 키워야 한다(\(1.1^3 = 1.33\)). 100 kW가 넘는 엔진을 얹은 차가 일상 주행에서는 그 10분의 1 남짓만 쓰고 있다는 뜻이기도 하다.</p>
+    <p>연비를 따질 때는 출력이 아니라 <b>거리당 에너지</b>가 중요하다. 일은 힘 × 거리이므로, 1 m를 가는 데 드는 에너지(J/m)는 저항력(N) 그 자체다. 편리한 환산이 있다.</p>
+    <div class="formula">$$E_{100} \,[\text{kWh/100 km}] = \frac{R\,[\text{N}] \times 10^{5}\,\text{m}}{3.6 \times 10^{6}\,\text{J/kWh}} = \frac{R\,[\text{N}]}{36}$$
+      <div class="where">저항 36 N이 100 km당 1 kWh다. 바퀴 기준 값이며, 실제 소비량은 이것을 파워트레인 효율로 나누고 보조 장치(에어컨, 전장) 소비를 더한다.</div>
+    </div>
+    <div class="callout tip">
+      <strong>계산 예: 시속 100 km 정속 주행</strong>
+      <p>저항 449 N은 \(449/36 \approx 12.5\) kWh/100 km다. 전기차라면 배터리에서 바퀴까지 효율 약 88 %와 보조 전력 0.5 kW를 넣어 \(12.5/0.88 + 0.5 \approx 14.7\) kWh/100 km, 전비 약 6.8 km/kWh가 된다. 내연기관차는 이 부하에서 엔진 효율이 25 % 안팎이라 연료 에너지로 약 50 kWh/100 km가 든다. 휘발유 1 L가 약 8.9 kWh이므로 약 5.7 L/100 km, 연비로 약 17.5 km/L다.</p>
+    </div>
+    <p>바퀴에서 필요한 에너지는 속도가 낮을수록 작다. 그런데 실제 연비는 시속 50~80 km 근처에서 가장 좋고 그보다 느려도 나빠진다. 속도와 무관하게 시간당 일정하게 드는 소비가 있기 때문이다. 내연기관은 스스로를 돌리는 마찰과 펌핑 손실 때문에 부하가 낮을수록 효율이 떨어지고(<a href="engine.html">3장</a>), 에어컨과 전장품은 차가 느리게 가도 같은 전력을 쓴다. 시간당 소비를 거리당으로 바꾸면 \(1/v\)에 비례하므로 저속에서 커진다. 아래에서 두 효과가 만드는 U자 곡선을 확인하자.</p>
+
+    <div class="sim" id="sim-eg">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>정속 주행 에너지: 왜 고속에서 연비가 나빠지나</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-eg"></canvas>
+          <div class="legend"><span><i class="sq" style="background:var(--ok)"></i>구름 저항</span><span><i class="sq" style="background:var(--accent-2)"></i>공기 저항</span><span><i class="sq" style="background:var(--warn)"></i>구동계 손실·보조 장치</span><span><i class="sq" style="background:var(--bad)"></i>엔진 열 손실</span><span><i style="background:var(--text)"></i>총 소비</span></div>
+        </div>
+        <div class="sim-controls">
+          <div class="ctrl"><span>파워트레인</span><div class="seg" id="eg-type"><button data-value="ev" class="on">전기차</button><button data-value="ice">내연기관</button></div></div>
+          <label class="ctrl"><span>속도 <output id="eg-v-out"></output></span><input type="range" id="eg-v" min="10" max="180" value="100" step="1"></label>
+          <label class="ctrl"><span>질량 <output id="eg-m-out"></output></span><input type="range" id="eg-m" min="900" max="2500" value="1500" step="10"></label>
+          <label class="ctrl"><span>항력 계수 Cd <output id="eg-cd-out"></output></span><input type="range" id="eg-cd" min="0.2" max="0.4" value="0.29" step="0.005"></label>
+          <label class="ctrl"><span>전면 면적 A <output id="eg-a-out"></output></span><input type="range" id="eg-a" min="1.9" max="2.9" value="2.2" step="0.05"></label>
+          <label class="ctrl"><span>보조 전력(에어컨 등) <output id="eg-x-out"></output></span><input type="range" id="eg-x" min="0" max="4" value="0.5" step="0.1"></label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">바퀴 필요 에너지</span><span class="v" id="o-eg-w">—</span></div>
+        <div class="stat"><span class="k">총 소비</span><span class="v" id="o-eg-t">—</span></div>
+        <div class="stat"><span class="k" id="k-eg-e">전비</span><span class="v" id="o-eg-e">—</span></div>
+        <div class="stat"><span class="k">공기 저항 비중(바퀴)</span><span class="v" id="o-eg-s">—</span></div>
+        <div class="stat"><span class="k">가장 경제적인 속도</span><span class="v" id="o-eg-b">—</span></div>
+        <div class="stat"><span class="k" id="k-eg-r">77 kWh 주행 거리</span><span class="v" id="o-eg-r">—</span></div>
+      </div>
+      <div class="sim-note">모델: 평지 정속, 구름 저항 계수 0.010. 전기차는 배터리→바퀴 효율 88 %. 내연기관은 구동계 효율 92 %, 엔진은 마찰 출력 \(2.5 + 0.035\,v\) kW(\(v\)는 km/h)를 더한 뒤 도시 효율 38 %로 나누는 단순한 윌런스 선 모델이며 연료는 휘발유 8.9 kWh/L로 환산했다. 해볼 것: 전기차에서 속도를 100 → 130 km/h로 올리면 주행 거리가 얼마나 줄어드는가. 보조 전력을 3 kW(한겨울 히터)로 올리면 저속 쪽 곡선이 솟구친다. 내연기관으로 바꾸면 세로축 눈금이 몇 배가 되고, 그 대부분이 엔진 열 손실임을 확인한다. 가감속이 없는 이상적인 정속 주행이므로 실제 도심 연비는 이보다 나쁘다.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 6 -->
+  <section id="traction">
+    <h2>구동력 선도</h2>
+    <p>막는 힘을 알았으니 이제 미는 힘과 겹쳐 볼 차례다. 가로축에 차속, 세로축에 힘을 두고 기어 단마다 낼 수 있는 최대 구동력 곡선과 주행 저항 곡선을 함께 그린 것이 <span class="term">구동력 선도</span><span class="en">(Tractive Force Diagram)</span>다. 차의 종방향 성능이 이 그림 한 장에 모두 들어 있다.</p>
+    <p>기어별 구동력 곡선은 엔진의 토크 곡선을 가로세로로 늘이고 줄인 것이다. 감속비가 \(i\)이면 세로로 \(i\)배 늘어나고 가로로 \(1/i\)로 줄어든다(<a href="overview.html#powerflow">1장</a>의 식 \(F_x = T_e i_g i_f \eta / r\)). 어떤 기어를 쓰든 넘을 수 없는 상한도 있다. 출력은 힘 × 속도이므로, 엔진이 낼 수 있는 최대 출력 \(P_{\max}\)로 정해지는 쌍곡선 \(F = \eta P_{\max} / v\)가 그것이다. 기어 곡선들은 이 쌍곡선 아래에서 각자 한 점씩만 닿는다. 변속기의 일은 넓은 속도 범위에서 이 이상적인 쌍곡선을 되도록 가깝게 따라가는 것이다(<a href="transmission.html">5장</a>).</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 760 320" role="img" aria-label="구동력 선도의 개념">
+        <line x1="70" y1="270" x2="730" y2="270" class="s-axis"/><line x1="70" y1="270" x2="70" y2="24" class="s-axis"/>
+        <text x="400" y="304" class="t-dim" text-anchor="middle">차속 v</text>
+        <text x="30" y="150" class="t-dim" text-anchor="middle" transform="rotate(-90 30 150)">힘 F</text>
+        <path d="M187 30 L200 54 L226 90 L265 126 L304 150 L343 167 L382 180 L460 198 L538 210 L616 218.600 L694 225" class="s-line" stroke-dasharray="6 4"/>
+        <text x="236" y="72" class="t-dim">등출력 쌍곡선 F = ηP/v</text>
+        <g class="s-acc">
+          <path d="M85 72 Q130 22 192 66"/>
+          <path d="M150 150 Q215 100 300 160"/>
+          <path d="M230 195 Q320 160 430 200"/>
+          <path d="M330 222 Q470 196 620 230"/>
+        </g>
+        <g class="t-acc"><text x="100" y="92">1단</text><text x="170" y="164">2단</text><text x="262" y="204">3단</text><text x="372" y="234">4단</text></g>
+        <path d="M70 265.500 Q330 262 460 245 T720 209" stroke="var(--accent-2)" stroke-width="2.200" fill="none"/>
+        <text x="672" y="200" class="t-dim" text-anchor="middle">주행 저항 R(v)</text>
+        <circle cx="607" cy="227" r="6" class="f-acc"/>
+        <line x1="607" y1="227" x2="607" y2="270" class="s-line" stroke-dasharray="3 3"/>
+        <text x="607" y="288" class="t-acc" text-anchor="middle">최고 속도</text>
+        <line x1="330" y1="184" x2="330" y2="258" stroke="var(--ok)" stroke-width="2.200" marker-end="url(#dy-a3)" marker-start="url(#dy-a3)"/>
+        <text x="340" y="252" class="t-dim">여유 구동력</text>
+      </svg>
+      <figcaption><b>그림 2-4.</b> 구동력 선도. 기어 곡선과 저항 곡선 사이의 세로 간격이 여유 구동력이고, 가장 오른쪽 교점이 최고 속도다. 점선은 변속기가 무한히 촘촘할 때의 상한이다.</figcaption>
+    </figure>
+
+    <p>이 그림에서 읽을 수 있는 것은 세 가지다.</p>
+    <ul>
+      <li><b>최고 속도.</b> 구동력 곡선과 저항 곡선이 만나는 점에서 가속도가 0이 된다. 그 오른쪽에서는 저항이 더 크므로 차는 그 속도를 넘지 못한다. 어림으로는 \(\eta P_{\max} = R(v)\,v\)를 풀면 된다.</li>
+      <li><b>여유 구동력</b><span class="en">(Excess Tractive Force)</span><b>.</b> 어떤 속도에서 구동력과 저항의 차 \(F_x - R\)이다. 이것을 \(\delta m\)으로 나누면 그 순간의 가속도가 된다. 추월 가속을 위해 기어를 내리는 것은 더 높은 곡선으로 옮겨 타는 일이다.</li>
+      <li><b>등판 능력.</b> 여유 구동력을 가속 대신 중력을 이기는 데 쓰면 \(\sin\theta_{\max} = (F_x - F_r - F_a)/(mg)\)다. 경사가 생기면 저항 곡선 전체가 위로 평행 이동한다고 봐도 된다.</li>
+    </ul>
+    <div class="callout tip">
+      <strong>계산 예: 115 kW 엔진의 최고 속도</strong>
+      <p>구동계 효율 0.92를 곱하면 바퀴 출력은 약 106 kW다. \(147\,v + 0.391\,v^{3} = 106{,}000\)을 풀면 \(v \approx 62.8\) m/s, 약 시속 226 km가 상한이다. 이 속도에서 공기 저항 몫이 약 97 kW로 전체의 91 %다. 실제 최고 속도는 그 속도에서 엔진이 최대 출력 회전수에 놓이도록 기어비가 맞아야만 이 값에 도달하고, 보통은 조금 못 미친다. 아래 시뮬레이터에서 종감속비를 바꿔 가며 확인할 수 있다.</p>
+    </div>
+
+    <div class="sim" id="sim-td">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>구동력 선도: 최고 속도와 등판 한계 찾기</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-td"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>엔진 최대 토크 <output id="td-t-out"></output></span><input type="range" id="td-t" min="120" max="400" value="200" step="5"></label>
+          <label class="ctrl"><span>종감속비 <output id="td-fd-out"></output></span><input type="range" id="td-fd" min="2.8" max="4.8" value="3.6" step="0.05"></label>
+          <label class="ctrl"><span>구배 <output id="td-g-out"></output></span><input type="range" id="td-g" min="0" max="40" value="0" step="1"></label>
+          <label class="check"><input type="checkbox" id="td-hyp" checked> 등출력 쌍곡선 표시</label>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">최고 속도</span><span class="v" id="o-td-v">—</span></div>
+        <div class="stat"><span class="k">엔진 최고 출력</span><span class="v" id="o-td-p">—</span></div>
+        <div class="stat"><span class="k">1단 최대 구동력</span><span class="v" id="o-td-f">—</span></div>
+        <div class="stat"><span class="k">등판 한계(1단)</span><span class="v" id="o-td-g">—</span></div>
+        <div class="stat"><span class="k">100 km/h 여유 구동력</span><span class="v" id="o-td-x">—</span></div>
+        <div class="stat"><span class="k">100 km/h 최대 가속도</span><span class="v" id="o-td-a">—</span></div>
+      </div>
+      <div class="sim-note">모델: 기준 차(1,500 kg), 기어비 3.60 / 2.10 / 1.40 / 1.00 / 0.78 / 0.62, 구동계 효율 0.92, 엔진은 4,200 rpm에서 최대 토크를 내는 포물선 토크 곡선(1,000~6,500 rpm). 색 곡선이 1~6단 구동력, 검은 곡선이 주행 저항, 옅게 칠한 영역이 여유 구동력, 가로 점선은 μ = 1인 노면에서 앞바퀴 굴림 차의 접지 한계다. 해볼 것: 평지에서 최고 속도가 몇 단에서 나오는지 보고 종감속비를 바꿔 본다. 구배를 올리면 높은 단부터 차례로 저항 곡선 아래로 잠긴다. 6 % 오르막에서 6단으로 시속 100 km를 유지할 수 있는가. 최대 토크를 400 N·m로 올리면 1단 구동력이 접지 한계를 훌쩍 넘는다. 그 힘은 쓸 수 없다.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 7 -->
+  <section id="accel">
+    <h2>접지 한계와 가속 성능</h2>
+    <p>구동력 선도에서 1단 곡선이 아무리 높아도 그 힘을 다 쓸 수 있는 것은 아니다. 구동력은 결국 타이어와 노면 사이의 마찰력이고, 마찰력은 수직 하중에 비례하는 한계가 있다.</p>
+    <div class="formula">$$F_x \le \mu\, N_{drive}$$
+      <div class="where">\(\mu\): 타이어와 노면 사이의 최대 마찰 계수(마른 아스팔트 약 0.9~1.1, 젖은 길 약 0.5~0.7, 눈길 약 0.2~0.3, 빙판 약 0.1), \(N_{drive}\): 구동축이 받는 수직 하중.</div>
+    </div>
+    <p>\(N_{drive}\)는 정지 상태의 무게 배분에 가속 중의 하중 이동을 더한 값이다. 유도 과정과 구동 방식별 최대 가속도 식은 <a href="overview.html#layout">1장</a>에서 다뤘다. 결론만 다시 쓰면 앞바퀴 굴림은 가속할수록 구동륜 하중을 잃고, 뒷바퀴 굴림은 얻으며, 네 바퀴 굴림은 차 무게 전부를 쓴다. 마른 길에서 기준 차의 한계는 FF 약 0.5 g, FR 약 0.6 g, AWD 약 1 g다.</p>
+    <p>그래서 정지 가속은 두 구간으로 나뉜다.</p>
+    <ul>
+      <li><b>접지 한계 구간</b>(저속). 엔진은 더 큰 힘을 낼 수 있지만 타이어가 받아 주지 못한다. 구동력은 \(F_t = \mu N_{drive}\)로 일정하고 가속도도 거의 일정하다. 이 구간에서는 출력을 올려도 빨라지지 않는다.</li>
+      <li><b>출력 한계 구간</b>(고속). 속도가 오르면 낼 수 있는 구동력 \(\eta P/v\)가 접지 한계 아래로 내려온다. 이때부터는 출력이 가속을 정하고, 가속도는 속도에 반비례해 줄어든다.</li>
+    </ul>
+    <p>두 구간이 바뀌는 속도는 \(v^{*} = \eta P / F_t\)다. 저항을 무시하면 가속 시간을 손으로 어림할 수 있다. 첫 구간은 등가속도 운동이고, 둘째 구간은 일정한 출력이 운동 에너지를 채우는 과정이다.</p>
+    <div class="formula">$$t_{0\to v} \;\approx\; \frac{\delta m\, v^{*}}{F_t} \;+\; \frac{\delta m \left(v^{2} - v^{*2}\right)}{2\, \eta P}$$
+      <div class="where">\(v^{*} \ge v\)이면 첫 항만 \(\delta m v / F_t\)로 쓴다. 주행 저항, 변속 시간, 엔진이 항상 최대 출력에 있지 않다는 점을 무시했으므로 실제보다 낙관적인 값이다.</div>
+    </div>
+    <div class="callout tip">
+      <strong>계산 예: 150 kW 앞바퀴 굴림 차의 0→100 km/h</strong>
+      <p>바퀴 출력은 \(0.9 \times 150 = 135\) kW, \(\delta m = 1.05 \times 1500 = 1575\) kg이다. \(\mu = 1.0\), 앞축 하중 비율 61 %이면 \(F_t \approx 0.61 \times 14{,}715 / 1.204 \approx 7{,}460\) N이고 전환 속도는 \(v^{*} = 135{,}000/7{,}460 \approx 18.1\) m/s(시속 65 km)다. 첫 구간 \(1575 \times 18.1 / 7460 \approx 3.8\) s, 둘째 구간 \(1575 \times (27.8^2 - 18.1^2)/(2 \times 135{,}000) \approx 2.6\) s로 합계 약 6.4 s다. 저항과 변속 시간을 넣으면 7초대가 된다. 출력을 300 kW로 두 배 올려도 첫 구간이 시속 100 km를 넘어 버려 \(1575 \times 27.8/7460 \approx 5.9\) s에서 더 줄지 않는다. 고출력 차가 네 바퀴 굴림을 택하는 이유다.</p>
+    </div>
+
+    <div class="sim" id="sim-ac">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>0→100 km/h와 400 m 가속</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-ac"></canvas><canvas id="cv-acg"></canvas>
+          <div class="legend"><span><i style="background:var(--warn)"></i>접지 한계 구간</span><span><i style="background:var(--accent)"></i>출력 한계 구간</span></div>
+        </div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>엔진·모터 출력 <output id="ac-p-out"></output></span><input type="range" id="ac-p" min="50" max="500" value="150" step="5"></label>
+          <label class="ctrl"><span>질량 <output id="ac-m-out"></output></span><input type="range" id="ac-m" min="900" max="2500" value="1500" step="10"></label>
+          <label class="ctrl"><span>노면 마찰 계수 μ <output id="ac-mu-out"></output></span><input type="range" id="ac-mu" min="0.2" max="1.2" value="1" step="0.05"></label>
+          <div class="ctrl"><span>구동 방식</span><div class="seg" id="ac-d"><button data-value="ff" class="on">FF</button><button data-value="fr">FR</button><button data-value="awd">AWD</button></div></div>
+          <div class="ctrl-row"><button class="btn primary" id="ac-run">출발</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">0→100 km/h</span><span class="v" id="o-ac-t">—</span></div>
+        <div class="stat"><span class="k">400 m 기록</span><span class="v" id="o-ac-q">—</span></div>
+        <div class="stat"><span class="k">400 m 통과 속도</span><span class="v" id="o-ac-qv">—</span></div>
+        <div class="stat"><span class="k">전환 속도 v*</span><span class="v" id="o-ac-sw">—</span></div>
+        <div class="stat"><span class="k">최대 가속도</span><span class="v" id="o-ac-a">—</span></div>
+        <div class="stat"><span class="k">현재</span><span class="v" id="o-ac-now">—</span></div>
+      </div>
+      <div class="sim-note">모델: 구동력 = min(접지 한계, 바퀴 출력 ÷ 속도). 구동계 효율 0.90, 회전 질량 계수 1.05, 기준 차의 공기·구름 저항, 하중 이동 포함(무게중심 높이 0.55 m, 휠베이스 2.7 m). 변속기가 엔진을 항상 최대 출력점에 둔다고 가정한 이상적인 값이라 실제 차보다 0.5~1.5초쯤 빠르게 나온다(1단 기어의 전기차에 더 가깝다). 해볼 것: FF에서 출력을 150 → 300 → 500 kW로 올리면 0→100 시간은 거의 줄지 않는데 400 m 통과 속도는 계속 오른다. 같은 조건에서 AWD로 바꾼다. μ를 0.3으로 내리면 출력이 거의 의미가 없어진다. 질량을 늘리면 출력 한계 구간만 느려지고 접지 한계 가속도는 그대로다.</div>
+    </div>
+  </section>
+
+  <!-- =============================================================== 8 -->
+  <section id="coast">
+    <h2>타력 주행 시험: 저항을 재는 법</h2>
+    <p>지금까지 \(C_{rr}\)과 \(C_d\)를 주어진 값처럼 썼다. 실제 차의 값은 어떻게 알아낼까. 풍동과 타이어 시험기로 따로 잴 수도 있지만, 차 한 대의 주행 저항 전체를 재는 표준 방법은 훨씬 단순하다. 평탄하고 바람 없는 직선로에서 일정 속도까지 올린 뒤 기어를 중립에 넣고, 차가 스스로 느려지는 과정을 기록한다. 이것이 <span class="term">타력 주행 시험</span><span class="en">(Coast-down Test)</span>이다.</p>
+    <p>중립에서는 구동력이 0이므로 운동 방정식에 저항만 남는다.</p>
+    <div class="formula">$$-\,\delta\, m\, \frac{dv}{dt} = C_{rr}\, m g + \tfrac{1}{2}\rho\, C_d A\, v^{2} \quad\Longrightarrow\quad R(v) = f_0 + f_1 v + f_2 v^{2}$$
+      <div class="where">감속도를 재면 그 속도에서의 저항을 안다. 인증 시험에서는 저항을 속도의 2차식으로 맞춘 세 계수 \(f_0, f_1, f_2\)(도로 부하 계수)를 구하고, 이 값을 섀시 다이나모미터에 입력해 실내에서 연비·배출가스 시험을 한다. \(f_1\)은 구동계의 점성 마찰과 타이어의 속도 의존성을 담는 작은 항이다.</div>
+    </div>
+    <p>두 계수를 분리할 수 있는 까닭은 속도 의존성이 다르기 때문이다. 고속에서는 공기 저항이 지배하므로 감속 곡선의 처음 기울기가 주로 \(C_dA\)를 정한다. 저속에서는 구름 저항만 남아 곡선이 거의 직선으로 떨어지고, 그 기울기가 \(C_{rr}\,g/\delta\)다. 기준 차라면 시속 120 km에서 감속도 약 0.37 m/s², 시속 20 km에서 약 0.10 m/s²로, 시속 120 km에서 멈출 때까지 3분 가까이 걸리고 2 km 넘게 굴러간다.</p>
+    <p>아래에서 직접 해 보자. 점은 가상의 시험에서 6초 간격으로 기록한 속도이고 측정 잡음이 섞여 있다. 두 슬라이더로 모델 곡선을 점에 맞추면 그 차의 \(C_{rr}\)과 \(C_d\)를 얻는다.</p>
+
+    <div class="sim" id="sim-cd">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>타력 주행 곡선 맞추기</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="cv-cd"></canvas></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>구름 저항 계수 Crr <output id="cd-crr-out"></output></span><input type="range" id="cd-crr" min="0.005" max="0.02" value="0.016" step="0.0002"></label>
+          <label class="ctrl"><span>항력 계수 Cd <output id="cd-cd-out"></output></span><input type="range" id="cd-cd" min="0.18" max="0.45" value="0.22" step="0.005"></label>
+          <div class="ctrl-row"><button class="btn primary" id="cd-new">새 측정 데이터</button><button class="btn" id="cd-fit">자동 피팅</button></div>
+        </div>
+      </div>
+      <div class="sim-readout">
+        <div class="stat"><span class="k">RMS 오차</span><span class="v" id="o-cd-e">—</span></div>
+        <div class="stat"><span class="k">판정</span><span class="v" id="o-cd-st">—</span></div>
+        <div class="stat"><span class="k">120 km/h 감속도(모델)</span><span class="v" id="o-cd-hi">—</span></div>
+        <div class="stat"><span class="k">20 km/h 감속도(모델)</span><span class="v" id="o-cd-lo">—</span></div>
+        <div class="stat"><span class="k">숨겨진 참값</span><span class="v" id="o-cd-tr">?</span></div>
+      </div>
+      <div class="sim-note">조건: 질량 1,500 kg, 전면 면적 2.2 m², 회전 질량 계수 1.04(중립이라 엔진 관성 제외), 시작 속도 120 km/h, 측정 잡음 표준편차 0.8 km/h. 빨간 세로선은 각 점과 모델 곡선의 차이다. 요령: 먼저 Cd로 처음 30초의 기울기를 맞추고, 다음에 Crr로 뒤쪽 꼬리를 맞춘 뒤 두 값을 번갈아 다듬는다. Crr만 올리면 곡선 전체가 일정한 기울기만큼 더 가파르게 눕고, Cd만 올리면 앞부분만 꺼진다. '자동 피팅'은 오차 제곱합이 가장 작은 조합을 찾고 참값을 공개한다. 잡음 때문에 가장 잘 맞는 값이 참값과 정확히 같지는 않다. 실제 시험에서 양방향으로 여러 번 반복해 평균하는 이유다.</div>
+    </div>
+
+    <div class="callout warn">
+      <strong>타력 주행 시험이 까다로운 이유</strong>
+      <p>바람이 초속 2 m만 불어도 시속 100 km에서 공기 저항이 약 15 % 달라지고(\((27.8 + 2)^2 / 27.8^2 \approx 1.15\)), 0.1 %의 미세한 경사도 15 N의 힘이 되어 구름 저항의 10 %에 해당한다. 그래서 같은 구간을 왕복해 평균하고, 기온·기압으로 공기 밀도를 보정하며, 타이어를 충분히 예열한 뒤 잰다. 타이어 온도가 낮으면 구름 저항이 눈에 띄게 크게 나온다.</p>
+    </div>
+    <div class="callout deep">
+      <strong>저항을 줄이는 세 가지 길</strong>
+      <p>식의 각 항이 곧 설계 목표다. 질량 \(m\)을 줄이면 구름·등판·가속 저항이 함께 줄어든다(<a href="body.html">11장</a>). \(C_dA\)를 줄이면 고속 저항이 준다(<a href="aero.html">12장</a>). \(C_{rr}\)을 줄이면 속도와 무관하게 항상 이득이다(<a href="tire.html">7장</a>). 전기차는 배터리 때문에 무겁지만 회생 제동으로 가속·등판에 쓴 에너지의 상당 부분을 되찾으므로(<a href="battery.html">16장</a>), 되찾을 수 없는 공기 저항과 구름 저항을 줄이는 데 특히 공을 들인다.</p>
+    </div>
+  </section>
+
+  <section class="keypoints" id="summary">
+    <h2>핵심 정리</h2>
+    <ol>
+      <li>종방향 운동은 \(\delta m\,dv/dt = F_x - (F_r + F_a + F_g)\) 한 줄로 정리된다. 구동력이 저항보다 크면 가속, 같으면 정속, 작으면 감속이다.</li>
+      <li>구름 저항 \(F_r = C_{rr} m g\)는 타이어 고무의 히스테리시스 손실에서 나오며 속도와 거의 무관하다. 승용차에서 \(C_{rr}\)은 대표적으로 0.008~0.015다.</li>
+      <li>공기 저항 \(F_a = \tfrac12 \rho C_d A v^2\)는 속도의 제곱에 비례한다. 중형 승용차는 시속 70 km 부근에서 구름 저항과 같아지고 그 위에서는 공기 저항이 지배한다.</li>
+      <li>등판 저항은 \(mg\sin\theta\)다. 구배 6 %의 등판 저항이 평지 시속 100 km의 전체 저항보다 약 2배 크다.</li>
+      <li>필요 출력 \(P = R v\)의 공기 저항 몫은 속도의 세제곱에 비례한다. 거리당 에너지는 저항력과 같고, 36 N이 1 kWh/100 km다.</li>
+      <li>구동력 선도에서 구동력 곡선과 저항 곡선의 교점이 최고 속도, 두 곡선의 간격이 여유 구동력이다. 여유 구동력은 가속 \((F_x - R)/(\delta m)\)이나 등판에 쓴다.</li>
+      <li>구동력은 \(\mu N_{drive}\)를 넘지 못한다. 정지 가속은 저속의 접지 한계 구간과 고속의 출력 한계 구간으로 나뉘고, 그 경계는 \(v^{*} = \eta P/F_t\)다.</li>
+      <li>타력 주행 시험은 중립에서의 감속 곡선으로 저항을 잰다. 고속 구간의 기울기가 \(C_dA\)를, 저속 구간의 기울기가 \(C_{rr}\)을 정한다.</li>
+    </ol>
+  </section>
+
+  <section class="quiz-sec" id="quiz">
+    <h2>확인 퀴즈</h2>
+    <div class="quiz">
+      <div class="quiz-q"><p>구름 저항이 생기는 주된 원인은?</p><div class="opts">
+        <button class="opt">타이어 트레드와 노면 사이의 미끄럼 마찰</button>
+        <button class="opt" data-correct>타이어 고무가 눌렸다 펴지기를 반복하면서 생기는 히스테리시스 손실</button>
+        <button class="opt">휠 베어링의 마찰</button>
+        <button class="opt">타이어가 휘젓는 공기의 저항</button>
+      </div><div class="quiz-exp">고무는 변형될 때 받은 에너지를 전부 돌려주지 않고 일부를 열로 잃는다. 그 결과 접지압이 앞쪽으로 치우쳐 회전을 거스르는 모멘트가 생긴다. 베어링 마찰이나 미세한 미끄럼도 있지만 비중이 작다.</div></div>
+
+      <div class="quiz-q"><p>평지에서 차속이 시속 100 km에서 120 km로 20 % 오르면 공기 저항을 이기는 데 필요한 출력은 약 몇 배가 되는가?</p><div class="opts">
+        <button class="opt">1.2배</button>
+        <button class="opt">1.44배</button>
+        <button class="opt" data-correct>1.73배</button>
+        <button class="opt">2.4배</button>
+      </div><div class="quiz-exp">공기 저항력은 속도의 제곱(1.44배), 출력은 힘 × 속도이므로 세제곱(\(1.2^3 = 1.728\))에 비례한다. 거리당 에너지(연비에 해당)는 힘과 같으므로 1.44배다.</div></div>
+
+      <div class="quiz-q"><p>질량 2,000 kg인 차가 구배 10 %의 오르막을 오를 때 등판 저항은 약 얼마인가?</p><div class="opts">
+        <button class="opt">약 200 N</button>
+        <button class="opt">약 980 N</button>
+        <button class="opt" data-correct>약 1,950 N</button>
+        <button class="opt">약 19,600 N</button>
+      </div><div class="quiz-exp">\(\theta = \arctan 0.1 = 5.71°\), \(\sin\theta = 0.0995\)이므로 \(2000 \times 9.81 \times 0.0995 \approx 1{,}952\) N이다. 작은 각에서는 무게에 구배를 곱해 \(19{,}620 \times 0.1\)로 어림해도 된다.</div></div>
+
+      <div class="quiz-q"><p>구동력 선도에서 어떤 속도의 여유 구동력이 1,575 N이다. 질량 1,500 kg, 회전 질량 계수 1.05일 때 그 순간의 가속도는?</p><div class="opts">
+        <button class="opt">0.5 m/s²</button>
+        <button class="opt" data-correct>1.0 m/s²</button>
+        <button class="opt">1.05 m/s²</button>
+        <button class="opt">1.5 m/s²</button>
+      </div><div class="quiz-exp">\(a = (F_x - R)/(\delta m) = 1575 / (1.05 \times 1500) = 1.0\) m/s²다. 같은 힘을 등판에 쓴다면 \(\sin\theta = 1575/14{,}715 \approx 0.107\), 구배 약 10.8 %를 정속으로 오를 수 있다.</div></div>
+
+      <div class="quiz-q"><p>마른 노면에서 앞바퀴 굴림 차의 엔진 출력만 두 배로 올렸더니 0→100 km/h 시간은 거의 그대로인데 400 m 통과 속도는 크게 올랐다. 이유로 알맞은 것은?</p><div class="opts">
+        <button class="opt">출력이 커지면 공기 저항이 함께 커져서</button>
+        <button class="opt" data-correct>시속 100 km까지는 대부분 접지 한계 구간이라 출력을 다 쓰지 못하고, 그 뒤의 출력 한계 구간에서만 이득을 보아서</button>
+        <button class="opt">회전 질량 계수가 출력에 비례해 커져서</button>
+        <button class="opt">구름 저항이 가속도에 비례해 커져서</button>
+      </div><div class="quiz-exp">저속에서는 구동력이 \(\mu N_{drive}\)로 제한된다. 출력을 올리면 전환 속도 \(v^{*} = \eta P / F_t\)가 높아질 뿐 그 아래 구간의 가속도는 변하지 않는다. 전환 속도를 넘어선 뒤에는 늘어난 출력이 그대로 가속에 쓰인다.</div></div>
+
+      <div class="quiz-q"><p>타력 주행 시험에서 감속 곡선의 저속 구간(시속 30 km 이하) 기울기가 주로 알려 주는 것은?</p><div class="opts">
+        <button class="opt">항력 계수와 전면 면적의 곱</button>
+        <button class="opt" data-correct>구름 저항 계수</button>
+        <button class="opt">엔진 브레이크의 세기</button>
+        <button class="opt">타이어와 노면의 마찰 계수 μ</button>
+      </div><div class="quiz-exp">저속에서는 \(v^2\)에 비례하는 공기 저항이 거의 사라지고 구름 저항만 남아 감속도가 \(C_{rr}\,g/\delta\)로 일정해진다. 중립 상태이므로 엔진 브레이크는 작용하지 않고, 바퀴가 미끄러지지 않으므로 μ와도 무관하다.</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  const G = CB.G, RHO = CB.RHO, DEG = 180 / Math.PI;
+  const B = { m: 1500, cd: 0.29, A: 2.2, crr: 0.010, r: 0.32, eta: 0.92 };
+  const HL = 0.55 / 2.7, FS = { ff: 0.61, fr: 0.52, awd: 0.56 };
+  const font = (px) => (px || 12) + "px " + CB.color("font");
+  const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; };
+  const fN = (x) => Math.round(x).toLocaleString("en-US") + " <small>N</small>";
+  const fU = (x, d, u) => x.toFixed(d) + " <small>" + u + "</small>";
+  const kg = (x) => x.toLocaleString("en-US") + " kg";
+  function tag(ctx, s, x, y, color, align, base) {
+    ctx.fillStyle = color; ctx.textAlign = align || "center"; ctx.textBaseline = base || "middle"; ctx.fillText(s, x, y);
+  }
+  function band(ctx, ch, lo, hi, color) {
+    ctx.beginPath();
+    hi.forEach(([x, y], i) => (i ? ctx.lineTo(ch.X(x), ch.Y(y)) : ctx.moveTo(ch.X(x), ch.Y(y))));
+    for (let i = lo.length - 1; i >= 0; i--) ctx.lineTo(ch.X(lo[i][0]), ch.Y(lo[i][1]));
+    ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+  }
+  function line(ctx, ch, data, color, width) {
+    ctx.beginPath();
+    data.forEach(([x, y], i) => (i ? ctx.lineTo(ch.X(x), ch.Y(y)) : ctx.moveTo(ch.X(x), ch.Y(y))));
+    ctx.strokeStyle = color; ctx.lineWidth = width || 2; ctx.stroke();
+  }
+
+  /* ---------------------------------------------------------------- 1. 주행 저항 분해 */
+  (function () {
+    const v = CB.range("rs-v", (x) => x + " km/h", update), m = CB.range("rs-m", kg, update);
+    const cd = CB.range("rs-cd", (x) => x.toFixed(3), update), A = CB.range("rs-a", (x) => x.toFixed(2) + " m²", update);
+    const crr = CB.range("rs-crr", (x) => x.toFixed(4), update), gr = CB.range("rs-g", (x) => (x > 0 ? "+" : "") + x.toFixed(1) + " %", update);
+    let cc, dist = 0;
+    function calc(kmh) {
+      const th = Math.atan(gr() / 100), u = CB.ms(kmh);
+      const r = m() * G * crr() * Math.cos(th), a = 0.5 * RHO * cd() * A() * u * u, g = m() * G * Math.sin(th);
+      return { r, a, g, tot: r + a + g, th, u };
+    }
+    function update() {
+      const c = calc(v());
+      CB.stat("o-rs-r", fN(c.r)); CB.stat("o-rs-a", fN(c.a)); CB.stat("o-rs-g", fN(c.g));
+      CB.stat("o-rs-t", fN(c.tot)); CB.stat("o-rs-p", fU((c.tot * c.u) / 1000, 1, "kW"));
+      CB.stat("o-rs-s", fU((c.a / (c.r + c.a)) * 100, 0, "%"));
+      if (cc) cc.redraw();
+    }
+    const cv = CB.canvas("#cv-rs", (ctx, w, h) => {
+      const P = CB.palette(), c = calc(v()), s = Math.min(w / 10.5, h / 3.6), C = CB.CAR;
+      ctx.save(); ctx.translate(w * 0.46, h * 0.68); ctx.rotate(-c.th);
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-w, 0); ctx.lineTo(w, 0); ctx.stroke();
+      const gap = 2 * s, off = (dist * s) % gap;
+      ctx.strokeStyle = P.faint; ctx.beginPath();
+      for (let x = -w - off; x < w; x += gap) { ctx.moveTo(x, 5); ctx.lineTo(x + gap * 0.4, 5); }
+      ctx.stroke();
+      CB.carSide(ctx, 0, 0, s, { wheelAngle: dist / C.r });
+      const k = (w * 0.3) / Math.max(1500, Math.abs(c.tot), c.a, Math.abs(c.g));
+      ctx.font = font(12);
+      const xa = 2.4 * s, ya = -0.95 * s;
+      CB.arrow(ctx, xa + c.a * k, ya, xa, ya, P.accent2, 3);
+      tag(ctx, "공기", xa + 4, ya - 12, P.accent2, "left");
+      CB.arrow(ctx, C.axR * s, 14, C.axR * s - c.r * k, 14, P.ok, 3);
+      tag(ctx, "구름", C.axR * s - 2, 30, P.ok, "right");
+      CB.arrow(ctx, 0, -0.6 * s, -c.g * k, -0.6 * s, P.warn, 3);
+      if (Math.abs(c.g) > 1) tag(ctx, "등판", -c.g * k, -0.6 * s - 12, P.warn, c.g > 0 ? "right" : "left");
+      const col = c.tot >= 0 ? P.accent : P.red;
+      CB.arrow(ctx, C.axF * s, 14, C.axF * s + c.tot * k, 14, col, 4);
+      tag(ctx, c.tot >= 0 ? "구동력" : "제동력", C.axF * s + 2, 30, col, c.tot >= 0 ? "left" : "right");
+      ctx.restore();
+    }, { aspect: 0.4, minHeight: 190, maxHeight: 280 });
+    cc = CB.canvas("#cv-rsc", (ctx) => {
+      const P = CB.palette(), r = [], ra = [], tot = [], zero = [];
+      for (let kmh = 0; kmh <= 200; kmh += 4) {
+        const c = calc(kmh);
+        zero.push([kmh, 0]); r.push([kmh, c.r]); ra.push([kmh, c.r + c.a]); tot.push([kmh, c.tot]);
+      }
+      const hi = Math.max(tot[tot.length - 1][1], ra[ra.length - 1][1]) * 1.08, lo = Math.min(0, tot[0][1] * 1.15);
+      const ch = CB.chart(ctx, null, { x: [0, 200], y: [lo, hi], xLabel: "차속 (km/h)", yLabel: "저항 (N)", hlines: lo < 0 ? [{ y: 0, color: P.axis, dash: [] }] : [] });
+      band(ctx, ch, zero, r, rgba(P.ok, 0.4)); band(ctx, ch, r, ra, rgba(P.accent2, 0.4)); band(ctx, ch, ra, tot, rgba(P.warn, 0.4));
+      line(ctx, ch, tot, P.text, 2.2);
+      const c = calc(v()), x = ch.X(v());
+      ctx.strokeStyle = P.dim; ctx.lineWidth = 1.2; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(x, ch.box.y); ctx.lineTo(x, ch.box.y + ch.box.h); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(x, ch.Y(c.tot), 5, 0, Math.PI * 2); ctx.fill();
+    }, { aspect: 0.5, maxHeight: 300 });
+    CB.loop(cv.canvas, (dt) => { dist += CB.ms(v()) * dt * 0.15; cv.redraw(); });
+    update();
+  })();
+
+  /* ---------------------------------------------------------------- 2. 언덕 */
+  (function () {
+    const gr = CB.range("hl-g", (x) => x.toFixed(1) + " % (" + (Math.atan(x / 100) * DEG).toFixed(1) + "°)", update);
+    const mu = CB.range("hl-mu", (x) => x.toFixed(2), update), m = CB.range("hl-m", kg, update), drv = CB.seg("hl-d", update);
+    let cv, geo = null;
+    function calc() {
+      const th = Math.atan(gr() / 100), W = m() * G, d = drv(), fs = FS[d], u = mu();
+      const Wf = W * (fs * Math.cos(th) - HL * Math.sin(th)), Wr = W * ((1 - fs) * Math.cos(th) + HL * Math.sin(th));
+      const need = W * (Math.sin(th) + B.crr * Math.cos(th));
+      const lim = u * Math.max(0, d === "ff" ? Wf : d === "fr" ? Wr : W * Math.cos(th));
+      const tl = d === "ff" ? (u * fs - B.crr) / (1 + u * HL) : d === "fr" ? (u * (1 - fs) - B.crr) / (1 - u * HL) : u - B.crr;
+      return { th, W, Wf, Wr, need, lim, maxPct: Math.max(0, tl) * 100, ok: need <= lim, d };
+    }
+    function update() {
+      const c = calc();
+      CB.stat("o-hl-s", fN(c.W * Math.sin(c.th))); CB.stat("o-hl-n", fN(c.W * Math.cos(c.th)));
+      CB.stat("o-hl-f", fN(c.need)); CB.stat("o-hl-l", fN(c.lim));
+      CB.stat("o-hl-x", fU(c.maxPct, 1, "%"));
+      CB.stat("o-hl-st", c.ok ? '<span style="color:var(--ok)">등판 가능</span>' : '<span style="color:var(--bad)">바퀴가 헛돈다</span>');
+      if (cv) cv.redraw();
+    }
+    cv = CB.canvas("#cv-hl", (ctx, w, h) => {
+      const P = CB.palette(), c = calc(), C = CB.CAR, th = c.th;
+      const px = w * 0.07, py = h * 0.88, Ls = Math.min(w * 0.86, h * 1.25), s = Math.min(w / 11, h / 6.5);
+      const ux = Math.cos(th), uy = -Math.sin(th), nx = -Math.sin(th), ny = -Math.cos(th);
+      const ex = px + Ls * ux, ey = py + Ls * uy;
+      geo = { px, py };
+      ctx.fillStyle = P.surface; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(ex, ey); ctx.lineTo(ex, py); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(w, py); ctx.moveTo(px, py); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.strokeStyle = P.dim; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(px, py, Ls * 0.2, -th, 0); ctx.stroke();
+      ctx.font = font(12);
+      tag(ctx, "θ = " + (th * DEG).toFixed(1) + "°", px + Ls * 0.2 + 6, py - 9, P.dim, "left");
+      const cx = px + Ls * 0.55 * ux, cy = py + Ls * 0.55 * uy;
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(-th);
+      CB.carSide(ctx, 0, 0, s, { color: c.ok ? P.accent : P.bad, alpha: 0.85 });
+      ctx.restore();
+      const Lw = h * 0.3, gx = cx + nx * 0.55 * s, gy = cy + ny * 0.55 * s, sn = Math.sin(th), cs = Math.cos(th);
+      const ax = gx - ux * Lw * sn, ay = gy - uy * Lw * sn;
+      ctx.strokeStyle = P.faint; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(gx, gy + Lw); ctx.lineTo(gx - nx * Lw * cs, gy - ny * Lw * cs); ctx.stroke();
+      ctx.setLineDash([6, 4]); ctx.strokeStyle = P.dim; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx, gy + Lw - 8); ctx.stroke(); ctx.setLineDash([]);
+      CB.arrow(ctx, gx, gy + Lw - 9, gx, gy + Lw, P.dim, 2);
+      CB.arrow(ctx, gx, gy, gx - nx * Lw * cs, gy - ny * Lw * cs, P.accent2, 2.5);
+      CB.arrow(ctx, gx, gy, ax, ay, P.warn, 3);
+      tag(ctx, "mg", gx + 6, gy + Lw - 2, P.dim, "left");
+      if (sn > 0.03) tag(ctx, "mg sin θ", ax - 4, ay - 10, P.warn, "right");
+      [[C.axF, c.Wf], [C.axR, c.Wr]].forEach(([a, Wa]) => {
+        const x0 = cx + ux * a * s, y0 = cy + uy * a * s, L = (Lw * Math.max(0, Wa)) / c.W;
+        CB.arrow(ctx, x0, y0, x0 + nx * L, y0 + ny * L, P.ok, 2.5);
+      });
+      const col = c.ok ? P.accent : P.bad, Lf = (Lw * c.need) / c.W, axles = c.d === "ff" ? [C.axF] : c.d === "fr" ? [C.axR] : [C.axF, C.axR];
+      axles.forEach((a) => {
+        const x0 = cx + ux * a * s - nx * 9, y0 = cy + uy * a * s - ny * 9, L = Lf / axles.length;
+        CB.arrow(ctx, x0, y0, x0 + ux * L, y0 + uy * L, col, 3.5);
+      });
+      ctx.fillStyle = P.bg; ctx.strokeStyle = P.accent; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(ex, ey, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      const bx = 14, bw = Math.min(w * 0.42, 200), ref = Math.max(c.need, c.lim, 1);
+      [["필요 구동력", c.need, col], ["접지 한계", c.lim, P.ok]].forEach(([name, val, color], i) => {
+        const y = 14 + i * 30;
+        tag(ctx, name + "  " + Math.round(val).toLocaleString("en-US") + " N", bx, y, P.dim, "left", "top");
+        ctx.fillStyle = P.surface; ctx.fillRect(bx, y + 16, bw, 7);
+        ctx.fillStyle = color; ctx.fillRect(bx, y + 16, (bw * val) / ref, 7);
+      });
+    }, { aspect: 0.62, minHeight: 250, maxHeight: 420 });
+    CB.drag(cv.canvas, {
+      move(p) {
+        if (!geo) return;
+        const th = CB.clamp(Math.atan2(geo.py - p.y, p.x - geo.px), 0, Math.atan(0.7));
+        gr.set(Math.round(Math.tan(th) * 200) / 2);
+      },
+    });
+    update();
+  })();
+
+  /* ---------------------------------------------------------------- 3. 정속 주행 에너지 */
+  (function () {
+    const type = CB.seg("eg-type", update), v = CB.range("eg-v", (x) => x + " km/h", update), m = CB.range("eg-m", kg, update);
+    const cd = CB.range("eg-cd", (x) => x.toFixed(3), update), A = CB.range("eg-a", (x) => x.toFixed(2) + " m²", update);
+    const aux = CB.range("eg-x", (x) => x.toFixed(1) + " kW", update);
+    let cv;
+    function at(kmh) {
+      const u = CB.ms(kmh), fr = m() * G * B.crr, fa = 0.5 * RHO * cd() * A() * u * u, pw = ((fr + fa) * u) / 1000;
+      let ptot, eE = 0;
+      if (type() === "ev") ptot = pw / 0.88 + aux();
+      else {
+        const pe = pw / 0.92 + aux() / 0.6;
+        ptot = (pe + 2.5 + 0.035 * kmh) / 0.38;
+        eE = ((ptot - pe) / kmh) * 100;
+      }
+      const tot = (ptot / kmh) * 100, eR = fr / 36, eA = fa / 36;
+      return { eR, eA, eE, eD: tot - eR - eA - eE, tot };
+    }
+    function update() {
+      const c = at(v()), ev = type() === "ev";
+      let best = 10, bt = Infinity;
+      for (let k = 10; k <= 180; k++) { const t = at(k).tot; if (t < bt) { bt = t; best = k; } }
+      CB.stat("o-eg-w", fU(c.eR + c.eA, 1, "kWh/100 km")); CB.stat("o-eg-t", fU(c.tot, 1, "kWh/100 km"));
+      CB.stat("k-eg-e", ev ? "전비" : "연비");
+      CB.stat("o-eg-e", ev ? fU(100 / c.tot, 2, "km/kWh") : fU(890 / c.tot, 1, "km/L") + " <small>(" + (c.tot / 8.9).toFixed(1) + " L/100 km)</small>");
+      CB.stat("o-eg-s", fU((c.eA / (c.eR + c.eA)) * 100, 0, "%"));
+      CB.stat("o-eg-b", (best <= 10 ? "≤ 10" : best) + " <small>km/h</small>");
+      CB.stat("k-eg-r", ev ? "77 kWh 주행 거리" : "50 L 주행 거리");
+      CB.stat("o-eg-r", fU(ev ? 7700 / c.tot : (50 * 890) / c.tot, 0, "km"));
+      if (cv) cv.redraw();
+    }
+    cv = CB.canvas("#cv-eg", (ctx) => {
+      const P = CB.palette(), z = [], a = [], b = [], d = [], t = [];
+      let hi = 0;
+      for (let k = 10; k <= 180; k += 2) {
+        const c = at(k);
+        z.push([k, 0]); a.push([k, c.eR]); b.push([k, c.eR + c.eA]); d.push([k, c.eR + c.eA + c.eD]); t.push([k, c.tot]);
+        if (k >= 20) hi = Math.max(hi, c.tot);
+      }
+      const clip = (arr) => arr.map(([x, y]) => [x, Math.min(y, hi * 1.1)]);
+      const ch = CB.chart(ctx, null, { x: [10, 180], y: [0, hi * 1.1], xLabel: "정속 주행 속도 (km/h)", yLabel: "kWh / 100 km" });
+      band(ctx, ch, z, clip(a), rgba(P.ok, 0.4)); band(ctx, ch, clip(a), clip(b), rgba(P.accent2, 0.4));
+      band(ctx, ch, clip(b), clip(d), rgba(P.warn, 0.4)); band(ctx, ch, clip(d), clip(t), rgba(P.bad, 0.3));
+      line(ctx, ch, clip(t), P.text, 2.2);
+      const c = at(v()), x = ch.X(v());
+      ctx.strokeStyle = P.dim; ctx.lineWidth = 1.2; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(x, ch.box.y); ctx.lineTo(x, ch.box.y + ch.box.h); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(x, ch.Y(Math.min(c.tot, hi * 1.1)), 5, 0, Math.PI * 2); ctx.fill();
+    }, { aspect: 0.62, maxHeight: 380 });
+    update();
+  })();
+
+  /* ---------------------------------------------------------------- 4. 구동력 선도 */
+  (function () {
+    const GEARS = [3.6, 2.1, 1.4, 1.0, 0.78, 0.62], N0 = 1000, N1 = 6500, K = (2 * Math.PI) / 60;
+    const tm = CB.range("td-t", (x) => x + " N·m", update), fd = CB.range("td-fd", (x) => x.toFixed(2), update), gr = CB.range("td-g", (x) => x + " %", update);
+    const hyp = document.getElementById("td-hyp");
+    let cv;
+    const tq = (n) => tm() * (1 - 0.55 * Math.pow((n - 4200) / 4200, 2));
+    const fGear = (gi, n) => (tq(n) * GEARS[gi] * fd() * B.eta) / B.r;
+    const vGear = (gi, n) => (n * K * B.r) / (GEARS[gi] * fd());
+    const flat = (u) => B.m * G * B.crr + 0.5 * RHO * B.cd * B.A * u * u;
+    const res = (u) => { const th = Math.atan(gr() / 100); return B.m * G * (B.crr * Math.cos(th) + Math.sin(th)) + 0.5 * RHO * B.cd * B.A * u * u; };
+    function env(u) {
+      let best = { F: -1, g: -1 };
+      GEARS.forEach((g, gi) => {
+        let n = (u / B.r) * g * fd() / K;
+        if (gi === 0 && n < N0) n = N0;
+        if (n < N0 || n > N1) return;
+        const F = fGear(gi, n);
+        if (F > best.F) best = { F, g: gi };
+      });
+      return best;
+    }
+    function solve() {
+      let top = null, pk = 0, sin = 0;
+      for (let k = 1; k <= 1200; k++) { const u = CB.ms(k * 0.25), e = env(u); if (e.g >= 0 && e.F >= res(u)) top = { kmh: k * 0.25, g: e.g, F: e.F }; }
+      for (let n = N0; n <= N1; n += 50) {
+        pk = Math.max(pk, tq(n) * n * K);
+        sin = Math.max(sin, (fGear(0, n) - flat(vGear(0, n))) / (B.m * G));
+      }
+      const e100 = env(CB.ms(100));
+      return { top, pk, f1: fGear(0, 4200), maxPct: Math.tan(Math.asin(Math.min(0.999, sin))) * 100, ex: e100.g >= 0 ? e100.F - res(CB.ms(100)) : NaN, g100: e100.g };
+    }
+    function update() {
+      const S = solve();
+      CB.stat("o-td-v", S.top ? fU(S.top.kmh, 0, "km/h") + " <small>(" + (S.top.g + 1) + "단)</small>" : '<span style="color:var(--bad)">등판 불가</span>');
+      CB.stat("o-td-p", fU(S.pk / 1000, 0, "kW") + " <small>(" + Math.round(S.pk / 735.5) + " ps)</small>");
+      CB.stat("o-td-f", fN(S.f1)); CB.stat("o-td-g", fU(S.maxPct, 0, "%"));
+      CB.stat("o-td-x", isFinite(S.ex) ? fN(S.ex) + " <small>(" + (S.g100 + 1) + "단)</small>" : "—");
+      CB.stat("o-td-a", isFinite(S.ex) ? fU(S.ex / (1.05 * B.m), 2, "m/s²") : "—");
+      if (cv) cv.redraw();
+    }
+    hyp.addEventListener("change", update);
+    cv = CB.canvas("#cv-td", (ctx) => {
+      const P = CB.palette(), S = solve(), ymax = S.f1 * 1.12, series = [], rs = [], ev = [], er = [];
+      GEARS.forEach((g, gi) => {
+        const data = [];
+        for (let n = N0; n <= N1; n += 100) data.push([CB.kmh(vGear(gi, n)), fGear(gi, n)]);
+        series.push({ data, color: P.series[gi % 5], width: 2.2, dash: gi === 5 ? [7, 3] : null });
+      });
+      for (let k = 0; k <= 260; k += 2) {
+        const u = CB.ms(k), R = res(u);
+        rs.push([k, R]);
+        const e = env(u);
+        if (S.top && k <= S.top.kmh && e.g >= 0 && e.F >= R) { ev.push([k, e.F]); er.push([k, R]); }
+      }
+      if (hyp.checked) {
+        const data = [];
+        for (let k = 10; k <= 260; k += 2) data.push([k, (S.pk * B.eta) / CB.ms(k)]);
+        series.push({ data, color: P.faint, width: 1.4, dash: [5, 4] });
+      }
+      series.push({ data: rs, color: P.text, width: 2.4 });
+      const grip = (B.m * G * FS.ff) / (1 + HL);
+      const ch = CB.chart(ctx, null, {
+        x: [0, 260], y: [0, ymax], xLabel: "차속 (km/h)", yLabel: "힘 (N)", series,
+        hlines: grip < ymax ? [{ y: grip, color: P.dim, label: "FF 접지 한계 (μ = 1)" }] : [],
+        points: S.top ? [{ x: S.top.kmh, y: res(CB.ms(S.top.kmh)), color: P.accent, r: 5.5, label: Math.round(S.top.kmh) + " km/h" }] : [],
+      });
+      if (ev.length > 1) band(ctx, ch, er, ev, rgba(P.accent, 0.13));
+      ctx.font = font(11);
+      GEARS.forEach((g, gi) => {
+        const x = ch.X(CB.kmh(vGear(gi, 4200)));
+        if (x < ch.box.x + ch.box.w - 6) tag(ctx, String(gi + 1), x, ch.Y(fGear(gi, 4200)) - 9, P.series[gi % 5]);
+      });
+    }, { aspect: 0.66, maxHeight: 430 });
+    update();
+  })();
+
+  /* ---------------------------------------------------------------- 5. 0–100 가속 */
+  (function () {
+    const DT = 0.01, V100 = CB.ms(100);
+    const pw = CB.range("ac-p", (x) => x + " kW (" + Math.round(x / 0.7355) + " ps)", recompute), m = CB.range("ac-m", kg, recompute);
+    const mu = CB.range("ac-mu", (x) => x.toFixed(2), recompute), drv = CB.seg("ac-d", recompute);
+    let R = simulate(), cv, cg;
+    const play = { t: 0, on: false };
+    function simulate() {
+      const P = pw() * 1000 * 0.9, M = m(), W = M * G, u = mu(), d = drv(), fs = FS[d], dm = 1.05 * M;
+      const T = [], V = [], X = [], F = [], L = [];
+      let v = 0, x = 0, t = 0, t100 = null, t400 = null, v400 = null, vsw = null, amax = 0;
+      while (t < 60 && (x < 400 || v < V100)) {
+        const Rv = M * G * B.crr + 0.5 * RHO * B.cd * B.A * v * v;
+        const Ft = d === "awd" ? u * W : d === "ff" ? (u * (W * fs + Rv * HL)) / (1 + u * HL) : (u * (W * (1 - fs) - Rv * HL)) / (1 - u * HL);
+        const Fp = P / Math.max(v, 0.5), lim = Ft < Fp, Fx = Math.min(Ft, Fp), a = (Fx - Rv) / dm;
+        T.push(t); V.push(v); X.push(x); F.push(Fx); L.push(lim);
+        if (!lim && vsw === null) vsw = v;
+        amax = Math.max(amax, a);
+        v = Math.max(0, v + a * DT); x += v * DT; t += DT;
+        if (t100 === null && v >= V100) t100 = t;
+        if (t400 === null && x >= 400) { t400 = t; v400 = v; }
+      }
+      return { T, V, X, F, L, n: T.length, t100, t400, v400, vsw, amax, W, d };
+    }
+    function stats() {
+      const i = Math.min(R.n - 1, Math.round(play.t / DT));
+      CB.stat("o-ac-t", R.t100 !== null ? fU(R.t100, 1, "s") : "도달 불가");
+      CB.stat("o-ac-q", R.t400 !== null ? fU(R.t400, 1, "s") : "—");
+      CB.stat("o-ac-qv", R.v400 !== null ? fU(CB.kmh(R.v400), 0, "km/h") : "—");
+      CB.stat("o-ac-sw", R.vsw !== null ? fU(CB.kmh(R.vsw), 0, "km/h") : "—");
+      CB.stat("o-ac-a", fU(R.amax / G, 2, "g"));
+      CB.stat("o-ac-now", Math.round(CB.kmh(R.V[i])) + " <small>km/h · " + Math.round(R.X[i]) + " m</small>");
+    }
+    function recompute() { R = simulate(); play.t = 0; play.on = false; stats(); if (cg) { cv.redraw(); cg.redraw(); } }
+    cv = CB.canvas("#cv-ac", (ctx, w, h) => {
+      const P = CB.palette(), C = CB.CAR, i = Math.min(R.n - 1, Math.round(play.t / DT)), x = R.X[i];
+      const s = Math.min(w / 13, h / 3.4), gy = h * 0.78, cx = w * 0.3, bx = w * 0.06, bw = w * 0.88;
+      ctx.font = font(11);
+      ctx.strokeStyle = P.border; ctx.lineWidth = 4; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(bx, 16); ctx.lineTo(bx + bw, 16); ctx.stroke();
+      ctx.strokeStyle = P.accent; ctx.beginPath(); ctx.moveTo(bx, 16); ctx.lineTo(bx + (bw * Math.min(x, 400)) / 400, 16); ctx.stroke(); ctx.lineCap = "butt";
+      for (let k = 0; k <= 4; k++) tag(ctx, k * 100 + " m", bx + (bw * k) / 4, 24, P.faint, k === 0 ? "left" : k === 4 ? "right" : "center", "top");
+      ctx.strokeStyle = P.axis; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
+      ctx.strokeStyle = P.faint; ctx.lineWidth = 1.5;
+      for (let k = Math.ceil((x - cx / s) / 5); k * 5 <= x + (w - cx) / s; k++) {
+        if (k < 0) continue;
+        const xm = cx + (k * 5 - x) * s, big = k % 4 === 0;
+        ctx.beginPath(); ctx.moveTo(xm, gy); ctx.lineTo(xm, gy - (big ? 14 : 6)); ctx.stroke();
+        if (big) tag(ctx, k * 5 + "", xm, gy - 16, P.faint, "center", "bottom");
+      }
+      CB.carSide(ctx, cx, gy, s, { wheelAngle: x / C.r });
+      const col = R.L[i] ? P.warn : P.accent, axles = R.d === "ff" ? [C.axF] : R.d === "fr" ? [C.axR] : [C.axF, C.axR];
+      const len = ((R.F[i] / R.W) * w * 0.38) / axles.length;
+      axles.forEach((a) => CB.arrow(ctx, cx + a * s, gy + 11, cx + a * s + len, gy + 11, col, 4));
+      ctx.font = font(12);
+      tag(ctx, (R.L[i] ? "접지 한계  " : "출력 한계  ") + Math.round(R.F[i]).toLocaleString("en-US") + " N", w - 10, gy + 12, col, "right");
+    }, { aspect: 0.3, minHeight: 150, maxHeight: 200 });
+    cg = CB.canvas("#cv-acg", (ctx) => {
+      const P = CB.palette(), a = [], b = [];
+      for (let i = 0; i < R.n; i += 5) {
+        const p = [R.T[i], CB.kmh(R.V[i])];
+        if (R.L[i]) { a.push(p); } else { if (!b.length && a.length) a.push(p); b.push(p); }
+      }
+      const tEnd = R.T[R.n - 1], vEnd = CB.kmh(R.V[R.n - 1]), i = Math.min(R.n - 1, Math.round(play.t / DT));
+      CB.chart(ctx, null, {
+        x: [0, Math.max(5, tEnd)], y: [0, Math.max(110, vEnd * 1.08)], xLabel: "시간 (s)", yLabel: "속도 (km/h)",
+        series: [{ data: a, color: P.warn, width: 3 }, { data: b, color: P.accent, width: 3 }],
+        hlines: [{ y: 100, color: P.dim, label: "100 km/h" }],
+        vlines: [].concat(R.t100 !== null ? [{ x: R.t100, color: P.dim, label: R.t100.toFixed(1) + " s" }] : [], R.t400 !== null ? [{ x: R.t400, color: P.faint, label: "400 m" }] : []),
+        points: [{ x: R.T[i], y: CB.kmh(R.V[i]), color: P.text, r: 5 }],
+      });
+    }, { aspect: 0.5, maxHeight: 300 });
+    document.getElementById("ac-run").addEventListener("click", () => { play.t = 0; play.on = true; });
+    CB.loop(cv.canvas, (dt) => {
+      if (!play.on) return;
+      play.t += dt;
+      if (play.t >= R.T[R.n - 1]) { play.t = R.T[R.n - 1]; play.on = false; }
+      cv.redraw(); cg.redraw(); stats();
+    });
+    stats();
+  })();
+
+  /* ---------------------------------------------------------------- 6. 타력 주행 */
+  (function () {
+    const M = 1500, A = 2.2, DELTA = 1.04, V0 = 120, DT = 0.25, TMAX = 180, STEP = 6;
+    const crr = CB.range("cd-crr", (x) => x.toFixed(4), update), cd = CB.range("cd-cd", (x) => x.toFixed(3), update);
+    let cv, truth, data, shown = false;
+    const dec = (c, d, u) => (M * G * c + 0.5 * RHO * d * A * u * u) / (DELTA * M);
+    function coast(c, d) {
+      const out = [];
+      let u = CB.ms(V0);
+      for (let t = 0; t <= TMAX + 1e-9; t += DT) { out.push(CB.kmh(u)); u = Math.max(0, u - dec(c, d, u) * DT); }
+      return out;
+    }
+    const sse = (curve) => data.reduce((s, [t, y]) => s + Math.pow(curve[Math.round(t / DT)] - y, 2), 0);
+    function measure() {
+      truth = { crr: 0.008 + Math.random() * 0.007, cd: 0.24 + Math.random() * 0.12 };
+      const curve = coast(truth.crr, truth.cd);
+      data = [];
+      for (let t = 0; t <= TMAX; t += STEP) {
+        const y = curve[Math.round(t / DT)];
+        if (y < 3) break;
+        data.push([t, Math.max(0, y + CB.randn() * 0.8)]);
+      }
+      shown = false;
+    }
+    function update() {
+      const rms = Math.sqrt(sse(coast(crr(), cd())) / data.length);
+      CB.stat("o-cd-e", fU(rms, 2, "km/h"));
+      CB.stat("o-cd-st", rms < 1.1 ? '<span style="color:var(--ok)">잘 맞는다</span>' : rms < 3 ? '<span style="color:var(--warn)">거의 다 왔다</span>' : '<span style="color:var(--bad)">더 조정</span>');
+      CB.stat("o-cd-hi", fU(dec(crr(), cd(), CB.ms(120)), 3, "m/s²")); CB.stat("o-cd-lo", fU(dec(crr(), cd(), CB.ms(20)), 3, "m/s²"));
+      CB.stat("o-cd-tr", shown ? "<small>Crr</small> " + truth.crr.toFixed(4) + " <small>· Cd</small> " + truth.cd.toFixed(3) : "?");
+      if (cv) cv.redraw();
+    }
+    measure();
+    cv = CB.canvas("#cv-cd", (ctx) => {
+      const P = CB.palette(), curve = coast(crr(), cd()), model = [];
+      for (let i = 0; i < curve.length; i += 4) model.push([i * DT, curve[i]]);
+      const ch = CB.chart(ctx, null, { x: [0, TMAX], y: [0, 130], xLabel: "중립에 넣은 뒤 시간 (s)", yLabel: "속도 (km/h)", series: [{ data: model, color: P.accent, width: 2.5 }] });
+      ctx.strokeStyle = rgba(P.bad, 0.8); ctx.lineWidth = 1.5; ctx.beginPath();
+      data.forEach(([t, y]) => { ctx.moveTo(ch.X(t), ch.Y(y)); ctx.lineTo(ch.X(t), ch.Y(curve[Math.round(t / DT)])); });
+      ctx.stroke();
+      ctx.fillStyle = P.text;
+      data.forEach(([t, y]) => { ctx.beginPath(); ctx.arc(ch.X(t), ch.Y(y), 3.2, 0, Math.PI * 2); ctx.fill(); });
+    }, { aspect: 0.62, maxHeight: 400 });
+    document.getElementById("cd-new").addEventListener("click", () => { measure(); update(); });
+    document.getElementById("cd-fit").addEventListener("click", () => {
+      let best = null;
+      for (let c = 0.005; c <= 0.02 + 1e-9; c += 0.0002) for (let d = 0.18; d <= 0.45 + 1e-9; d += 0.005) {
+        const e = sse(coast(c, d));
+        if (!best || e < best.e) best = { e, c, d };
+      }
+      shown = true;
+      crr.set(best.c.toFixed(4)); cd.set(best.d.toFixed(3));
+    });
+    update();
+  })();
+})();
+</script>
+</body>
+</html>
