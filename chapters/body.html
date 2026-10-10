@@ -508,10 +508,10 @@
         <div class="stat"><span class="k">중상(AIS 3+) 확률</span><span class="v" id="o-hc-r">—</span></div>
         <div class="stat"><span class="k">판정</span><span class="v" id="o-hc-z">—</span></div>
       </div>
-      <div class="sim-note">음영은 HIC 값을 최대로 만드는 구간 \([t_1, t_2]\)다. 아래 막대는 HIC15 눈금으로, 700이 법규 한계다. 중상 확률은 미국 NCAP이 쓰는 위험 곡선으로 계산한 참고값이다. 해볼 것: 'Δv 유지'를 켜고 지속 시간을 늘려 보자. 같은 속도 변화라도 펄스를 길게 펴면 HIC가 급격히 떨어진다. 에어백과 푹신한 내장재가 하는 일이 바로 이것이다. 지속 시간이 15 ms보다 길면 음영이 펄스의 가운데 15 ms만 고른다.</div>
+      <div class="sim-note">음영은 HIC 값을 최대로 만드는 구간 \([t_1, t_2]\)다. 아래 막대는 HIC15 눈금으로, 700이 법규 한계다. 중상 확률은 미국 NCAP이 쓰는 위험 곡선으로 계산한 참고값이다. 해볼 것: 'Δv 유지'를 켜고 지속 시간을 늘려 보자. 같은 속도 변화라도 펄스를 길게 펴면 HIC가 급격히 떨어진다. 에어백과 푹신한 내장재가 하는 일이 바로 이것이다. 음영 구간은 최대 15 ms지만 펄스 모양에 따라 더 짧을 수 있다. 예를 들어 20 ms 삼각 펄스의 최적 구간은 가운데 약 11.4 ms다. 이 모형은 0.1 ms 간격의 시간점 사이를 사다리꼴로 적분하고, 그 시간점들을 구간 끝점 후보로 비교한다.</div>
     </div>
 
-    <p>가슴은 두 가지로 본다. 하나는 <b>흉부 가속도</b>로, 3 ms 이상 지속된 값이 60 g를 넘지 않아야 한다. 다른 하나는 <b>흉부 압박량</b>으로, 벨트나 스티어링 휠이 갈비뼈를 누른 깊이다. 로드 리미터가 겨냥하는 것이 이 압박량이다. 그 밖에 목의 인장·굽힘 모멘트, 넓적다리 축 하중, 정강이 지수 등을 함께 평가한다.</p>
+    <p>가슴은 두 가지로 본다. 하나는 <b>흉부 합성 가속도</b>로, 60 g를 넘는 구간의 누적 시간이 3 ms 이하여야 한다. 짧은 피크가 여러 번 생겨도 그 시간을 합산한다. 다른 하나는 <b>흉부 압박량</b>으로, 벨트나 스티어링 휠이 갈비뼈를 누른 깊이다. 로드 리미터가 겨냥하는 것이 이 압박량이다. 그 밖에 목의 인장·굽힘 모멘트, 넓적다리 축 하중, 정강이 지수 등을 함께 평가한다.</p>
     <div class="callout warn">
       <strong>기준값은 확률이다</strong>
       <p>HIC 700은 그 아래면 안전하고 넘으면 다친다는 경계가 아니다. 사람마다 내성이 달라서 값이 커질수록 중상 확률이 연속적으로 올라간다. 고령자와 체구가 작은 승객은 같은 하중에서 더 크게 다치므로, 최근 시험은 여러 체격의 더미와 더 낮은 한계값을 쓴다.</p>
@@ -808,10 +808,11 @@
   // HIC = max (t2-t1)·[구간 평균 가속도(g)]^2.5, 창 길이 ≤ win(초)
   M.hic = function (a, dt, win) {
     const pre = [0];
-    for (let i = 0; i < a.length; i++) pre.push(pre[i] + a[i] * dt);
-    const wmax = Math.round(win / dt);
+    // a[i]는 i·dt의 시간점: 적분 구간은 표본 사이에만 존재한다.
+    for (let i = 1; i < a.length; i++) pre.push(pre[i - 1] + (a[i - 1] + a[i]) * 0.5 * dt);
+    const wmax = Math.floor(win / dt + 1e-9);
     let best = 0, i1 = 0, i2 = 0;
-    for (let i = 0; i < a.length; i++) for (let j = i + 1; j <= Math.min(a.length, i + wmax); j++) {
+    for (let i = 0; i < a.length - 1; i++) for (let j = i + 1; j <= Math.min(a.length - 1, i + wmax); j++) {
       const d = (j - i) * dt, hv = d * Math.pow((pre[j] - pre[i]) / d, 2.5);
       if (hv > best) { best = hv; i1 = i; i2 = j; }
     }
